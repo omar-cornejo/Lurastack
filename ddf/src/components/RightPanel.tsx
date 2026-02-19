@@ -23,6 +23,8 @@ export const RightPanel = () => {
     };
 
     const handleMouseUp = () => {
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
       setIsResizing(false);
     };
 
@@ -46,7 +48,12 @@ export const RightPanel = () => {
     >
       {visible && (
         <div
-          onMouseDown={() => setIsResizing(true)}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            document.body.style.userSelect = "none";
+            document.body.style.cursor = "col-resize";
+            setIsResizing(true);
+          }}
           className="absolute left-0 top-0 h-full w-1 cursor-col-resize bg-transparent hover:bg-gray-300"
         />
       )}
