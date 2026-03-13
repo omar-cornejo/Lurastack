@@ -55,11 +55,6 @@ export default function BottomPanel({ onHeightChange }: BottomPanelProps) {
     const onWindowResize = () => fitAddon.current?.fit();
     window.addEventListener('resize', onWindowResize);
 
-    setTimeout(() => {
-      invoke("write_to_pty", { input: "\r" });
-      setTimeout(() => invoke("write_to_pty", { input: "clear\r" }), 1);
-    }, 1);
-
     return () => {
       unlisten.then((f) => f());
       window.removeEventListener('resize', onWindowResize);

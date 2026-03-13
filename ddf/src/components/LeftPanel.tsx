@@ -6,10 +6,11 @@ type IconGroups = {
 };
 
 type LeftPanelProps = {
-  bottomHeight: number; 
+  bottomHeight: number;
+  addResource: (type: string, icon: string) => void;
 };
 
-export const LeftPanel = ({ bottomHeight }: LeftPanelProps) => {
+export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
   const [visible, setVisible] = useState(false);
   const [width, setWidth] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
@@ -124,6 +125,7 @@ export const LeftPanel = ({ bottomHeight }: LeftPanelProps) => {
                       alt={file}
                       className="w-full max-w-full aspect-square mx-auto hover:scale-110 transition-transform cursor-pointer"
                       style={{ objectFit: 'contain' }}
+                      onClick={() => addResource(file.replace(".svg", ""), `/icons/${folder}/${file}`)}
                     />
                   ))}
                 </div>
