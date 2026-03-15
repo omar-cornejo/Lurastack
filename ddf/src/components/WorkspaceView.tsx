@@ -26,6 +26,7 @@ import {
 } from "../commands/placeCanvasNode";
 import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
 import { warn } from "../commands/warn";
+import { TEST_NODE_SCHEMAS } from "../models/testNodes";
 
 type WorkspaceViewProps = {
   viewId: string;
@@ -43,6 +44,7 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     provider: "registry.terraform.io/hashicorp/aws",
     resources: [],
   });
+  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
 
   const buildSubtreeSnapshot = useCallback(
     (rootId: string) => {
@@ -232,6 +234,7 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
         currentNodes.length,
         dropPosition,
         options?.targetContainerId,
+        newResource.id,
       ),
     );
 
@@ -242,6 +245,7 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
   const clearCanvas = async () => {
     setNodes([]);
     setEdges([]);
+    setSelectedNodeId(undefined);
 
     const updatedProject: TerraformProject = {
       ...project,
@@ -251,6 +255,47 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     setProject(updatedProject);
     await saveProjectToHCL(updatedProject);
   };
+
+  const selectedNode = selectedNodeId
+    ? nodes.find((node) => node.id === selectedNodeId)
+    : undefined;
+
+  const selectedSchema = selectedNode
+    ? TEST_NODE_SCHEMAS.find((schema) => schema.id === selectedNode.data.schemaId)
+    : undefined;
+
+  const selectedResource = selectedNode
+    ? project.resources.find((resource) => resource.id === selectedNode.data.resourceId)
+    : undefined;
+
+  const selectNode = useCallback((nodeId?: string) => {
+    setSelectedNodeId(nodeId);
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => ({
+        ...node,
+        selected: nodeId ? node.id === nodeId : false,
+      })),
+    );
+  }, [setNodes]);
+
+  const updateSelectedResource = useCallback(
+    (updater: (resource: TerraformResource) => TerraformResource) => {
+      if (!selectedResource) return;
+
+      setProject((currentProject) => {
+        const updatedResources = currentProject.resources.map((resource) =>
+          resource.id === selectedResource.id ? updater(resource) : resource,
+        );
+        const updatedProject = {
+          ...currentProject,
+          resources: updatedResources,
+        };
+        void saveProjectToHCL(updatedProject);
+        return updatedProject;
+      });
+    },
+    [selectedResource, viewId],
+  );
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -270,10 +315,19 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
             onNodeDragFinalize={onNodeDragFinalize}
             onNodeDragStart={onNodeDragStart}
             onNodeDragStop={onNodeDragStop}
+            onNodeSelected={selectNode}
           />
         </main>
 
-        <RightPanel />
+        <RightPanel
+          nodes={nodes}
+          selectedNodeId={selectedNodeId}
+          selectedNode={selectedNode}
+          selectedSchema={selectedSchema}
+          selectedResource={selectedResource}
+          onSelectNode={selectNode}
+          onUpdateSelectedResource={updateSelectedResource}
+        />
       </div>
 
       <BottomPanel onHeightChange={setBottomHeight} />

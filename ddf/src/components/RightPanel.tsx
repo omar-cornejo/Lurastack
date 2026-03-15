@@ -1,14 +1,398 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
+import type { Node } from "reactflow";
+import type { CanvasTerraformNodeData } from "../canvas/types";
+import type { TerraformResource } from "../models/terraform";
+import type { TerraformNodeSchema } from "../models/testNodes";
 
 type RightPanelTab = "info" | "hcl";
 
-export const RightPanel = () => {
+type InspectorProperty = {
+  name: string;
+  type: string;
+  required?: boolean;
+  optional?: boolean;
+  computed?: boolean;
+  typeKinds: string[];
+};
+
+type PropertySection = {
+  sectionKey: string;
+  sectionTitle: string;
+  properties: Array<
+    InspectorProperty & {
+      fieldName: string;
+    }
+  >;
+};
+
+type RightPanelProps = {
+  nodes: Node<CanvasTerraformNodeData>[];
+  selectedNodeId?: string;
+  selectedNode?: Node<CanvasTerraformNodeData>;
+  selectedSchema?: TerraformNodeSchema;
+  selectedResource?: TerraformResource;
+  onSelectNode: (nodeId?: string) => void;
+  onUpdateSelectedResource: (
+    updater: (resource: TerraformResource) => TerraformResource,
+  ) => void;
+};
+
+const schemaModules = import.meta.glob("../schemas/aws/**/*.json", { eager: true });
+
+const normalizeSchemaPath = (path: string) =>
+  path
+    .replace(/^\.\.\//, "")
+    .replace(/^src\//, "")
+    .replace(/^\//, "");
+
+const schemaTypeToText = (type: unknown): string => {
+  if (typeof type === "string") return type;
+  if (Array.isArray(type)) {
+    return type
+      .map((value) => (typeof value === "string" ? value : JSON.stringify(value)))
+      .join(", ");
+  }
+  if (type && typeof type === "object") {
+    return JSON.stringify(type);
+  }
+  return "unknown";
+};
+
+const extractTypeKinds = (type: unknown, acc = new Set<string>()): string[] => {
+  if (typeof type === "string") {
+    acc.add(type.toLowerCase());
+    return Array.from(acc);
+  }
+
+  if (Array.isArray(type)) {
+    if (typeof type[0] === "string") {
+      acc.add(type[0].toLowerCase());
+    }
+    type.slice(1).forEach((item) => {
+      extractTypeKinds(item, acc);
+    });
+    return Array.from(acc);
+  }
+
+  if (type && typeof type === "object") {
+    acc.add("object");
+    Object.values(type).forEach((value) => {
+      extractTypeKinds(value, acc);
+    });
+    return Array.from(acc);
+  }
+
+  return Array.from(acc);
+};
+
+const getSchemaDocument = (sourceSchemaPath?: string): any | undefined => {
+  if (!sourceSchemaPath) return undefined;
+  const target = normalizeSchemaPath(sourceSchemaPath);
+
+  for (const [modulePath, moduleValue] of Object.entries(schemaModules)) {
+    if (normalizeSchemaPath(modulePath) === target) {
+      const candidate = moduleValue as { default?: unknown };
+      return (candidate?.default ?? moduleValue) as any;
+    }
+  }
+
+  return undefined;
+};
+
+const collectAttributesFromBlock = (
+  block: any,
+  prefix = "",
+  acc: InspectorProperty[] = [],
+) => {
+  if (!block) return acc;
+
+  const attrs = block.attributes ?? {};
+  Object.entries(attrs).forEach(([name, meta]) => {
+    const typedMeta = meta as {
+      type?: unknown;
+      required?: boolean;
+      computed?: boolean;
+      optional?: boolean;
+    };
+
+    acc.push({
+      name: `${prefix}${name}`,
+      type: schemaTypeToText(typedMeta.type),
+      required: !!typedMeta.required,
+      optional: !!typedMeta.optional,
+      computed: !!typedMeta.computed,
+      typeKinds: extractTypeKinds(typedMeta.type),
+    });
+  });
+
+  const blockTypes = block.block_types ?? {};
+  Object.entries(blockTypes).forEach(([blockName, blockMeta]) => {
+    const typedBlockMeta = blockMeta as {
+      nesting_mode?: string;
+      block?: any;
+    };
+
+    if (typedBlockMeta.block) {
+      collectAttributesFromBlock(
+        typedBlockMeta.block,
+        `${prefix}${blockName}.`,
+        acc,
+      );
+    }
+  });
+
+  return acc;
+};
+
+const parseHclValueToAttribute = (input: string): unknown => {
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+};
+
+const toHclLiteral = (value: unknown): string => {
+  if (typeof value === "boolean" || typeof value === "number") {
+    return String(value);
+  }
+  if (value === null || value === undefined) {
+    return '""';
+  }
+  return `"${String(value).replace(/"/g, '\\"')}"`;
+};
+
+const buildHclFromResource = (
+  resource: TerraformResource,
+  inspectorProperties: InspectorProperty[],
+) => {
+  const blockKind = resource.kind ?? "resource";
+  const header = `${blockKind} "${resource.type}" "${resource.name}" {`;
+  const attrs = resource.config.attributes ?? {};
+  const lines = Object.entries(attrs)
+    .filter(([key, value]) => {
+      if (inspectorProperties.some((p) => p.name === key && p.required)) {
+        return true;
+      }
+      return value !== "" && value !== undefined && value !== null;
+    })
+    .map(([key, value]) => `  ${key} = ${toHclLiteral(value)}`);
+
+  const requiredNotFilled = inspectorProperties
+    .filter((prop) => prop.required)
+    .filter((prop) => !(prop.name in attrs))
+    .map((prop) => `  ${prop.name} = ""`);
+
+  return [header, ...lines, ...requiredNotFilled, "}"].join("\n");
+};
+
+const parseHclAttributes = (hcl: string): Record<string, unknown> => {
+  const attributes: Record<string, unknown> = {};
+  const lines = hcl.split("\n");
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (
+      !trimmed ||
+      trimmed.startsWith("#") ||
+      trimmed.startsWith("//") ||
+      trimmed.startsWith("resource ") ||
+      trimmed.startsWith("data ") ||
+      trimmed === "{" ||
+      trimmed === "}"
+    ) {
+      return;
+    }
+
+    const simpleAssignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.+)$/);
+    if (!simpleAssignment) return;
+
+    const [, key, rawValue] = simpleAssignment;
+    attributes[key] = parseHclValueToAttribute(rawValue);
+  });
+
+  return attributes;
+};
+
+export const RightPanel = ({
+  nodes,
+  selectedNodeId,
+  selectedNode,
+  selectedSchema,
+  selectedResource,
+  onSelectNode,
+  onUpdateSelectedResource,
+}: RightPanelProps) => {
   const [visible, setVisible] = useState(false);
   const [width, setWidth] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
   const [activeTab, setActiveTab] = useState<RightPanelTab>("info");
+  const [hclDraft, setHclDraft] = useState("");
+  const [attributeSearch, setAttributeSearch] = useState("");
+  const [attributeStateFilters, setAttributeStateFilters] = useState<
+    Array<"required" | "optional" | "computed">
+  >([]);
+  const [attributeTypeFilters, setAttributeTypeFilters] = useState<string[]>([]);
+  const [showTypeMenu, setShowTypeMenu] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  const inspectorProperties = useMemo<InspectorProperty[]>(() => {
+    if (!selectedSchema) return [];
+
+    const schemaDocument = getSchemaDocument(selectedSchema.sourceSchemaPath);
+    const collected = collectAttributesFromBlock(schemaDocument?.block)
+      .sort((left, right) => left.name.localeCompare(right.name));
+
+    if (collected.length > 0) {
+      return collected;
+    }
+
+    return selectedSchema.properties.map((property) => ({
+      name: property.name,
+      type: property.type,
+      required: property.required,
+      optional: !property.required,
+      computed: property.computed,
+      typeKinds: extractTypeKinds(property.type),
+    }));
+  }, [selectedSchema]);
+
+  const inspectorSections = useMemo<PropertySection[]>(() => {
+    const sectionMap = new Map<string, PropertySection>();
+
+    inspectorProperties.forEach((property) => {
+      const parts = property.name.split(".");
+      const sectionKey = parts.length > 1 ? parts.slice(0, -1).join(".") : "root";
+      const fieldName = parts[parts.length - 1] ?? property.name;
+
+      if (!sectionMap.has(sectionKey)) {
+        sectionMap.set(sectionKey, {
+          sectionKey,
+          sectionTitle:
+            sectionKey === "root"
+              ? "Atributos principales"
+              : `Bloque: ${sectionKey}`,
+          properties: [],
+        });
+      }
+
+      sectionMap.get(sectionKey)!.properties.push({
+        ...property,
+        fieldName,
+      });
+    });
+
+    const sections = Array.from(sectionMap.values()).map((section) => ({
+      ...section,
+      properties: section.properties.sort((left, right) =>
+        left.fieldName.localeCompare(right.fieldName),
+      ),
+    }));
+
+    sections.sort((left, right) => {
+      if (left.sectionKey === "root") return -1;
+      if (right.sectionKey === "root") return 1;
+      return left.sectionKey.localeCompare(right.sectionKey);
+    });
+
+    return sections;
+  }, [inspectorProperties]);
+
+  const availableTypeOptions = useMemo(() => {
+    const preferredOrder = ["string", "number", "bool", "map", "list", "set", "object"];
+    const discovered = new Set<string>();
+
+    inspectorProperties.forEach((property) => {
+      property.typeKinds.forEach((kind) => discovered.add(kind));
+    });
+
+    const discoveredList = Array.from(discovered);
+    const sorted = [...preferredOrder.filter((kind) => discovered.has(kind))];
+    discoveredList
+      .filter((kind) => !preferredOrder.includes(kind))
+      .sort((left, right) => left.localeCompare(right))
+      .forEach((kind) => sorted.push(kind));
+
+    return sorted;
+  }, [inspectorProperties]);
+
+  const filteredInspectorSections = useMemo(() => {
+    const search = attributeSearch.trim().toLowerCase();
+
+    const matchByState = (property: InspectorProperty) => {
+      if (!attributeStateFilters.length) return true;
+
+      return attributeStateFilters.some((state) => {
+        if (state === "required") return !!property.required;
+        if (state === "optional") return !!property.optional;
+        return !!property.computed;
+      });
+    };
+
+    const matchByType = (property: InspectorProperty) => {
+      if (!attributeTypeFilters.length) return true;
+      return property.typeKinds.some((kind) => attributeTypeFilters.includes(kind));
+    };
+
+    const matchBySearch = (property: InspectorProperty & { fieldName: string }) => {
+      if (!search) return true;
+      return (
+        property.name.toLowerCase().includes(search) ||
+        property.fieldName.toLowerCase().includes(search) ||
+        property.type.toLowerCase().includes(search)
+      );
+    };
+
+    return inspectorSections
+      .map((section) => ({
+        ...section,
+        properties: section.properties.filter(
+          (property) =>
+            matchByState(property) &&
+            matchByType(property) &&
+            matchBySearch(property),
+        ),
+      }))
+      .map((section) => ({
+        ...section,
+        properties:
+          attributeStateFilters.length === 1 && attributeStateFilters[0] === "optional"
+            ? [...section.properties].sort((left, right) => {
+                const leftOptionalOnly = left.optional && !left.computed;
+                const rightOptionalOnly = right.optional && !right.computed;
+
+                if (leftOptionalOnly !== rightOptionalOnly) {
+                  return leftOptionalOnly ? -1 : 1;
+                }
+
+                return left.fieldName.localeCompare(right.fieldName);
+              })
+            : section.properties,
+      }))
+      .filter((section) => section.properties.length > 0);
+  }, [attributeSearch, attributeStateFilters, attributeTypeFilters, inspectorSections]);
+
+  const children = useMemo(
+    () =>
+      selectedNodeId
+        ? nodes.filter((node) => node.parentNode === selectedNodeId)
+        : [],
+    [nodes, selectedNodeId],
+  );
+
+  useEffect(() => {
+    if (!selectedResource) {
+      setHclDraft("");
+      return;
+    }
+
+    setHclDraft(buildHclFromResource(selectedResource, inspectorProperties));
+  }, [selectedResource, inspectorProperties]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -63,7 +447,7 @@ export const RightPanel = () => {
 
       {visible && (
         <div className="px-2 pt-2 pb-1 flex items-center justify-between border-b border-gray-200">
-          <strong className="text-sm text-gray-800">Right</strong>
+          <strong className="text-sm text-gray-800">Inspector</strong>
           <div className="flex gap-1">
             <button
               type="button"
@@ -109,55 +493,283 @@ export const RightPanel = () => {
 
       {visible && (
         <div id="right-panel-content" className="p-2 h-full overflow-auto">
+          {!selectedNode || !selectedResource || !selectedSchema ? (
+            <div className="rounded border border-dashed border-gray-300 p-3 text-xs text-gray-500">
+              Select a node in the canvas to inspect and edit its configuration.
+            </div>
+          ) : null}
+
           {activeTab === "info" && (
-            <div className="space-y-2 text-sm text-gray-800">
-              <p>Contenido del panel derecho.</p>
-              <p className="text-gray-500 text-xs">
-                Aquí puedes mostrar información contextual del recurso
-                seleccionado, documentación, etc.
-              </p>
+            <div className="space-y-3 text-sm text-gray-800">
+              {selectedNode && selectedResource && selectedSchema && (
+                <>
+                  <div className="rounded border border-gray-200 bg-white p-2 text-xs">
+                    <div><span className="font-semibold">Node:</span> {selectedNode.data.label}</div>
+                    <div><span className="font-semibold">Type:</span> {selectedSchema.terraformType}</div>
+                    <div><span className="font-semibold">Kind:</span> {selectedSchema.terraformKind}</div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-medium text-gray-600">Resource name</label>
+                    <input
+                      value={selectedResource.name}
+                      onChange={(event) => {
+                        const name = event.target.value;
+                        onUpdateSelectedResource((resource) => ({
+                          ...resource,
+                          name,
+                        }));
+                      }}
+                      className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="rounded border border-gray-300 bg-white p-2">
+                      <div className="grid grid-cols-1 gap-2">
+                        <input
+                          value={attributeSearch}
+                          onChange={(event) => setAttributeSearch(event.target.value)}
+                          placeholder="Search attributes..."
+                          className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs"
+                        />
+
+                        <div className="flex flex-wrap gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAttributeStateFilters((current) =>
+                                current.includes("required")
+                                  ? current.filter((value) => value !== "required")
+                                  : [...current, "required"],
+                              )
+                            }
+                            className={`rounded px-2 py-1 text-[11px] font-semibold border ${
+                              attributeStateFilters.includes("required")
+                                ? "border-red-300 bg-red-100 text-red-700"
+                                : "border-gray-300 bg-white text-gray-600"
+                            }`}
+                          >
+                            Required
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAttributeStateFilters((current) =>
+                                current.includes("optional")
+                                  ? current.filter((value) => value !== "optional")
+                                  : [...current, "optional"],
+                              )
+                            }
+                            className={`rounded px-2 py-1 text-[11px] font-semibold border ${
+                              attributeStateFilters.includes("optional")
+                                ? "border-slate-300 bg-slate-100 text-slate-700"
+                                : "border-gray-300 bg-white text-gray-600"
+                            }`}
+                          >
+                            Optional
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setAttributeStateFilters((current) =>
+                                current.includes("computed")
+                                  ? current.filter((value) => value !== "computed")
+                                  : [...current, "computed"],
+                              )
+                            }
+                            className={`rounded px-2 py-1 text-[11px] font-semibold border ${
+                              attributeStateFilters.includes("computed")
+                                ? "border-amber-300 bg-amber-100 text-amber-700"
+                                : "border-gray-300 bg-white text-gray-600"
+                            }`}
+                          >
+                            Computed
+                          </button>
+
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setShowTypeMenu((current) => !current)}
+                              className={`rounded px-2 py-1 text-[11px] font-semibold border ${
+                                attributeTypeFilters.length > 0
+                                  ? "border-blue-300 bg-blue-100 text-blue-700"
+                                  : "border-gray-300 bg-white text-gray-600"
+                              }`}
+                            >
+                              Type {attributeTypeFilters.length > 0 ? `(${attributeTypeFilters.length})` : ""}
+                            </button>
+
+                            {showTypeMenu ? (
+                              <div className="absolute right-0 z-20 mt-1 w-44 rounded border border-gray-300 bg-white p-2 shadow-lg">
+                                <div className="mb-1 flex items-center justify-between">
+                                  <div className="text-[10px] font-semibold text-gray-700">Attribute types</div>
+                                  <button
+                                    type="button"
+                                    onClick={() => setAttributeTypeFilters([])}
+                                    className="text-[10px] text-blue-600"
+                                  >
+                                    Clear
+                                  </button>
+                                </div>
+
+                                <div className="max-h-44 space-y-1 overflow-auto pr-1">
+                                  {availableTypeOptions.map((typeOption) => (
+                                    <label
+                                      key={typeOption}
+                                      className="flex cursor-pointer items-center gap-2 text-[11px] text-gray-700"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={attributeTypeFilters.includes(typeOption)}
+                                        onChange={() => {
+                                          setAttributeTypeFilters((current) =>
+                                            current.includes(typeOption)
+                                              ? current.filter((value) => value !== typeOption)
+                                              : [...current, typeOption],
+                                          );
+                                        }}
+                                      />
+                                      <span className="break-all">{typeOption}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {filteredInspectorSections.map((section) => (
+                      <div key={section.sectionKey} className="rounded border border-gray-300 bg-white p-2">
+                        <div className="mb-2 border-b border-gray-200 pb-1">
+                          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-700 break-words">
+                            {section.sectionTitle}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          {section.properties.map((property) => {
+                            const currentValue = selectedResource.config.attributes[property.name];
+                            const displayValue =
+                              currentValue === undefined || currentValue === null
+                                ? ""
+                                : String(currentValue);
+
+                            return (
+                              <div key={property.name} className="rounded border border-gray-200 bg-gray-50 p-2">
+                                <div className="mb-1 flex items-start justify-between gap-2">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="text-xs font-semibold text-gray-800 break-all">
+                                      {property.fieldName}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 break-words">
+                                      {property.type} · {property.computed ? "computed" : "editable"}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex shrink-0 gap-1">
+                                    <span
+                                      className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${
+                                        property.required
+                                          ? "bg-red-100 text-red-700"
+                                          : "bg-slate-100 text-slate-600"
+                                      }`}
+                                    >
+                                      {property.required ? "required" : "optional"}
+                                    </span>
+                                    {property.computed ? (
+                                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+                                        computed
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                </div>
+
+                                <input
+                                  disabled={property.computed && !property.optional}
+                                  value={displayValue}
+                                  onChange={(event) => {
+                                    const value = event.target.value;
+                                    onUpdateSelectedResource((resource) => ({
+                                      ...resource,
+                                      config: {
+                                        ...resource.config,
+                                        attributes: {
+                                          ...resource.config.attributes,
+                                          [property.name]: value,
+                                        },
+                                      },
+                                    }));
+                                  }}
+                                  className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs disabled:bg-gray-100"
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+
+                    {filteredInspectorSections.length === 0 ? (
+                      <div className="rounded border border-dashed border-gray-300 p-2 text-xs text-gray-500">
+                        No attributes match the current filters.
+                      </div>
+                    ) : null}
+                  </div>
+
+                  {selectedNode.data.isContainer && (
+                    <div className="rounded border border-gray-200 bg-white p-2">
+                      <div className="mb-2 text-xs font-semibold text-gray-800">Children ({children.length})</div>
+                      <div className="space-y-1">
+                        {children.length === 0 ? (
+                          <p className="text-xs text-gray-500">This container has no children.</p>
+                        ) : (
+                          children.map((child) => (
+                            <button
+                              key={child.id}
+                              type="button"
+                              onClick={() => onSelectNode(child.id)}
+                              className="w-full rounded border border-gray-200 px-2 py-1 text-left text-xs hover:bg-blue-50"
+                            >
+                              {child.data.label}
+                            </button>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
 
           {activeTab === "hcl" && (
             <div className="h-full flex flex-col">
-              <p className="mb-2 text-sm font-medium text-gray-800">
-                Ejemplo de configuración Terraform (HCL)
-              </p>
-              <div className="flex-1 rounded border border-gray-200 bg-[#0b1120] text-[#e5e7eb] text-xs font-mono p-2 overflow-auto">
-                <pre>
-{`terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
-    }
-  }
-}
+              <p className="mb-2 text-sm font-medium text-gray-800">Selected node HCL</p>
+              <textarea
+                value={hclDraft}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setHclDraft(next);
+                  if (!selectedResource) return;
 
-provider "aws" {
-  region = "eu-west-1"
-}
-
-resource "aws_s3_bucket" "example" {
-  bucket = "mi-bucket-ejemplo"
-
-  tags = {
-    Project = "ddf"
-    Env     = "dev"
-  }
-}
-
-resource "aws_instance" "web" {
-  ami           = "ami-1234567890"
-  instance_type = "t3.micro"
-
-  tags = {
-    Name = "web-ddf"
-  }
-}`}
-                </pre>
-              </div>
+                  const parsedAttributes = parseHclAttributes(next);
+                  onUpdateSelectedResource((resource) => ({
+                    ...resource,
+                    config: {
+                      ...resource.config,
+                      attributes: {
+                        ...resource.config.attributes,
+                        ...parsedAttributes,
+                      },
+                    },
+                  }));
+                }}
+                disabled={!selectedNode || !selectedResource || !selectedSchema}
+                className="h-[65vh] w-full rounded border border-gray-200 bg-[#0b1120] p-2 font-mono text-xs text-[#e5e7eb] disabled:bg-slate-100 disabled:text-slate-500"
+              />
             </div>
           )}
         </div>

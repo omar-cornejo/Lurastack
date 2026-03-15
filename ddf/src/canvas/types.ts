@@ -1,6 +1,7 @@
 import type { TerraformNodeSchema } from "../models/testNodes";
 
 export type CanvasTerraformNodeData = {
+  resourceId: string;
   schemaId: string;
   label: string;
   icon: string;

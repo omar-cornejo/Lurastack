@@ -15,6 +15,7 @@ import {
   type NodeDragHandler,
   type XYPosition,
   type Connection,
+  type OnSelectionChangeParams,
 } from "reactflow";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 import { canvasNodeTypes } from "../canvas/nodeTypes";
@@ -42,6 +43,7 @@ type CenterPanelProps = {
   onNodeDragFinalize?: (draggedNodeId: string, targetContainerId?: string) => void;
   onNodeDragStart: NodeDragHandler;
   onNodeDragStop: NodeDragHandler;
+  onNodeSelected?: (nodeId?: string) => void;
 };
 
 export default function CenterPanel({
@@ -54,6 +56,7 @@ export default function CenterPanel({
   onNodeDragFinalize,
   onNodeDragStart,
   onNodeDragStop,
+  onNodeSelected,
 }: CenterPanelProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [reactFlowInstance, setReactFlowInstance] =
@@ -290,6 +293,13 @@ export default function CenterPanel({
     [activeDropContainerId, onDropNode, reactFlowInstance],
   );
 
+  const handleSelectionChange = useCallback(
+    ({ nodes: selectedNodes }: OnSelectionChangeParams) => {
+      onNodeSelected?.(selectedNodes.length === 1 ? selectedNodes[0]?.id : undefined);
+    },
+    [onNodeSelected],
+  );
+
   return (
     <section className="flex h-full min-h-0 w-full flex-1 overflow-hidden bg-slate-100">
       <div
@@ -306,6 +316,8 @@ export default function CenterPanel({
           onNodeDragStart={onNodeDragStart}
           onNodeDrag={handleNodeDrag}
           onNodeDragStop={handleNodeDragStop}
+          onNodeClick={(_event, node) => onNodeSelected?.(node.id)}
+          onSelectionChange={handleSelectionChange}
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onInit={setReactFlowInstance}
