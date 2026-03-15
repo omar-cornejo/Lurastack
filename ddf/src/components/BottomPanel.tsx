@@ -133,9 +133,9 @@ export default function BottomPanel({ onHeightChange }: BottomPanelProps) {
         />
       )}
 
-      <div className="p-2 flex items-center justify-between transition-opacity duration-150"
+        <div className="p-2 flex items-center justify-between transition-opacity duration-150"
         style={{ opacity: open ? 1 : 0 }}>
-        <strong>Abajo</strong>
+        <strong>Bottom</strong>
       </div>
 
 
@@ -160,7 +160,7 @@ export default function BottomPanel({ onHeightChange }: BottomPanelProps) {
         className="absolute left-1/2 top-0 transform -translate-x-1/2  px-2 py-1 m-1 bg-gray-200 rounded z-10 flex items-center justify-center"
         aria-expanded={open}
         aria-controls="bottom-panel-content"
-        aria-label={open ? 'Cerrar panel inferior' : 'Mostrar panel inferior'}
+        aria-label={open ? 'Close bottom panel' : 'Show bottom panel'}
         type="button"
       >
         <Icon

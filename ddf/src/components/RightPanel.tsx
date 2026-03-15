@@ -63,7 +63,7 @@ export const RightPanel = () => {
 
       {visible && (
         <div className="px-2 pt-2 pb-1 flex items-center justify-between border-b border-gray-200">
-          <strong className="text-sm text-gray-800">Derecha</strong>
+          <strong className="text-sm text-gray-800">Right</strong>
           <div className="flex gap-1">
             <button
               type="button"

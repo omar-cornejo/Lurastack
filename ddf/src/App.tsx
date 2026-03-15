@@ -1,79 +1,73 @@
 import "./App.css";
-import { useState } from "react";
-import Header from "./components/Header";
-import { LeftPanel } from "./components/LeftPanel";
-import CenterPanel from "./components/CenterPanel";
-import { RightPanel } from "./components/RightPanel";
-import BottomPanel from "./components/BottomPanel";
-import { TerraformProject, TerraformResource } from "./models/terraform";
-import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { useState, useRef } from "react";
+import GlobalBar from "./components/GlobalBar";
+import WorkspaceView from "./components/WorkspaceView";
+import { ViewInfo } from "./types/views";
+
+let viewCounter = 1;
+
+function createView(): ViewInfo {
+  return {
+    id: crypto.randomUUID(),
+    name: `View ${viewCounter++}`,
+  };
+}
 
 function App() {
-  const [bottomHeight, setBottomHeight] = useState(288);
-  const [project, setProject] = useState<TerraformProject>({
-    provider: "registry.terraform.io/hashicorp/aws",
-    resources: []
-  });
+  const initialView = useRef<ViewInfo | null>(null);
+  if (!initialView.current) initialView.current = createView();
 
+  const [views, setViews] = useState<ViewInfo[]>([initialView.current]);
+  const [activeViewId, setActiveViewId] = useState<string>(initialView.current.id);
 
-  const terraformResourceToHCL = (r: TerraformResource) => {
-    let attrs = "";
-    for (const [k, v] of Object.entries(r.config.attributes)) {
-      attrs += `  ${k} = "${v}"\n`;
-    }
-
-    // Por ahora solo atributos simples, puedes expandir con blocks más tarde
-    return `resource "${r.type}" "${r.name}" {\n${attrs}}\n`;
+  const handleCreateView = () => {
+    const newView = createView();
+    setViews((prev) => [...prev, newView]);
+    setActiveViewId(newView.id);
   };
 
-  const saveProjectToHCL = async (project: TerraformProject) => {
-    let hcl = `terraform {\n  required_providers {\n    ${project.provider.split("/").pop()} = {}\n  }\n}\n\n`;
-    project.resources.forEach(r => {
-      hcl += terraformResourceToHCL(r) + "\n";
-    });
+  const handleCloseView = (id: string) => {
+    setViews((prev) => {
+      const closedIndex = prev.findIndex((v) => v.id === id);
+      const updated = prev.filter((v) => v.id !== id);
 
-    await writeTextFile("project.tf", hcl, { baseDir: BaseDirectory.AppData });
-  };
+      // Re-index names so they stay in order and the counter doesn't grow infinitely
+      const reindexed = updated.map((v, i) => ({ ...v, name: `View ${i + 1}` }));
+      // Keep counter one above the current number of views
+      viewCounter = reindexed.length + 1;
 
-  const addResource = async (type: string, icon: string) => {
-    const newResource: TerraformResource = {
-      id: crypto.randomUUID(),
-      type,
-      name: `${type}_example`,
-
-      config: {
-        attributes: {},
-        blocks: {}
-      },
-
-      ui: {
-        x: 100,
-        y: 100,
-        icon
+      if (activeViewId === id && reindexed.length > 0) {
+        const nextIndex = Math.min(closedIndex, reindexed.length - 1);
+        setActiveViewId(reindexed[nextIndex].id);
       }
-    };
 
-    const updatedProject = { ...project, resources: [...project.resources, newResource] };
-    setProject(updatedProject);
-    await saveProjectToHCL(updatedProject);
+      return reindexed;
+    });
   };
-
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
-      <Header />
+      {/* Global bar: always visible, above all views */}
+      <GlobalBar
+        views={views}
+        activeViewId={activeViewId}
+        onSwitchView={setActiveViewId}
+        onCreateView={handleCreateView}
+        onCloseView={handleCloseView}
+      />
 
-      <div className="flex flex-1 overflow-hidden">
-        <LeftPanel bottomHeight={bottomHeight} addResource={addResource} />
-
-        <main className="flex-1 overflow-auto bg-white">
-          <CenterPanel />
-        </main>
-
-        <RightPanel />
+      {/* Render all views but only show the active one — preserves their state */}
+      <div className="flex flex-1 overflow-hidden relative">
+        {views.map((view) => (
+          <div
+            key={view.id}
+            className="absolute inset-0 flex flex-col"
+            style={{ display: view.id === activeViewId ? "flex" : "none" }}
+          >
+            <WorkspaceView viewId={view.id} />
+          </div>
+        ))}
       </div>
-
-      <BottomPanel onHeightChange={setBottomHeight} />
     </div>
   );
 }

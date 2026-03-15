@@ -72,7 +72,7 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
           <div className="relative">
             <input
               type="text"
-              placeholder="Buscar icono..."
+              placeholder="Search icon..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-8 pr-2 py-1.5 text-sm rounded bg-white border border-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-400"
@@ -90,7 +90,7 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
         className="absolute right-0 top-1/2 transform translate-x-1/2 -translate-y-1/2 px-2 py-1 bg-gray-200 rounded z-10 flex items-center justify-center"
         aria-expanded={visible}
         aria-controls="left-panel-content"
-        aria-label={visible ? 'Cerrar panel izquierdo' : 'Mostrar panel izquierdo'}
+        aria-label={visible ? 'Close left panel' : 'Show left panel'}
         type="button"
       >
         <Icon icon="weui:arrow-filled" className={`transition-transform ${visible ? "rotate-180" : ""}`} width={10} height={18} aria-hidden="true" />
