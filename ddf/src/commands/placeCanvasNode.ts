@@ -14,6 +14,8 @@ const CONTAINER_PADDING_BOTTOM = 20;
 const CONTAINER_HEADER_SPACE = 58;
 const MAX_CONTAINER_DIMENSION = 6000;
 const EXPANSION_SIBLING_PADDING = 20;
+const CHILD_COLLISION_PADDING = 12;
+const MAX_PLACEMENT_ATTEMPTS = 300;
 
 type CanvasNode = Node<CanvasTerraformNodeData>;
 
@@ -499,31 +501,83 @@ const projectIntoContainer = (
   absolutePosition: XYPosition,
   container: CanvasNode,
   nodes: CanvasNode[],
-  childSize: NodeSize,
 ) => {
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
   const containerAbsolute = getAbsolutePosition(container, nodeMap);
-  const containerSize = getNodeSize(container);
-
-  const maxChildX = Math.max(
-    CONTAINER_PADDING_X,
-    containerSize.width - childSize.width - CONTAINER_PADDING_X,
-  );
-  const maxChildY = Math.max(
-    CONTAINER_HEADER_SPACE,
-    containerSize.height - childSize.height - CONTAINER_PADDING_BOTTOM,
-  );
-
   return {
-    x: Math.min(
-      maxChildX,
-      Math.max(CONTAINER_PADDING_X, absolutePosition.x - containerAbsolute.x),
-    ),
-    y: Math.min(
-      maxChildY,
-      Math.max(CONTAINER_HEADER_SPACE, absolutePosition.y - containerAbsolute.y),
-    ),
+    x: Math.max(CONTAINER_PADDING_X, absolutePosition.x - containerAbsolute.x),
+    y: Math.max(CONTAINER_HEADER_SPACE, absolutePosition.y - containerAbsolute.y),
   };
+};
+
+const getChildRectInParent = (child: CanvasNode): NodeRect => {
+  const size = getNodeSize(child);
+  return {
+    x: child.position.x,
+    y: child.position.y,
+    width: size.width,
+    height: size.height,
+  };
+};
+
+const intersectsInParent = (left: NodeRect, right: NodeRect, padding: number) => {
+  return (
+    left.x < right.x + right.width + padding &&
+    left.x + left.width + padding > right.x &&
+    left.y < right.y + right.height + padding &&
+    left.y + left.height + padding > right.y
+  );
+};
+
+const resolveNonOverlappingPositionInContainer = (
+  nodes: CanvasNode[],
+  containerId: string,
+  desiredLocalPosition: XYPosition,
+  childSize: NodeSize,
+  excludedNodeIds: Set<string> = new Set(),
+) => {
+  const siblings = nodes.filter(
+    (candidate) =>
+      candidate.parentNode === containerId &&
+      !excludedNodeIds.has(candidate.id),
+  );
+
+  let candidate: XYPosition = {
+    x: Math.max(CONTAINER_PADDING_X, desiredLocalPosition.x),
+    y: Math.max(CONTAINER_HEADER_SPACE, desiredLocalPosition.y),
+  };
+
+  let attempts = 0;
+  while (attempts < MAX_PLACEMENT_ATTEMPTS) {
+    const candidateRect: NodeRect = {
+      x: candidate.x,
+      y: candidate.y,
+      width: childSize.width,
+      height: childSize.height,
+    };
+
+    const overlappingSibling = siblings.find((sibling) =>
+      intersectsInParent(
+        candidateRect,
+        getChildRectInParent(sibling),
+        CHILD_COLLISION_PADDING,
+      ),
+    );
+
+    if (!overlappingSibling) {
+      return candidate;
+    }
+
+    const overlapRect = getChildRectInParent(overlappingSibling);
+    candidate = {
+      x: Math.max(CONTAINER_PADDING_X, candidate.x),
+      y: overlapRect.y + overlapRect.height + CONTAINER_PADDING_BOTTOM,
+    };
+
+    attempts += 1;
+  }
+
+  return candidate;
 };
 
 const findContainerById = (nodes: CanvasNode[], containerId: string) =>
@@ -570,7 +624,6 @@ export const calculateNodePlacement = (
     absolutePosition,
     targetContainer,
     currentNodes,
-    nodeSize,
   );
 
   return {
@@ -608,10 +661,14 @@ export const placeCanvasNodeFromUserAction = (
   const placement = explicitContainer
     ? {
         parentNode: explicitContainer.id,
-        position: projectIntoContainer(
-          dropPosition,
-          explicitContainer,
+        position: resolveNonOverlappingPositionInContainer(
           workingNodes,
+          explicitContainer.id,
+          projectIntoContainer(
+            dropPosition,
+            explicitContainer,
+            workingNodes,
+          ),
           createdNodeSize,
         ),
         targetContainerId: explicitContainer.id,
@@ -630,11 +687,23 @@ export const placeCanvasNodeFromUserAction = (
         );
       })();
 
-  if (placement.parentNode) {
+  const finalPlacement = placement.parentNode
+    ? {
+        ...placement,
+        position: resolveNonOverlappingPositionInContainer(
+          workingNodes,
+          placement.parentNode,
+          placement.position,
+          createdNodeSize,
+        ),
+      }
+    : placement;
+
+  if (finalPlacement.parentNode) {
     const expansionCheck = canExpandHierarchyForPlacement(
       workingNodes,
-      placement.parentNode,
-      placement.position,
+      finalPlacement.parentNode,
+      finalPlacement.position,
       createdNodeSize,
     );
 
@@ -647,12 +716,12 @@ export const placeCanvasNodeFromUserAction = (
     }
   }
 
-  createdNode.parentNode = placement.parentNode;
+  createdNode.parentNode = finalPlacement.parentNode;
   createdNode.extent = undefined;
-  createdNode.position = placement.position;
+  createdNode.position = finalPlacement.position;
 
   const nextNodes = [...workingNodes, createdNode];
-  if (!placement.parentNode) return nextNodes;
+  if (!finalPlacement.parentNode) return nextNodes;
 
   return expandAncestorContainers(nextNodes, createdNode.id);
 };
@@ -693,7 +762,6 @@ export const reparentCanvasNodeAfterDrag = (
             draggedAbsolute,
             explicitContainer,
             workingNodes,
-            draggedSize,
           ),
           targetContainerId: explicitContainer.id,
         }
@@ -708,11 +776,24 @@ export const reparentCanvasNodeAfterDrag = (
           },
         );
 
-  if (placement.parentNode) {
+  const finalPlacement = placement.parentNode
+    ? {
+        ...placement,
+        position: resolveNonOverlappingPositionInContainer(
+          workingNodes,
+          placement.parentNode,
+          placement.position,
+          draggedSize,
+          excludedNodeIds,
+        ),
+      }
+    : placement;
+
+  if (finalPlacement.parentNode) {
     const expansionCheck = canExpandHierarchyForPlacement(
       workingNodes,
-      placement.parentNode,
-      placement.position,
+      finalPlacement.parentNode,
+      finalPlacement.position,
       draggedSize,
       excludedNodeIds,
     );
@@ -730,20 +811,20 @@ export const reparentCanvasNodeAfterDrag = (
     }
   }
 
-  if (!placement.parentNode) {
+  if (!finalPlacement.parentNode) {
     draggedNode.parentNode = undefined;
     draggedNode.extent = undefined;
-    draggedNode.position = placement.position;
+    draggedNode.position = finalPlacement.position;
     if (!previousParentId) return workingNodes;
     return shrinkAncestorContainers(workingNodes, previousParentId);
   }
 
-  draggedNode.parentNode = placement.parentNode;
+  draggedNode.parentNode = finalPlacement.parentNode;
   draggedNode.extent = undefined;
-  draggedNode.position = placement.position;
+  draggedNode.position = finalPlacement.position;
   const expandedNodes = expandAncestorContainers(workingNodes, draggedNode.id);
 
-  if (!previousParentId || previousParentId === placement.parentNode) {
+  if (!previousParentId || previousParentId === finalPlacement.parentNode) {
     return expandedNodes;
   }
 
