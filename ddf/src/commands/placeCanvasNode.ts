@@ -884,6 +884,7 @@ export const placeCanvasNodeFromUserAction = (
   dropPosition?: XYPosition,
   forcedTargetContainerId?: string,
   resourceId?: string,
+  resourceDisplayName?: string,
 ): CanvasNode[] => {
   const workingNodes: CanvasNode[] = currentNodes.map((node) => ({
     ...node,
@@ -897,6 +898,7 @@ export const placeCanvasNodeFromUserAction = (
     index,
     dropPosition,
     resourceId,
+    resourceDisplayName,
   );
 
   if (!dropPosition) {

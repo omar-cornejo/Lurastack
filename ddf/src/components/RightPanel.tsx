@@ -4,17 +4,13 @@ import type { Node } from "reactflow";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
+import { TEST_NODE_SCHEMAS } from "../models/testNodes";
+import {
+  getInspectorPropertiesForSchema,
+  type InspectorProperty,
+} from "../commands/schemaInspector";
 
 type RightPanelTab = "info" | "hcl";
-
-type InspectorProperty = {
-  name: string;
-  type: string;
-  required?: boolean;
-  optional?: boolean;
-  computed?: boolean;
-  typeKinds: string[];
-};
 
 type PropertySection = {
   sectionKey: string;
@@ -28,6 +24,7 @@ type PropertySection = {
 
 type RightPanelProps = {
   nodes: Node<CanvasTerraformNodeData>[];
+  resources: TerraformResource[];
   selectedNodeId?: string;
   selectedNode?: Node<CanvasTerraformNodeData>;
   selectedSchema?: TerraformNodeSchema;
@@ -38,111 +35,44 @@ type RightPanelProps = {
   ) => void;
 };
 
-const schemaModules = import.meta.glob("../schemas/aws/**/*.json", { eager: true });
+const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
 
-const normalizeSchemaPath = (path: string) =>
-  path
-    .replace(/^\.\.\//, "")
-    .replace(/^src\//, "")
-    .replace(/^\//, "");
+const terraformRefPattern = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 
-const schemaTypeToText = (type: unknown): string => {
-  if (typeof type === "string") return type;
-  if (Array.isArray(type)) {
-    return type
-      .map((value) => (typeof value === "string" ? value : JSON.stringify(value)))
-      .join(", ");
-  }
-  if (type && typeof type === "object") {
-    return JSON.stringify(type);
-  }
-  return "unknown";
-};
-
-const extractTypeKinds = (type: unknown, acc = new Set<string>()): string[] => {
-  if (typeof type === "string") {
-    acc.add(type.toLowerCase());
-    return Array.from(acc);
-  }
-
-  if (Array.isArray(type)) {
-    if (typeof type[0] === "string") {
-      acc.add(type[0].toLowerCase());
-    }
-    type.slice(1).forEach((item) => {
-      extractTypeKinds(item, acc);
-    });
-    return Array.from(acc);
-  }
-
-  if (type && typeof type === "object") {
-    acc.add("object");
-    Object.values(type).forEach((value) => {
-      extractTypeKinds(value, acc);
-    });
-    return Array.from(acc);
-  }
-
-  return Array.from(acc);
-};
-
-const getSchemaDocument = (sourceSchemaPath?: string): any | undefined => {
-  if (!sourceSchemaPath) return undefined;
-  const target = normalizeSchemaPath(sourceSchemaPath);
-
-  for (const [modulePath, moduleValue] of Object.entries(schemaModules)) {
-    if (normalizeSchemaPath(modulePath) === target) {
-      const candidate = moduleValue as { default?: unknown };
-      return (candidate?.default ?? moduleValue) as any;
-    }
-  }
-
-  return undefined;
-};
-
-const collectAttributesFromBlock = (
-  block: any,
-  prefix = "",
-  acc: InspectorProperty[] = [],
+const normalizeMappedReference = (
+  rawValue: string,
+  targetPropertyName: string,
+  resources: TerraformResource[],
 ) => {
-  if (!block) return acc;
+  const value = rawValue.trim();
+  if (!value) return value;
+  if (terraformRefPattern.test(value) || value.startsWith("var.")) {
+    return value;
+  }
 
-  const attrs = block.attributes ?? {};
-  Object.entries(attrs).forEach(([name, meta]) => {
-    const typedMeta = meta as {
-      type?: unknown;
-      required?: boolean;
-      computed?: boolean;
-      optional?: boolean;
-    };
+  const match = value.match(/^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?$/);
+  if (!match) return value;
 
-    acc.push({
-      name: `${prefix}${name}`,
-      type: schemaTypeToText(typedMeta.type),
-      required: !!typedMeta.required,
-      optional: !!typedMeta.optional,
-      computed: !!typedMeta.computed,
-      typeKinds: extractTypeKinds(typedMeta.type),
-    });
-  });
+  const [, schemaOrType, resourceName, explicitAttr] = match;
+  const schema = TEST_NODE_SCHEMAS.find(
+    (candidate) =>
+      candidate.id.toLowerCase() === schemaOrType.toLowerCase() ||
+      candidate.terraformType.toLowerCase() === schemaOrType.toLowerCase(),
+  );
 
-  const blockTypes = block.block_types ?? {};
-  Object.entries(blockTypes).forEach(([blockName, blockMeta]) => {
-    const typedBlockMeta = blockMeta as {
-      nesting_mode?: string;
-      block?: any;
-    };
+  if (!schema) return value;
 
-    if (typedBlockMeta.block) {
-      collectAttributesFromBlock(
-        typedBlockMeta.block,
-        `${prefix}${blockName}.`,
-        acc,
-      );
-    }
-  });
+  const resource = resources.find(
+    (candidate) =>
+      candidate.name === resourceName &&
+      (candidate.schemaId === schema.id || candidate.type === schema.terraformType),
+  );
 
-  return acc;
+  if (!resource) return value;
+
+  const attr = explicitAttr ?? (targetPropertyName.endsWith("_id") ? "id" : "id");
+  const prefix = resource.kind === "data" ? "data." : "";
+  return `${prefix}${schema.terraformType}.${resource.name}.${attr}`;
 };
 
 const parseHclValueToAttribute = (input: string): unknown => {
@@ -160,6 +90,9 @@ const parseHclValueToAttribute = (input: string): unknown => {
 const toHclLiteral = (value: unknown): string => {
   if (typeof value === "boolean" || typeof value === "number") {
     return String(value);
+  }
+  if (typeof value === "string" && terraformRefPattern.test(value.trim())) {
+    return value.trim();
   }
   if (value === null || value === undefined) {
     return '""';
@@ -221,6 +154,7 @@ const parseHclAttributes = (hcl: string): Record<string, unknown> => {
 
 export const RightPanel = ({
   nodes,
+  resources,
   selectedNodeId,
   selectedNode,
   selectedSchema,
@@ -242,24 +176,7 @@ export const RightPanel = ({
   const panelRef = useRef<HTMLDivElement>(null);
 
   const inspectorProperties = useMemo<InspectorProperty[]>(() => {
-    if (!selectedSchema) return [];
-
-    const schemaDocument = getSchemaDocument(selectedSchema.sourceSchemaPath);
-    const collected = collectAttributesFromBlock(schemaDocument?.block)
-      .sort((left, right) => left.name.localeCompare(right.name));
-
-    if (collected.length > 0) {
-      return collected;
-    }
-
-    return selectedSchema.properties.map((property) => ({
-      name: property.name,
-      type: property.type,
-      required: property.required,
-      optional: !property.required,
-      computed: property.computed,
-      typeKinds: extractTypeKinds(property.type),
-    }));
+    return getInspectorPropertiesForSchema(selectedSchema);
   }, [selectedSchema]);
 
   const inspectorSections = useMemo<PropertySection[]>(() => {
@@ -690,8 +607,37 @@ export const RightPanel = ({
                                 <input
                                   disabled={property.computed && !property.optional}
                                   value={displayValue}
+                                  onDragOver={(event) => {
+                                    event.preventDefault();
+                                  }}
+                                  onDrop={(event) => {
+                                    event.preventDefault();
+                                    const droppedValue =
+                                      event.dataTransfer.getData(OBJECT_MAPPER_REF_MIME) ||
+                                      event.dataTransfer.getData("text/plain");
+                                    const mapped = normalizeMappedReference(
+                                      droppedValue,
+                                      property.name,
+                                      resources,
+                                    );
+
+                                    onUpdateSelectedResource((resource) => ({
+                                      ...resource,
+                                      config: {
+                                        ...resource.config,
+                                        attributes: {
+                                          ...resource.config.attributes,
+                                          [property.name]: mapped,
+                                        },
+                                      },
+                                    }));
+                                  }}
                                   onChange={(event) => {
-                                    const value = event.target.value;
+                                    const value = normalizeMappedReference(
+                                      event.target.value,
+                                      property.name,
+                                      resources,
+                                    );
                                     onUpdateSelectedResource((resource) => ({
                                       ...resource,
                                       config: {

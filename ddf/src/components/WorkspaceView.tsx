@@ -212,14 +212,31 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     [],
   );
 
+  const generateNextResourceName = useCallback(
+    (schema: TerraformNodeSchema) => {
+      const base = schema.id.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+      const prefix = `${base}_`;
+      const used = project.resources
+        .map((resource) => resource.name)
+        .filter((name) => name.startsWith(prefix))
+        .map((name) => Number(name.slice(prefix.length)))
+        .filter((value) => Number.isInteger(value) && value > 0);
+
+      const next = used.length ? Math.max(...used) + 1 : 1;
+      return `${base}_${next}`;
+    },
+    [project.resources],
+  );
+
   const addResource = async (
     node: TerraformNodeSchema,
     dropPosition?: XYPosition,
     options?: { targetContainerId?: string },
   ) => {
+    const resourceName = generateNextResourceName(node);
     const newResource: TerraformResource = createTerraformResourceFromSchema(
       node,
-      project.resources.length,
+      resourceName,
     );
 
     const updatedProject = {
@@ -235,6 +252,7 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
         dropPosition,
         options?.targetContainerId,
         newResource.id,
+        newResource.name,
       ),
     );
 
@@ -282,9 +300,11 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     (updater: (resource: TerraformResource) => TerraformResource) => {
       if (!selectedResource) return;
 
+      const updatedSelectedResource = updater(selectedResource);
+
       setProject((currentProject) => {
         const updatedResources = currentProject.resources.map((resource) =>
-          resource.id === selectedResource.id ? updater(resource) : resource,
+          resource.id === selectedResource.id ? updatedSelectedResource : resource,
         );
         const updatedProject = {
           ...currentProject,
@@ -293,8 +313,24 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
         void saveProjectToHCL(updatedProject);
         return updatedProject;
       });
+
+      if (updatedSelectedResource.name !== selectedResource.name) {
+        setNodes((currentNodes) =>
+          currentNodes.map((node) =>
+            node.data.resourceId === updatedSelectedResource.id
+              ? {
+                  ...node,
+                  data: {
+                    ...node.data,
+                    label: updatedSelectedResource.name,
+                  },
+                }
+              : node,
+          ),
+        );
+      }
     },
-    [selectedResource, viewId],
+    [selectedResource, setNodes],
   );
 
   return (
@@ -321,6 +357,7 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
 
         <RightPanel
           nodes={nodes}
+          resources={project.resources}
           selectedNodeId={selectedNodeId}
           selectedNode={selectedNode}
           selectedSchema={selectedSchema}
@@ -330,7 +367,12 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
         />
       </div>
 
-      <BottomPanel onHeightChange={setBottomHeight} />
+      <BottomPanel
+        onHeightChange={setBottomHeight}
+        nodes={nodes}
+        resources={project.resources}
+        schemas={TEST_NODE_SCHEMAS}
+      />
     </div>
   );
 }

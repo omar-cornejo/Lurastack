@@ -3,12 +3,12 @@ import type { TerraformNodeSchema } from "../testNodes";
 
 export const createTerraformResourceFromSchema = (
   schema: TerraformNodeSchema,
-  index: number,
+  resourceName: string,
 ): TerraformResource => ({
   id: crypto.randomUUID(),
   kind: schema.terraformKind,
   type: schema.terraformType,
-  name: `${schema.id}_${index + 1}`,
+  name: resourceName,
   hclTemplate: schema.hclTemplate,
   schemaId: schema.id,
   config: { attributes: {}, blocks: {} },

@@ -40,6 +40,7 @@ export const createCanvasNodeFromUserAction = (
   index: number,
   position?: XYPosition,
   resourceId?: string,
+  displayLabel?: string,
 ): Node<CanvasTerraformNodeData> => {
   const isContainer = CONTAINER_SCHEMA_IDS.has(schema.id);
 
@@ -61,7 +62,7 @@ export const createCanvasNodeFromUserAction = (
     data: {
       resourceId: resourceId ?? crypto.randomUUID(),
       schemaId: schema.id,
-      label: schema.label,
+      label: displayLabel ?? schema.label,
       icon: schema.icon,
       terraformType: schema.terraformType,
       terraformKind: schema.terraformKind,
