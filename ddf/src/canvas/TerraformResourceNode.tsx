@@ -1,8 +1,9 @@
 import type { NodeProps } from "reactflow";
-import { Handle, Position } from "reactflow";
+import { Handle, NodeResizer, Position } from "reactflow";
 import type { CanvasTerraformNodeData } from "./types";
+import { DEFAULT_CONTAINER_SIZE } from "../commands/createCanvasNode";
 
-export function TerraformResourceNode({ data }: NodeProps<CanvasTerraformNodeData>) {
+export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraformNodeData>) {
   if (data.isContainer) {
     return (
       <div
@@ -12,6 +13,14 @@ export function TerraformResourceNode({ data }: NodeProps<CanvasTerraformNodeDat
             : "border-blue-300"
         }`}
       >
+        <NodeResizer
+          isVisible={selected}
+          minWidth={DEFAULT_CONTAINER_SIZE.width}
+          minHeight={DEFAULT_CONTAINER_SIZE.height}
+          lineClassName="!border-blue-400"
+          handleClassName="!h-2.5 !w-2.5 !rounded-sm !border !border-white !bg-blue-500"
+        />
+
         <Handle type="target" position={Position.Top} className="!pointer-events-auto !bg-blue-500" />
 
         <div className="container-drag-handle pointer-events-auto flex items-center gap-2 border-b border-blue-200 bg-blue-100/80 px-3 py-2">

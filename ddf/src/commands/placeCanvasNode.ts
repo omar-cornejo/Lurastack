@@ -29,18 +29,22 @@ export const getNodeSize = (node: CanvasNode) => {
   const measuredHeight = typeof node.height === "number" ? node.height : undefined;
 
   const width =
-    (typeof node.style?.width === "number"
+    typeof node.style?.width === "number"
       ? node.style.width
+      : typeof measuredWidth === "number"
+        ? measuredWidth
       : node.data.isContainer
         ? DEFAULT_CONTAINER_SIZE.width
-        : DEFAULT_RESOURCE_NODE_SIZE.width) ?? measuredWidth;
+        : DEFAULT_RESOURCE_NODE_SIZE.width;
 
   const height =
-    (typeof node.style?.height === "number"
+    typeof node.style?.height === "number"
       ? node.style.height
+      : typeof measuredHeight === "number"
+        ? measuredHeight
       : node.data.isContainer
         ? DEFAULT_CONTAINER_SIZE.height
-        : DEFAULT_RESOURCE_NODE_SIZE.height) ?? measuredHeight;
+        : DEFAULT_RESOURCE_NODE_SIZE.height;
 
   return { width, height };
 };
@@ -209,13 +213,39 @@ export const expandAncestorContainers = (nodes: CanvasNode[], startNodeId: strin
         ? startSubtreeSize
         : getNodeSize(child);
 
+    let shiftX = 0;
+    let shiftY = 0;
+
+    if (child.position.x < CONTAINER_PADDING_X) {
+      shiftX = child.position.x - CONTAINER_PADDING_X;
+    }
+    if (child.position.y < CONTAINER_HEADER_SPACE) {
+      shiftY = child.position.y - CONTAINER_HEADER_SPACE;
+    }
+
     const requiredWidth =
       child.position.x + childSize.width + CONTAINER_PADDING_X;
     const requiredHeight =
       child.position.y + childSize.height + CONTAINER_PADDING_BOTTOM;
 
-    const nextWidth = Math.max(parentSize.width, requiredWidth);
-    const nextHeight = Math.max(parentSize.height, requiredHeight);
+    const nextWidth = Math.max(parentSize.width - shiftX, requiredWidth - shiftX);
+    const nextHeight = Math.max(parentSize.height - shiftY, requiredHeight - shiftY);
+
+    if (shiftX !== 0 || shiftY !== 0) {
+      parent.position = {
+        x: parent.position.x + shiftX,
+        y: parent.position.y + shiftY,
+      };
+
+      nodes.forEach((n) => {
+        if (n.parentNode === parent.id) {
+          n.position = {
+            x: n.position.x - shiftX,
+            y: n.position.y - shiftY,
+          };
+        }
+      });
+    }
 
     if (nextWidth !== parentSize.width || nextHeight !== parentSize.height) {
       parent.style = {
@@ -299,6 +329,205 @@ export const shrinkAncestorContainers = (
   }
 
   return nodes;
+};
+
+export const applyManualContainerResizeEffects = (
+  previousNodes: CanvasNode[],
+  currentNodes: CanvasNode[],
+  resizedNodeIds: string[],
+) => {
+  if (!resizedNodeIds.length) return currentNodes;
+
+  const previousNodeMap = new Map(previousNodes.map((node) => [node.id, node]));
+
+  const applyOffsets = (
+    map: Map<string, CanvasNode>,
+    nodeId: string,
+    dx: number,
+    dy: number
+  ) => {
+    map.forEach((node) => {
+      if (node.parentNode === nodeId) {
+        node.position = {
+          x: node.position.x - dx,
+          y: node.position.y - dy,
+        };
+      }
+    });
+  };
+
+  const resizedIdSet = new Set(resizedNodeIds);
+  const workingNodes: CanvasNode[] = currentNodes.map((node) => ({
+    ...node,
+    position: { ...node.position },
+    style: node.style ? { ...node.style } : undefined,
+    data: { ...node.data },
+  }));
+
+  const resizedContainers = workingNodes.filter(
+    (node) => resizedIdSet.has(node.id) && node.data.isContainer,
+  );
+
+  if (!resizedContainers.length) return workingNodes;
+
+  const intersectsWithPadding = (left: NodeRect, right: NodeRect, padding: number) => {
+    const leftExpanded = {
+      x: left.x - padding,
+      y: left.y - padding,
+      width: left.width + padding * 2,
+      height: left.height + padding * 2,
+    };
+
+    return (
+      leftExpanded.x < right.x + right.width &&
+      leftExpanded.x + leftExpanded.width > right.x &&
+      leftExpanded.y < right.y + right.height &&
+      leftExpanded.y + leftExpanded.height > right.y
+    );
+  };
+
+  const hasSameLayerCollision = (nodes: CanvasNode[], nodeId: string) => {
+    const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+    const resizedNode = nodeMap.get(nodeId);
+    if (!resizedNode) return false;
+
+    const resizedRect = getAbsoluteNodeRect(resizedNode, nodeMap);
+    const siblings = nodes.filter(
+      (candidate) =>
+        candidate.id !== resizedNode.id &&
+        candidate.parentNode === resizedNode.parentNode,
+    );
+
+    return siblings.some((sibling) => {
+      const siblingRect = getAbsoluteNodeRect(sibling, nodeMap);
+      return intersectsWithPadding(
+        resizedRect,
+        siblingRect,
+        EXPANSION_SIBLING_PADDING,
+      );
+    });
+  };
+
+  const restorePreviousTransform = (
+    target: CanvasNode,
+    previousNode?: CanvasNode,
+  ) => {
+    if (!previousNode) return;
+
+    const previousSize = getNodeSize(previousNode);
+    const dx = target.position.x - previousNode.position.x;
+    const dy = target.position.y - previousNode.position.y;
+    
+    target.position = { ...previousNode.position };
+    target.style = {
+      ...target.style,
+      width: previousSize.width,
+      height: previousSize.height,
+    };
+
+    if (dx !== 0 || dy !== 0) {
+      applyOffsets(new Map(workingNodes.map(n => [n.id, n])), target.id, -dx, -dy);
+    }
+  };
+
+  const hasValidParentAnchor = (
+    node: CanvasNode,
+  ) => {
+    if (!node.parentNode) return true;
+
+    return (
+      node.position.x >= CONTAINER_PADDING_X &&
+      node.position.y >= CONTAINER_HEADER_SPACE
+    );
+  };
+
+
+  for (const container of resizedContainers) {
+    const minSize = recomputeContainerSizeFromChildren(workingNodes, container.id);
+    if (!minSize) continue;
+
+    const previousNode = previousNodeMap.get(container.id);
+    const previousSize = previousNode ? getNodeSize(previousNode) : getNodeSize(container);
+
+    const currentSize = getNodeSize(container);
+    let nextWidth = Math.max(currentSize.width, minSize.width);
+    let nextHeight = Math.max(currentSize.height, minSize.height);
+
+    let dx = 0;
+    let dy = 0;
+
+    if (previousNode) {
+      const rawDx = container.position.x - previousNode.position.x;
+      const rawDy = container.position.y - previousNode.position.y;
+
+      const actualDWidth = nextWidth - previousSize.width;
+      const actualDHeight = nextHeight - previousSize.height;
+
+      if (rawDx !== 0) dx = -actualDWidth;
+      if (rawDy !== 0) dy = -actualDHeight;
+
+      container.position = {
+        x: previousNode.position.x + dx,
+        y: previousNode.position.y + dy,
+      };
+    }
+
+    if (dx !== 0 || dy !== 0) {
+      applyOffsets(new Map(workingNodes.map(n => [n.id, n])), container.id, dx, dy);
+    }
+
+    if (nextWidth !== currentSize.width || nextHeight !== currentSize.height) {
+      container.style = {
+        ...container.style,
+        width: nextWidth,
+        height: nextHeight,
+      };
+    }
+
+    const isExpansion =
+      nextWidth > previousSize.width ||
+      nextHeight > previousSize.height ||
+      dx !== 0 || dy !== 0;
+
+    if (!isExpansion) {
+      continue;
+    }
+
+
+    if (hasSameLayerCollision(workingNodes, container.id)) {
+      restorePreviousTransform(container, previousNode);
+      warn(
+        `Cannot resize '${container.data.label}': expansion collides with a sibling in the same layer.`,
+        "RESIZE_SIBLING_COLLISION",
+      );
+      continue;
+    }
+
+    if (container.parentNode) {
+      const expansionCheck = canExpandHierarchyForPlacement(
+        workingNodes,
+        container.parentNode,
+        container.position,
+        { width: nextWidth, height: nextHeight },
+      );
+
+      if (!expansionCheck.ok) {
+        restorePreviousTransform(container, previousNode);
+        warn(
+          `Cannot resize '${container.data.label}': ${expansionCheck.reason}`,
+          "RESIZE_ANCESTOR_BLOCKED",
+        );
+        continue;
+      }
+    }
+
+  }
+
+  for (const container of resizedContainers) {
+    expandAncestorContainers(workingNodes, container.id);
+  }
+
+  return workingNodes;
 };
 
 export const getDescendantNodeIds = (nodes: CanvasNode[], nodeId: string) => {
@@ -392,13 +621,23 @@ const canExpandHierarchyForPlacement = (
   while (parent) {
     const parentSize = getNodeSize(parent);
 
+    let shiftX = 0;
+    let shiftY = 0;
+
+    if (projectedChildPosition.x < CONTAINER_PADDING_X) {
+      shiftX = projectedChildPosition.x - CONTAINER_PADDING_X;
+    }
+    if (projectedChildPosition.y < CONTAINER_HEADER_SPACE) {
+      shiftY = projectedChildPosition.y - CONTAINER_HEADER_SPACE;
+    }
+
     const requiredWidth =
       projectedChildPosition.x + projectedChildSize.width + CONTAINER_PADDING_X;
     const requiredHeight =
       projectedChildPosition.y + projectedChildSize.height + CONTAINER_PADDING_BOTTOM;
 
-    const nextWidth = Math.max(parentSize.width, requiredWidth);
-    const nextHeight = Math.max(parentSize.height, requiredHeight);
+    const nextWidth = Math.max(parentSize.width - shiftX, requiredWidth - shiftX);
+    const nextHeight = Math.max(parentSize.height - shiftY, requiredHeight - shiftY);
 
     if (nextWidth > MAX_CONTAINER_DIMENSION || nextHeight > MAX_CONTAINER_DIMENSION) {
       return {
@@ -407,12 +646,29 @@ const canExpandHierarchyForPlacement = (
       };
     }
 
-    if (nextWidth !== parentSize.width || nextHeight !== parentSize.height) {
+    if (shiftX !== 0 || shiftY !== 0 || nextWidth !== parentSize.width || nextHeight !== parentSize.height) {
       parent.style = {
         ...parent.style,
         width: nextWidth,
         height: nextHeight,
       };
+
+      if (shiftX !== 0 || shiftY !== 0) {
+        parent.position = {
+          x: parent.position.x + shiftX,
+          y: parent.position.y + shiftY,
+        };
+
+        afterNodes.forEach((n) => {
+          if (n.parentNode === parent!.id) {
+            n.position = {
+              x: n.position.x - shiftX,
+              y: n.position.y - shiftY,
+            };
+          }
+        });
+      }
+
       changedAncestorIds.add(parent.id);
     }
 

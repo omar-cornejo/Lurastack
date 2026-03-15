@@ -9,8 +9,10 @@ import type { TerraformNodeSchema } from "../models/testNodes";
 import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import {
   addEdge,
+  applyNodeChanges,
   useEdgesState,
   useNodesState,
+  type NodeChange,
   type Node,
   type NodeDragHandler,
   type XYPosition,
@@ -18,6 +20,7 @@ import {
 } from "reactflow";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 import {
+  applyManualContainerResizeEffects,
   placeCanvasNodeFromUserAction,
   reparentCanvasNodeAfterDrag,
 } from "../commands/placeCanvasNode";
@@ -30,7 +33,7 @@ type WorkspaceViewProps = {
 
 export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
   const [bottomHeight, setBottomHeight] = useState(288);
-  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasTerraformNodeData>([]);
+  const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const activeDragNodeIdRef = useRef<string | null>(null);
   const dragSubtreeSnapshotRef = useRef<
@@ -108,6 +111,28 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
       setEdges((currentEdges) => addEdge(connection, currentEdges));
     },
     [setEdges],
+  );
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes((currentNodes) => {
+        const nextNodes = applyNodeChanges(changes, currentNodes);
+        const resizedNodeIds = changes
+          .filter((change) => change.type === "dimensions")
+          .map((change) => change.id);
+
+        if (!resizedNodeIds.length) {
+          return nextNodes;
+        }
+
+        return applyManualContainerResizeEffects(
+          currentNodes,
+          nextNodes,
+          resizedNodeIds,
+        );
+      });
+    },
+    [setNodes],
   );
 
   const terraformResourceToHCL = (r: TerraformResource) => {
