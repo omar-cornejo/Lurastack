@@ -21,7 +21,18 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
           handleClassName="!h-2.5 !w-2.5 !rounded-sm !border !border-white !bg-blue-500"
         />
 
-        <Handle type="target" position={Position.Top} className="!pointer-events-auto !bg-blue-500" />
+        <Handle
+          type="target"
+          id="top"
+          position={Position.Top}
+          className="!pointer-events-auto !bg-blue-500"
+        />
+        <Handle
+          type="source"
+          id="top"
+          position={Position.Top}
+          className="!pointer-events-auto !bg-blue-500"
+        />
 
         <div className="container-drag-handle pointer-events-auto flex items-center gap-2 border-b border-blue-200 bg-blue-100/80 px-3 py-2">
           <img
@@ -42,6 +53,13 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
 
         <Handle
           type="source"
+          id="bottom"
+          position={Position.Bottom}
+          className="!pointer-events-auto !bg-blue-500"
+        />
+        <Handle
+          type="target"
+          id="bottom"
           position={Position.Bottom}
           className="!pointer-events-auto !bg-blue-500"
         />
@@ -51,7 +69,8 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
 
   return (
     <div className="h-full w-full rounded-md border border-slate-300 bg-white px-3 py-2 shadow-sm">
-      <Handle type="target" position={Position.Top} className="!bg-slate-500" />
+      <Handle type="target" id="top" position={Position.Top} className="!bg-slate-500" />
+      <Handle type="source" id="top" position={Position.Top} className="!bg-slate-500" />
 
       <div className="flex items-center gap-2">
         <img src={data.icon} alt={data.label} className="h-7 w-7 rounded object-cover" />
@@ -61,7 +80,8 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
         </div>
       </div>
 
-      <Handle type="source" position={Position.Bottom} className="!bg-slate-500" />
+      <Handle type="source" id="bottom" position={Position.Bottom} className="!bg-slate-500" />
+      <Handle type="target" id="bottom" position={Position.Bottom} className="!bg-slate-500" />
     </div>
   );
 }

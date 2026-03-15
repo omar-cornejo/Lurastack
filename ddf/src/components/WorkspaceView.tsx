@@ -17,6 +17,7 @@ import {
   type NodeDragHandler,
   type XYPosition,
   type Connection,
+  type Edge,
 } from "reactflow";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 import {
@@ -33,6 +34,8 @@ type WorkspaceViewProps = {
 };
 
 export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
+  const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+
   const [bottomHeight, setBottomHeight] = useState(288);
   const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -115,6 +118,79 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     [setEdges],
   );
 
+  const applyEdgeMapping = useCallback(
+    (payload: {
+      edgeId: string;
+      fromNodeId: string;
+      toNodeId: string;
+      sourceExpression: string;
+      targetAttribute: string;
+    }) => {
+      const targetNode = nodes.find((node) => node.id === payload.toNodeId);
+      if (!targetNode) return;
+      const targetResourceId = targetNode.data.resourceId;
+
+      setProject((currentProject) => {
+        const updatedProject = {
+          ...currentProject,
+          resources: currentProject.resources.map((resource) =>
+            resource.id === targetResourceId
+              ? {
+                  ...resource,
+                  config: {
+                    ...resource.config,
+                    attributes: {
+                      ...resource.config.attributes,
+                      [payload.targetAttribute]: payload.sourceExpression,
+                    },
+                  },
+                }
+              : resource,
+          ),
+        };
+        void saveProjectToHCL(updatedProject);
+        return updatedProject;
+      });
+
+      setEdges((currentEdges) =>
+        currentEdges.map((edge) => {
+          if (edge.id !== payload.edgeId) return edge;
+          const previousMappings = Array.isArray((edge.data as any)?.mappings)
+            ? ((edge.data as any).mappings as Array<{
+                fromNodeId: string;
+                toNodeId: string;
+                sourceExpression: string;
+                targetAttribute: string;
+              }>)
+            : [];
+
+          const nextMappings = [
+            ...previousMappings.filter(
+              (mapping) =>
+                !(mapping.toNodeId === payload.toNodeId &&
+                  mapping.targetAttribute === payload.targetAttribute),
+            ),
+            {
+              fromNodeId: payload.fromNodeId,
+              toNodeId: payload.toNodeId,
+              sourceExpression: payload.sourceExpression,
+              targetAttribute: payload.targetAttribute,
+            },
+          ];
+
+          return {
+            ...edge,
+            data: {
+              ...(edge.data ?? {}),
+              mappings: nextMappings,
+            },
+          } as Edge;
+        }),
+      );
+    },
+    [nodes, setEdges],
+  );
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setNodes((currentNodes) => {
@@ -145,7 +221,11 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     const blockKind = r.kind ?? "resource";
     let attrs = "";
     for (const [k, v] of Object.entries(r.config.attributes)) {
-      attrs += `  ${k} = "${v}"\n`;
+      if (typeof v === "string" && TERRAFORM_REF_PATTERN.test(v.trim())) {
+        attrs += `  ${k} = ${v.trim()}\n`;
+      } else {
+        attrs += `  ${k} = "${v}"\n`;
+      }
     }
     return `${blockKind} "${r.type}" "${r.name}" {\n${attrs}}\n`;
   };
@@ -344,6 +424,8 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
           <CenterPanel
             nodes={nodes}
             edges={edges}
+            resources={project.resources}
+            schemas={TEST_NODE_SCHEMAS}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
@@ -352,6 +434,12 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
             onNodeDragStart={onNodeDragStart}
             onNodeDragStop={onNodeDragStop}
             onNodeSelected={selectNode}
+            onDeleteEdge={(edgeId) =>
+              setEdges((currentEdges) =>
+                currentEdges.filter((edge) => edge.id !== edgeId),
+              )
+            }
+            onApplyEdgeMapping={applyEdgeMapping}
           />
         </main>
 
