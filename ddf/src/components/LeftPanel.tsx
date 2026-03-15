@@ -1,13 +1,96 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Icon } from '@iconify/react';
-
-type IconGroups = {
-  [folder: string]: string[];
-};
+import { TEST_NODE_SCHEMAS, type TerraformNodeSchema } from "../models/testNodes";
 
 type LeftPanelProps = {
   bottomHeight: number;
-  addResource: (type: string, icon: string) => void;
+  addResource: (node: TerraformNodeSchema) => void;
+};
+
+const GROUP_ORDER: Array<TerraformNodeSchema["schemaGroup"]> = [
+  "resources",
+  "data_sources",
+  "ephemeral_resources",
+  "functions",
+  "provider",
+];
+
+const GROUP_LABELS: Record<TerraformNodeSchema["schemaGroup"], string> = {
+  resources: "Resources",
+  data_sources: "Data Sources",
+  ephemeral_resources: "Ephemeral Resources",
+  functions: "Functions",
+  provider: "Provider",
+};
+
+const normalize = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+const compact = (value: string) => normalize(value).replace(/\s+/g, "");
+
+const isSubsequence = (needle: string, haystack: string) => {
+  if (!needle) return true;
+  let needleIndex = 0;
+  for (const character of haystack) {
+    if (character === needle[needleIndex]) {
+      needleIndex += 1;
+      if (needleIndex === needle.length) return true;
+    }
+  }
+  return false;
+};
+
+const rankNode = (node: TerraformNodeSchema, query: string) => {
+  const normalizedQuery = normalize(query);
+  if (!normalizedQuery) return 1;
+
+  const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
+  if (!queryTokens.length) return 1;
+
+  const haystacks = [
+    node.label,
+    node.id,
+    node.terraformType,
+    node.terraformKind,
+    ...node.properties.map((property) => property.name),
+    ...(node.searchTerms ?? []),
+  ];
+
+  const normalizedHaystacks = haystacks.map((value) => normalize(value));
+  const compactHaystacks = haystacks.map((value) => compact(value));
+
+  let score = 0;
+
+  for (const token of queryTokens) {
+    const tokenCompact = token.replace(/\s+/g, "");
+    let tokenBest = 0;
+
+    for (const value of normalizedHaystacks) {
+      if (!value) continue;
+      if (value === token) tokenBest = Math.max(tokenBest, 120);
+      else if (value.startsWith(token)) tokenBest = Math.max(tokenBest, 90);
+      else if (value.includes(token)) tokenBest = Math.max(tokenBest, 60);
+    }
+
+    if (tokenBest === 0) {
+      for (const value of compactHaystacks) {
+        if (!value || !tokenCompact) continue;
+        if (value === tokenCompact) tokenBest = Math.max(tokenBest, 85);
+        else if (value.startsWith(tokenCompact)) tokenBest = Math.max(tokenBest, 70);
+        else if (isSubsequence(tokenCompact, value)) tokenBest = Math.max(tokenBest, 40);
+      }
+    }
+
+    if (tokenBest === 0) return 0;
+    score += tokenBest;
+  }
+
+  return score;
 };
 
 export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
@@ -15,14 +98,38 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
   const [width, setWidth] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const [icons, setIcons] = useState<IconGroups>({});
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    fetch("/icons/manifest.json")
-      .then(res => res.json())
-      .then(data => setIcons(data));
-  }, []);
+  const filteredNodes = useMemo(() => {
+    return TEST_NODE_SCHEMAS
+      .map((node) => ({ node, score: rankNode(node, search) }))
+      .filter((entry) => entry.score > 0)
+      .sort((left, right) => {
+        if (right.score !== left.score) return right.score - left.score;
+        return left.node.label.localeCompare(right.node.label);
+      })
+      .map((entry) => entry.node);
+  }, [search]);
+
+  const groupedNodes = useMemo(() => {
+    const groups: Record<TerraformNodeSchema["schemaGroup"], TerraformNodeSchema[]> = {
+      resources: [],
+      data_sources: [],
+      ephemeral_resources: [],
+      functions: [],
+      provider: [],
+    };
+
+    filteredNodes.forEach((node) => {
+      groups[node.schemaGroup].push(node);
+    });
+
+    return groups;
+  }, [filteredNodes]);
+
+  const tileMin = Math.max(78, Math.min(132, Math.floor(width / 3.2)));
+  const hasSearch = search.trim().length > 0;
+  const hasResults = filteredNodes.length > 0;
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
@@ -102,36 +209,58 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
           className="p-2 overflow-auto box-border"
           style={{ maxHeight: '100%' }}
         >
-          {Object.entries(icons).map(([folder, files]) => {
-            const filteredFiles = files.filter(file => file.toLowerCase().includes(search.toLowerCase()));
-            if (!filteredFiles.length) return null;
+          {hasSearch && !hasResults && (
+            <p className="rounded border border-dashed border-gray-300 p-2 text-xs text-gray-500">
+              No matches found.
+            </p>
+          )}
 
-            return (
-              <div key={folder} className="mb-4">
-                <h3 className="text-xs font-semibold text-gray-500 mb-2">
-                  {folder.replace("Arch_", "").replace(/-/g, " ")}
-                </h3>
+          <div className="space-y-3">
+            {GROUP_ORDER
+              .filter((groupKey) => groupedNodes[groupKey].length > 0 || !hasSearch)
+              .map((groupKey) => (
+                <section key={groupKey}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <h3 className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+                      {GROUP_LABELS[groupKey]}
+                    </h3>
+                    <span className="text-[10px] text-gray-400">
+                      {groupedNodes[groupKey].length}
+                    </span>
+                  </div>
 
-                <div
-                  className="grid gap-2"
-                  style={{
-                    gridTemplateColumns: `repeat(auto-fill, minmax(${Math.min(60, width / 4)}px, 1fr))`,
-                  }}
-                >
-                  {filteredFiles.map(file => (
-                    <img
-                      key={file}
-                      src={`/icons/${folder}/${file}`}
-                      alt={file}
-                      className="w-full max-w-full aspect-square mx-auto hover:scale-110 transition-transform cursor-pointer"
-                      style={{ objectFit: 'contain' }}
-                      onClick={() => addResource(file.replace(".svg", ""), `/icons/${folder}/${file}`)}
-                    />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+                  {groupedNodes[groupKey].length === 0 ? (
+                    <p className="text-[11px] text-gray-400">No test nodes</p>
+                  ) : (
+                    <div
+                      className="grid gap-2"
+                      style={{
+                        gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
+                      }}
+                    >
+                      {groupedNodes[groupKey].map((node) => (
+                        <button
+                          key={node.id}
+                          type="button"
+                          onClick={() => addResource(node)}
+                          title={`${node.label} (${node.terraformType})`}
+                          className="group flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-2 text-center hover:border-blue-300 hover:bg-blue-50"
+                        >
+                          <img
+                            src={node.icon}
+                            alt={node.label}
+                            className="h-8 w-8 rounded object-cover opacity-95 group-hover:opacity-100"
+                          />
+                          <span className="line-clamp-2 text-[11px] font-medium leading-4 text-gray-700">
+                            {node.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
+          </div>
         </div>
       )}
     </aside>

@@ -5,8 +5,11 @@ export type TerraformBlock = {
 
 export type TerraformResource = {
   id: string;              
+  kind?: "resource" | "data";
   type: string;            
   name: string;            
+  hclTemplate?: string;
+  schemaId?: string;
 
   config: {
     attributes: Record<string, any>;

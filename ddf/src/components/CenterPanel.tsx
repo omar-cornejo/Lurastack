@@ -32,6 +32,7 @@ export default function CenterPanel() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          proOptions={{ hideAttribution: true }}
           fitView
           minZoom={0.2}
           maxZoom={2}

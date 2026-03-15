@@ -5,6 +5,7 @@ import CenterPanel from "./CenterPanel";
 import { RightPanel } from "./RightPanel";
 import BottomPanel from "./BottomPanel";
 import { TerraformProject, TerraformResource } from "../models/terraform";
+import type { TerraformNodeSchema } from "../models/testNodes";
 import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 
 type WorkspaceViewProps = {
@@ -19,11 +20,16 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
   });
 
   const terraformResourceToHCL = (r: TerraformResource) => {
+    if (r.hclTemplate?.trim()) {
+      return `${r.hclTemplate.trim()}\n`;
+    }
+
+    const blockKind = r.kind ?? "resource";
     let attrs = "";
     for (const [k, v] of Object.entries(r.config.attributes)) {
       attrs += `  ${k} = "${v}"\n`;
     }
-    return `resource "${r.type}" "${r.name}" {\n${attrs}}\n`;
+    return `${blockKind} "${r.type}" "${r.name}" {\n${attrs}}\n`;
   };
 
   const saveProjectToHCL = async (proj: TerraformProject) => {
@@ -36,13 +42,16 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     });
   };
 
-  const addResource = async (type: string, icon: string) => {
+  const addResource = async (node: TerraformNodeSchema) => {
     const newResource: TerraformResource = {
       id: crypto.randomUUID(),
-      type,
-      name: `${type}_example`,
+      kind: node.terraformKind,
+      type: node.terraformType,
+      name: `${node.id}_example`,
+      hclTemplate: node.hclTemplate,
+      schemaId: node.id,
       config: { attributes: {}, blocks: {} },
-      ui: { x: 100, y: 100, icon },
+      ui: { x: 100, y: 100, icon: node.icon },
     };
     const updatedProject = {
       ...project,
