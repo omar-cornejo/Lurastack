@@ -167,7 +167,13 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
   };
 
   const onNodeDragStart: NodeDragHandler = useCallback(
-    (_event, draggedNode) => {
+    (_event, draggedNode, nodes) => {
+      if (nodes.length > 1) {
+        activeDragNodeIdRef.current = null;
+        dragSubtreeSnapshotRef.current = null;
+        return;
+      }
+
       activeDragNodeIdRef.current = draggedNode.id;
       dragSubtreeSnapshotRef.current = buildSubtreeSnapshot(draggedNode.id);
     },

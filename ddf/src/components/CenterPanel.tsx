@@ -5,6 +5,7 @@ import {
   Controls,
   MiniMap,
   ReactFlow,
+  SelectionMode,
   type ReactFlowInstance,
   type Edge,
   type Node,
@@ -154,8 +155,13 @@ export default function CenterPanel({
   }, [nodes, reactFlowInstance]);
 
   const handleNodeDrag: NodeDragHandler = useCallback(
-    (event, draggingNode) => {
+    (event, draggingNode, nodesToDrag) => {
       if (!reactFlowInstance) return;
+
+      if (nodesToDrag.length > 1) {
+        applyPlacementIndicator(undefined);
+        return;
+      }
 
       const currentNode = nodes.find((node) => node.id === draggingNode.id);
       if (!currentNode) return;
@@ -199,6 +205,13 @@ export default function CenterPanel({
 
   const handleNodeDragStop: NodeDragHandler = useCallback(
     (event, node, nodeList) => {
+      if (nodeList.length > 1) {
+        setActiveDropContainerId(null);
+        // Do not reparent if multiple nodes are dragged
+        onNodeDragStop(event, node, nodeList);
+        return;
+      }
+
       let finalTargetId = activeDropContainerId ?? undefined;
 
       if (
@@ -298,6 +311,9 @@ export default function CenterPanel({
           onInit={setReactFlowInstance}
           nodeTypes={canvasNodeTypes}
           elevateNodesOnSelect={false}
+          selectionOnDrag={true}
+          panOnDrag={[1, 2]}
+          selectionMode={SelectionMode.Partial}
           proOptions={{ hideAttribution: true }}
           fitView
           minZoom={0.2}
