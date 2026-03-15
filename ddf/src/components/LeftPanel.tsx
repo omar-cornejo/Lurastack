@@ -2,6 +2,10 @@ import { useState, useRef, useEffect, useMemo, type DragEvent } from "react";
 import { Icon } from '@iconify/react';
 import { TEST_NODE_SCHEMAS, type TerraformNodeSchema } from "../models/testNodes";
 import { NODE_DRAG_MIME, serializeDraggedNode } from "../commands/nodeDragPayload";
+import {
+  clearActiveLeftPanelDrag,
+  setActiveLeftPanelDrag,
+} from "../commands/leftPanelDragState";
 
 type LeftPanelProps = {
   bottomHeight: number;
@@ -105,9 +109,14 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
     event: DragEvent<HTMLButtonElement>,
     node: TerraformNodeSchema,
   ) => {
+    setActiveLeftPanelDrag(node);
     event.dataTransfer.setData(NODE_DRAG_MIME, serializeDraggedNode(node));
     event.dataTransfer.setData("text/plain", node.id);
     event.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleDragEnd = () => {
+    clearActiveLeftPanelDrag();
   };
 
   const filteredNodes = useMemo(() => {
@@ -255,6 +264,7 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
                           draggable
                           onClick={() => addResource(node)}
                           onDragStart={(event) => handleDragStart(event, node)}
+                          onDragEnd={handleDragEnd}
                           title={`${node.label} (${node.terraformType})`}
                           className="group flex min-h-[84px] cursor-grab select-none flex-col items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-2 text-center hover:border-blue-300 hover:bg-blue-50 active:cursor-grabbing"
                         >

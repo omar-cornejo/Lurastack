@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import GlobalBar from "./components/GlobalBar";
 import WorkspaceView from "./components/WorkspaceView";
 import { ViewInfo } from "./types/views";
+import { Toaster } from "sileo";
 
 let viewCounter = 1;
 
@@ -47,6 +48,11 @@ function App() {
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
+      <Toaster
+        position="top-center"
+        offset={{ top: 56 }}
+      />
+
       {/* Global bar: always visible, above all views */}
       <GlobalBar
         views={views}

@@ -2,6 +2,23 @@ import type { Node, XYPosition } from "reactflow";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 
+export const CONTAINER_SCHEMA_IDS = new Set([
+  "subnet",
+  "vpc",
+  "region",
+  "availability-zone",
+]);
+
+export const DEFAULT_CONTAINER_SIZE = {
+  width: 340,
+  height: 230,
+};
+
+export const DEFAULT_RESOURCE_NODE_SIZE = {
+  width: 176,
+  height: 84,
+};
+
 const gridPositionFromIndex = (index: number): XYPosition => {
   const columns = 4;
   const horizontalGap = 220;
@@ -22,14 +39,31 @@ export const createCanvasNodeFromUserAction = (
   schema: TerraformNodeSchema,
   index: number,
   position?: XYPosition,
-): Node<CanvasTerraformNodeData> => ({
-  id: crypto.randomUUID(),
-  type: "terraformResource",
-  position: position ?? gridPositionFromIndex(index),
-  data: {
-    label: schema.label,
-    icon: schema.icon,
-    terraformType: schema.terraformType,
-    terraformKind: schema.terraformKind,
-  },
-});
+): Node<CanvasTerraformNodeData> => {
+  const isContainer = CONTAINER_SCHEMA_IDS.has(schema.id);
+
+  return {
+    id: crypto.randomUUID(),
+    type: "terraformResource",
+    dragHandle: isContainer ? ".container-drag-handle" : undefined,
+    zIndex: isContainer ? 0 : 10,
+    position: position ?? gridPositionFromIndex(index),
+    style: isContainer
+      ? {
+          width: DEFAULT_CONTAINER_SIZE.width,
+          height: DEFAULT_CONTAINER_SIZE.height,
+        }
+      : {
+          width: DEFAULT_RESOURCE_NODE_SIZE.width,
+          height: DEFAULT_RESOURCE_NODE_SIZE.height,
+        },
+    data: {
+      schemaId: schema.id,
+      label: schema.label,
+      icon: schema.icon,
+      terraformType: schema.terraformType,
+      terraformKind: schema.terraformKind,
+      isContainer,
+    },
+  };
+};
