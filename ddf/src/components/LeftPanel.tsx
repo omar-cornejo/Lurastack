@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, type DragEvent } from "react";
 import { Icon } from '@iconify/react';
 import { TEST_NODE_SCHEMAS, type TerraformNodeSchema } from "../models/testNodes";
+import { NODE_DRAG_MIME, serializeDraggedNode } from "../commands/nodeDragPayload";
 
 type LeftPanelProps = {
   bottomHeight: number;
@@ -99,6 +100,15 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
   const [isResizing, setIsResizing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
+
+  const handleDragStart = (
+    event: DragEvent<HTMLButtonElement>,
+    node: TerraformNodeSchema,
+  ) => {
+    event.dataTransfer.setData(NODE_DRAG_MIME, serializeDraggedNode(node));
+    event.dataTransfer.setData("text/plain", node.id);
+    event.dataTransfer.effectAllowed = "copy";
+  };
 
   const filteredNodes = useMemo(() => {
     return TEST_NODE_SCHEMAS
@@ -242,16 +252,19 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
                         <button
                           key={node.id}
                           type="button"
+                          draggable
                           onClick={() => addResource(node)}
+                          onDragStart={(event) => handleDragStart(event, node)}
                           title={`${node.label} (${node.terraformType})`}
-                          className="group flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-2 text-center hover:border-blue-300 hover:bg-blue-50"
+                          className="group flex min-h-[84px] cursor-grab select-none flex-col items-center justify-center gap-2 rounded-md border border-gray-200 bg-white px-2 py-2 text-center hover:border-blue-300 hover:bg-blue-50 active:cursor-grabbing"
                         >
                           <img
                             src={node.icon}
                             alt={node.label}
-                            className="h-8 w-8 rounded object-cover opacity-95 group-hover:opacity-100"
+                            draggable={false}
+                            className="pointer-events-none h-8 w-8 select-none rounded object-cover opacity-95 group-hover:opacity-100"
                           />
-                          <span className="line-clamp-2 text-[11px] font-medium leading-4 text-gray-700">
+                          <span className="pointer-events-none line-clamp-2 select-none text-[11px] font-medium leading-4 text-gray-700">
                             {node.label}
                           </span>
                         </button>

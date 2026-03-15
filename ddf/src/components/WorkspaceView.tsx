@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Header from "./Header";
 import { LeftPanel } from "./LeftPanel";
 import CenterPanel from "./CenterPanel";
@@ -7,6 +7,16 @@ import BottomPanel from "./BottomPanel";
 import { TerraformProject, TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+import {
+  addEdge,
+  useEdgesState,
+  useNodesState,
+  type XYPosition,
+  type Connection,
+} from "reactflow";
+import type { CanvasTerraformNodeData } from "../canvas/types";
+import { createCanvasNodeFromUserAction } from "../commands/createCanvasNode";
+import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
 
 type WorkspaceViewProps = {
   viewId: string;
@@ -14,10 +24,19 @@ type WorkspaceViewProps = {
 
 export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
   const [bottomHeight, setBottomHeight] = useState(288);
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasTerraformNodeData>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [project, setProject] = useState<TerraformProject>({
     provider: "registry.terraform.io/hashicorp/aws",
     resources: [],
   });
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      setEdges((currentEdges) => addEdge(connection, currentEdges));
+    },
+    [setEdges],
+  );
 
   const terraformResourceToHCL = (r: TerraformResource) => {
     if (r.hclTemplate?.trim()) {
@@ -42,21 +61,22 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     });
   };
 
-  const addResource = async (node: TerraformNodeSchema) => {
-    const newResource: TerraformResource = {
-      id: crypto.randomUUID(),
-      kind: node.terraformKind,
-      type: node.terraformType,
-      name: `${node.id}_example`,
-      hclTemplate: node.hclTemplate,
-      schemaId: node.id,
-      config: { attributes: {}, blocks: {} },
-      ui: { x: 100, y: 100, icon: node.icon },
-    };
+  const addResource = async (node: TerraformNodeSchema, dropPosition?: XYPosition) => {
+    const newResource: TerraformResource = createTerraformResourceFromSchema(
+      node,
+      project.resources.length,
+    );
+
     const updatedProject = {
       ...project,
       resources: [...project.resources, newResource],
     };
+
+    setNodes((currentNodes) => [
+      ...currentNodes,
+      createCanvasNodeFromUserAction(node, currentNodes.length, dropPosition),
+    ]);
+
     setProject(updatedProject);
     await saveProjectToHCL(updatedProject);
   };
@@ -69,7 +89,14 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
         <LeftPanel bottomHeight={bottomHeight} addResource={addResource} />
 
         <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
-          <CenterPanel />
+          <CenterPanel
+            nodes={nodes}
+            edges={edges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onDropNode={(node, position) => addResource(node, position)}
+          />
         </main>
 
         <RightPanel />

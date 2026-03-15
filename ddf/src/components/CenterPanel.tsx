@@ -1,26 +1,67 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import {
   Background,
   BackgroundVariant,
   Controls,
   MiniMap,
   ReactFlow,
-  addEdge,
-  useEdgesState,
-  useNodesState,
+  type ReactFlowInstance,
+  type Edge,
+  type Node,
+  type OnConnect,
+  type OnEdgesChange,
+  type OnNodesChange,
+  type XYPosition,
   type Connection,
 } from "reactflow";
+import type { CanvasTerraformNodeData } from "../canvas/types";
+import { canvasNodeTypes } from "../canvas/nodeTypes";
+import type { TerraformNodeSchema } from "../models/testNodes";
+import { NODE_DRAG_MIME, parseDraggedNode } from "../commands/nodeDragPayload";
 import "reactflow/dist/style.css";
 
-export default function CenterPanel() {
-  const [nodes, , onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+type CenterPanelProps = {
+  nodes: Node<CanvasTerraformNodeData>[];
+  edges: Edge[];
+  onNodesChange: OnNodesChange;
+  onEdgesChange: OnEdgesChange;
+  onConnect: OnConnect | ((connection: Connection) => void);
+  onDropNode: (node: TerraformNodeSchema, position: XYPosition) => void;
+};
 
-  const onConnect = useCallback(
-    (connection: Connection) => {
-      setEdges((currentEdges) => addEdge(connection, currentEdges));
+export default function CenterPanel({
+  nodes,
+  edges,
+  onNodesChange,
+  onEdgesChange,
+  onConnect,
+  onDropNode,
+}: CenterPanelProps) {
+  const [reactFlowInstance, setReactFlowInstance] =
+    useState<ReactFlowInstance<CanvasTerraformNodeData> | null>(null);
+
+  const handleDragOver = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDrop = useCallback(
+    (event: React.DragEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      if (!reactFlowInstance) return;
+
+      const payload = event.dataTransfer.getData(NODE_DRAG_MIME);
+      const draggedNode = parseDraggedNode(payload);
+      if (!draggedNode) return;
+
+      const flowPosition = reactFlowInstance.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      onDropNode(draggedNode, flowPosition);
     },
-    [setEdges],
+    [onDropNode, reactFlowInstance],
   );
 
   return (
@@ -32,6 +73,10 @@ export default function CenterPanel() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          onInit={setReactFlowInstance}
+          nodeTypes={canvasNodeTypes}
           proOptions={{ hideAttribution: true }}
           fitView
           minZoom={0.2}
