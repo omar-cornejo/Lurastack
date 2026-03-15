@@ -56,10 +56,10 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     <div className="flex flex-col flex-1 overflow-hidden">
       <Header />
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         <LeftPanel bottomHeight={bottomHeight} addResource={addResource} />
 
-        <main className="flex-1 overflow-auto bg-white">
+        <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
           <CenterPanel />
         </main>
 
