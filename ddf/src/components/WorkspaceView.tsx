@@ -1,9 +1,10 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Header from "./Header";
 import { LeftPanel } from "./LeftPanel";
 import CenterPanel from "./CenterPanel";
 import { RightPanel } from "./RightPanel";
 import BottomPanel from "./BottomPanel";
+import CodePanel from "./CodePanel";
 import { TerraformProject, TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
@@ -33,8 +34,11 @@ type WorkspaceViewProps = {
   viewId: string;
 };
 
-export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
+export default function WorkspaceView({ viewId: _viewId }: WorkspaceViewProps) {
   const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+  const [activeSection, setActiveSection] = useState<"canvas" | "code">("canvas");
+  const [cloudProvider, setCloudProvider] = useState<"aws">("aws");
+  const [providerRegion] = useState("eu-west-1");
 
   const [bottomHeight, setBottomHeight] = useState(288);
   const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>([]);
@@ -48,6 +52,7 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     resources: [],
   });
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
+  const hclPersistenceDisabledRef = useRef(false);
 
   const buildSubtreeSnapshot = useCallback(
     (rootId: string) => {
@@ -214,10 +219,6 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
   );
 
   const terraformResourceToHCL = (r: TerraformResource) => {
-    if (r.hclTemplate?.trim()) {
-      return `${r.hclTemplate.trim()}\n`;
-    }
-
     const blockKind = r.kind ?? "resource";
     let attrs = "";
     for (const [k, v] of Object.entries(r.config.attributes)) {
@@ -230,16 +231,50 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     return `${blockKind} "${r.type}" "${r.name}" {\n${attrs}}\n`;
   };
 
-  const saveProjectToHCL = async (proj: TerraformProject) => {
-    let hcl = `terraform {\n  required_providers {\n    ${proj.provider.split("/").pop()} = {}\n  }\n}\n\n`;
+  const buildGlobalHcl = useCallback((proj: TerraformProject) => {
+    let hcl = `terraform {\n`;
+    hcl += `  required_providers {\n`;
+    hcl += `    ${cloudProvider} = {\n`;
+    hcl += `      source  = "hashicorp/${cloudProvider}"\n`;
+    hcl += `      version = "~> 5.0"\n`;
+    hcl += `    }\n`;
+    hcl += `  }\n`;
+    hcl += `}\n\n`;
+    hcl += `provider "${cloudProvider}" {\n`;
+    hcl += `  region = "${providerRegion}"\n`;
+    hcl += `}\n\n`;
+
     proj.resources.forEach((r) => {
       hcl += terraformResourceToHCL(r) + "\n";
     });
+
+    return hcl;
+  }, [cloudProvider, providerRegion]);
+
+  const saveProjectToHCL = async (proj: TerraformProject) => {
+    if (hclPersistenceDisabledRef.current) {
+      return;
+    }
+
+    const isTauriRuntime =
+      typeof window !== "undefined" &&
+      !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+
+    if (!isTauriRuntime) {
+      return;
+    }
+
+    const hcl = buildGlobalHcl(proj);
     try {
-      await writeTextFile(`project_${viewId}.tf`, hcl, {
+      await writeTextFile("main.tf", hcl, {
         baseDir: BaseDirectory.AppData,
       });
     } catch (error) {
+      const errorMessage = String(error);
+      if (errorMessage.includes("not allowed")) {
+        hclPersistenceDisabledRef.current = true;
+      }
+
       warn(
         "No se pudo guardar el archivo HCL en AppData (revisa permisos Tauri fs).",
         "TAURI_FS_PERSIST",
@@ -247,6 +282,23 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
       console.warn("Failed to persist HCL file via Tauri fs plugin:", error);
     }
   };
+
+  useEffect(() => {
+    const nodeResourceIds = new Set(nodes.map((node) => node.data.resourceId));
+    setProject((currentProject) => {
+      const nextResources = currentProject.resources.filter((resource) =>
+        nodeResourceIds.has(resource.id),
+      );
+
+      if (nextResources.length === currentProject.resources.length) {
+        return currentProject;
+      }
+
+      const nextProject = { ...currentProject, resources: nextResources };
+      void saveProjectToHCL(nextProject);
+      return nextProject;
+    });
+  }, [nodes]);
 
   const onNodeDragStart: NodeDragHandler = useCallback(
     (_event, draggedNode, nodes) => {
@@ -413,54 +465,118 @@ export default function WorkspaceView({ viewId }: WorkspaceViewProps) {
     [selectedResource, setNodes],
   );
 
+  const updateResourceAttributeById = useCallback(
+    (resourceId: string, attribute: string, value: unknown) => {
+      setProject((currentProject) => {
+        const updatedProject = {
+          ...currentProject,
+          resources: currentProject.resources.map((resource) =>
+            resource.id === resourceId
+              ? {
+                  ...resource,
+                  config: {
+                    ...resource.config,
+                    attributes: {
+                      ...resource.config.attributes,
+                      [attribute]: value,
+                    },
+                  },
+                }
+              : resource,
+          ),
+        };
+        void saveProjectToHCL(updatedProject);
+        return updatedProject;
+      });
+    },
+    [],
+  );
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <Header onClearCanvas={clearCanvas} />
+      <Header
+        onClearCanvas={clearCanvas}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+      />
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        <LeftPanel bottomHeight={bottomHeight} addResource={addResource} />
+      <div className="relative flex flex-1 min-h-0 overflow-hidden">
+        <div
+          className="absolute inset-0 flex flex-col min-h-0"
+          style={{
+            visibility: activeSection === "canvas" ? "visible" : "hidden",
+            pointerEvents: activeSection === "canvas" ? "auto" : "none",
+          }}
+        >
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            <LeftPanel
+              bottomHeight={bottomHeight}
+              addResource={addResource}
+              cloudProvider={cloudProvider}
+              onCloudProviderChange={setCloudProvider}
+            />
 
-        <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
-          <CenterPanel
+            <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
+              <CenterPanel
+                nodes={nodes}
+                edges={edges}
+                resources={project.resources}
+                schemas={TEST_NODE_SCHEMAS}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onDropNode={(node, position, options) => addResource(node, position, options)}
+                onNodeDragFinalize={onNodeDragFinalize}
+                onNodeDragStart={onNodeDragStart}
+                onNodeDragStop={onNodeDragStop}
+                onNodeSelected={selectNode}
+                onDeleteEdge={(edgeId) =>
+                  setEdges((currentEdges) =>
+                    currentEdges.filter((edge) => edge.id !== edgeId),
+                  )
+                }
+                onApplyEdgeMapping={applyEdgeMapping}
+              />
+            </main>
+
+            <RightPanel
+              nodes={nodes}
+              resources={project.resources}
+              selectedNodeId={selectedNodeId}
+              selectedNode={selectedNode}
+              selectedSchema={selectedSchema}
+              selectedResource={selectedResource}
+              onSelectNode={selectNode}
+              onUpdateSelectedResource={updateSelectedResource}
+            />
+          </div>
+
+          <BottomPanel
+            onHeightChange={setBottomHeight}
             nodes={nodes}
-            edges={edges}
             resources={project.resources}
             schemas={TEST_NODE_SCHEMAS}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            onDropNode={(node, position, options) => addResource(node, position, options)}
-            onNodeDragFinalize={onNodeDragFinalize}
-            onNodeDragStart={onNodeDragStart}
-            onNodeDragStop={onNodeDragStop}
-            onNodeSelected={selectNode}
-            onDeleteEdge={(edgeId) =>
-              setEdges((currentEdges) =>
-                currentEdges.filter((edge) => edge.id !== edgeId),
-              )
-            }
-            onApplyEdgeMapping={applyEdgeMapping}
           />
-        </main>
+        </div>
 
-        <RightPanel
-          nodes={nodes}
-          resources={project.resources}
-          selectedNodeId={selectedNodeId}
-          selectedNode={selectedNode}
-          selectedSchema={selectedSchema}
-          selectedResource={selectedResource}
-          onSelectNode={selectNode}
-          onUpdateSelectedResource={updateSelectedResource}
-        />
+        <div
+          className="absolute inset-0 min-h-0"
+          style={{
+            visibility: activeSection === "code" ? "visible" : "hidden",
+            pointerEvents: activeSection === "code" ? "auto" : "none",
+          }}
+        >
+          <main className="flex h-full min-h-0 w-full overflow-hidden bg-white">
+            <CodePanel
+              resources={project.resources}
+              schemas={TEST_NODE_SCHEMAS}
+              cloudProvider={cloudProvider}
+              region={providerRegion}
+              onUpdateAttribute={updateResourceAttributeById}
+            />
+          </main>
+        </div>
       </div>
-
-      <BottomPanel
-        onHeightChange={setBottomHeight}
-        nodes={nodes}
-        resources={project.resources}
-        schemas={TEST_NODE_SCHEMAS}
-      />
     </div>
   );
 }

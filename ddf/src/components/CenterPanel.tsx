@@ -130,6 +130,8 @@ export default function CenterPanel({
     return cache;
   }, [nodes]);
 
+  const stableNodeTypes = useMemo(() => canvasNodeTypes, []);
+
   const nodesWithDropTarget = useMemo(
     () =>
       nodes.map((node) => {
@@ -534,7 +536,7 @@ export default function CenterPanel({
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onInit={setReactFlowInstance}
-          nodeTypes={canvasNodeTypes}
+          nodeTypes={stableNodeTypes}
           connectionMode={ConnectionMode.Loose}
           elevateNodesOnSelect={false}
           selectionOnDrag={true}

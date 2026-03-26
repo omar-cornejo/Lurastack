@@ -10,6 +10,8 @@ import {
 type LeftPanelProps = {
   bottomHeight: number;
   addResource: (node: TerraformNodeSchema) => void;
+  cloudProvider: "aws";
+  onCloudProviderChange: (provider: "aws") => void;
 };
 
 const GROUP_ORDER: Array<TerraformNodeSchema["schemaGroup"]> = [
@@ -98,7 +100,12 @@ const rankNode = (node: TerraformNodeSchema, query: string) => {
   return score;
 };
 
-export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
+export const LeftPanel = ({
+  bottomHeight,
+  addResource,
+  cloudProvider,
+  onCloudProviderChange,
+}: LeftPanelProps) => {
   const [visible, setVisible] = useState(false);
   const [width, setWidth] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
@@ -120,7 +127,14 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
   };
 
   const filteredNodes = useMemo(() => {
-    return TEST_NODE_SCHEMAS
+    const providerFiltered = TEST_NODE_SCHEMAS.filter((node) => {
+      if (cloudProvider === "aws") {
+        return node.terraformType.startsWith("aws_");
+      }
+      return true;
+    });
+
+    return providerFiltered
       .map((node) => ({ node, score: rankNode(node, search) }))
       .filter((entry) => entry.score > 0)
       .sort((left, right) => {
@@ -195,6 +209,16 @@ export const LeftPanel = ({ bottomHeight, addResource }: LeftPanelProps) => {
 
       {visible && (
         <div className="p-2">
+          <div className="mb-2">
+            <select
+              value={cloudProvider}
+              onChange={(event) => onCloudProviderChange(event.target.value as "aws")}
+              className="w-full rounded border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400"
+            >
+              <option value="aws">AWS</option>
+            </select>
+          </div>
+
           <div className="relative">
             <input
               type="text"

@@ -40,6 +40,16 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
   const terminalRef = useRef<HTMLDivElement>(null);
   const term = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
+  const terminalDisposedRef = useRef(false);
+
+  const safeFitTerminal = () => {
+    if (terminalDisposedRef.current || !term.current || !fitAddon.current) return;
+    try {
+      fitAddon.current.fit();
+    } catch {
+      // ignore transient fit errors when terminal is mounting/unmounting
+    }
+  };
 
   const resourcesInCanvas = useMemo(() => {
     const byResourceId = new Map(resources.map((resource) => [resource.id, resource]));
@@ -172,6 +182,7 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
 
   useEffect(() => {
     if (!terminalRef.current) return;
+    terminalDisposedRef.current = false;
 
     term.current = new Terminal({
       cursorBlink: true,
@@ -185,36 +196,50 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
 
     term.current.open(terminalRef.current);
     setTimeout(() => {
-      fitAddon.current?.fit();
+      if (terminalDisposedRef.current) return;
+      safeFitTerminal();
       term.current?.focus();
     }, 0);
 
     term.current.onData((data: string) => {
+      if (terminalDisposedRef.current) return;
       invoke("write_to_pty", { input: data });
     });
 
     const unlisten = listen<string>("pty-output", (event) => {
-      term.current?.write(event.payload);
+      if (terminalDisposedRef.current || !term.current) return;
+      try {
+        term.current.write(event.payload);
+      } catch {
+        // ignore writes after dispose boundaries
+      }
     });
 
-    const onWindowResize = () => fitAddon.current?.fit();
+    const onWindowResize = () => safeFitTerminal();
     window.addEventListener('resize', onWindowResize);
 
     return () => {
+      terminalDisposedRef.current = true;
       unlisten.then((f) => f());
       window.removeEventListener('resize', onWindowResize);
-      term.current?.dispose();
+      try {
+        term.current?.dispose();
+      } catch {
+        // ignore dispose race conditions
+      }
+      term.current = null;
+      fitAddon.current = null;
     };
   }, []);
 
   useEffect(() => {
-    fitAddon.current?.fit();
+    safeFitTerminal();
   }, [height]);
 
   useEffect(() => {
     if (activeTab === "terminal") {
       requestAnimationFrame(() => {
-        fitAddon.current?.fit();
+        safeFitTerminal();
         term.current?.focus();
       });
     }
@@ -224,7 +249,7 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
     if (!panelRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      fitAddon.current?.fit();
+      safeFitTerminal();
     });
 
     resizeObserver.observe(panelRef.current);
@@ -529,7 +554,11 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
 
                         <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
                           {group.properties.map((property) => {
-                            const refPrefix = `${activeMapperItem.schema?.id ?? activeMapperItem.resource.schemaId}.${activeMapperItem.resource.name}`;
+                            const resourcePrefix =
+                              activeMapperItem.resource.kind === "data"
+                                ? `data.${activeMapperItem.resource.type}`
+                                : activeMapperItem.resource.type;
+                            const refPrefix = `${resourcePrefix}.${activeMapperItem.resource.name}`;
                             const mapperValue = `${refPrefix}.${property.name}`;
                             const fieldName = property.name.split(".").pop() ?? property.name;
 

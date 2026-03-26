@@ -62,13 +62,17 @@ function App() {
         onCloseView={handleCloseView}
       />
 
-      {/* Render all views but only show the active one — preserves their state */}
+      {/* Render all views and keep layout size for inactive ones to preserve state without collapsing React Flow containers */}
       <div className="flex flex-1 overflow-hidden relative">
         {views.map((view) => (
           <div
             key={view.id}
             className="absolute inset-0 flex flex-col"
-            style={{ display: view.id === activeViewId ? "flex" : "none" }}
+            style={{
+              visibility: view.id === activeViewId ? "visible" : "hidden",
+              pointerEvents: view.id === activeViewId ? "auto" : "none",
+              zIndex: view.id === activeViewId ? 1 : 0,
+            }}
           >
             <WorkspaceView viewId={view.id} />
           </div>
