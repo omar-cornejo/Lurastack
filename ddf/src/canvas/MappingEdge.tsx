@@ -194,11 +194,12 @@ export function MappingEdge({
       {uniqueMappings.length || fallbackSummary ? (
         <EdgeLabelRenderer>
           <div
-            className="pointer-events-auto absolute max-w-[320px] rounded-md border border-slate-300 bg-white/95 text-[10px] text-slate-700 shadow"
+            className="connection-overlay pointer-events-auto absolute z-[12000] max-w-[320px] rounded-md border border-slate-300 bg-white/95 text-[10px] text-slate-700 shadow"
             style={{
               left: 0,
               top: 0,
               transform: `translate(-50%, -50%) translate(${desiredMidX}px, ${desiredMidY}px)`,
+              zIndex: 12000,
             }}
             onPointerDown={(event) => {
               event.stopPropagation();

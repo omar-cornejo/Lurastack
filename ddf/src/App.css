@@ -20,3 +20,14 @@ input, textarea, select, option, button, a, label, .allow-select,
 }
 
 /* If you need to enable selection for a specific area, add the `allow-select` class. */
+
+.react-flow__edge-label-renderer,
+.react-flow__edgelabel-renderer {
+	z-index: 12000 !important;
+	pointer-events: none;
+}
+
+.react-flow__edge-label-renderer .connection-overlay,
+.react-flow__edgelabel-renderer .connection-overlay {
+	pointer-events: auto;
+}

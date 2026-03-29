@@ -108,6 +108,13 @@ export default function CenterPanel({
 
   const stableNodeTypes = useMemo(() => canvasNodeTypes, []);
   const stableEdgeTypes = useMemo(() => canvasEdgeTypes, []);
+  const stableDefaultEdgeOptions = useMemo(
+    () => ({
+      zIndex: 10000,
+      interactionWidth: 32,
+    }),
+    [],
+  );
 
   const getEdgeMappings = useCallback(
     (edge: Edge<CanvasEdgeData>): CanvasEdgeMapping[] =>
@@ -143,8 +150,6 @@ export default function CenterPanel({
 
     return cache;
   }, [nodes]);
-
-  const stableNodeTypes = useMemo(() => canvasNodeTypes, []);
 
   const nodesWithDropTarget = useMemo(
     () =>
@@ -544,10 +549,8 @@ export default function CenterPanel({
           onDrop={handleDrop}
           onInit={setReactFlowInstance}
           nodeTypes={stableNodeTypes}
-<<<<<<< HEAD
-=======
           edgeTypes={stableEdgeTypes}
->>>>>>> ec59cc5 (added connections on edge)
+          defaultEdgeOptions={stableDefaultEdgeOptions}
           connectionMode={ConnectionMode.Loose}
           elevateNodesOnSelect={false}
           selectionOnDrag={true}

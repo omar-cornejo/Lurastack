@@ -7,7 +7,7 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
   if (data.isContainer) {
     return (
       <div
-        className={`h-full w-full rounded-md border-2 bg-blue-50/60 shadow-inner transition-colors ${
+        className={`pointer-events-none h-full w-full rounded-md border-2 bg-blue-50/60 shadow-inner transition-colors ${
           data.isDropTarget
             ? "border-emerald-500 ring-2 ring-emerald-300"
             : "border-blue-300"
@@ -17,8 +17,8 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
           isVisible={selected}
           minWidth={DEFAULT_CONTAINER_SIZE.width}
           minHeight={DEFAULT_CONTAINER_SIZE.height}
-          lineClassName="!border-blue-400"
-          handleClassName="!h-2.5 !w-2.5 !rounded-sm !border !border-white !bg-blue-500"
+          lineClassName="!pointer-events-none !border-blue-400"
+          handleClassName="!pointer-events-auto !z-[13000] !h-2.5 !w-2.5 !rounded-sm !border !border-white !bg-blue-500"
         />
 
         <Handle
