@@ -19,8 +19,13 @@ import {
   type OnSelectionChangeParams,
   type EdgeMouseHandler,
 } from "reactflow";
-import type { CanvasTerraformNodeData } from "../canvas/types";
+import type {
+  CanvasEdgeData,
+  CanvasEdgeMapping,
+  CanvasTerraformNodeData,
+} from "../canvas/types";
 import { canvasNodeTypes } from "../canvas/nodeTypes";
+import { canvasEdgeTypes } from "../canvas/edgeTypes";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import type { TerraformResource } from "../models/terraform";
 import { NODE_DRAG_MIME, parseDraggedNode } from "../commands/nodeDragPayload";
@@ -35,7 +40,7 @@ import "reactflow/dist/style.css";
 
 type CenterPanelProps = {
   nodes: Node<CanvasTerraformNodeData>[];
-  edges: Edge[];
+  edges: Edge<CanvasEdgeData>[];
   resources: TerraformResource[];
   schemas: TerraformNodeSchema[];
   onNodesChange: OnNodesChange;
@@ -100,6 +105,15 @@ export default function CenterPanel({
     x: number;
     y: number;
   } | null>(null);
+
+  const stableNodeTypes = useMemo(() => canvasNodeTypes, []);
+  const stableEdgeTypes = useMemo(() => canvasEdgeTypes, []);
+
+  const getEdgeMappings = useCallback(
+    (edge: Edge<CanvasEdgeData>): CanvasEdgeMapping[] =>
+      Array.isArray(edge.data?.mappings) ? edge.data.mappings : [],
+    [],
+  );
 
   const nodeDepthMap = useMemo(() => {
     const byId = new Map(nodes.map((node) => [node.id, node]));
@@ -377,7 +391,7 @@ export default function CenterPanel({
     return `${prefix}${context.schema.terraformType}.${context.resource.name}.${attributeName}`;
   }, [getNodeResourceContext]);
 
-  const openEdgeMapper = useCallback((edge: Edge, x: number, y: number) => {
+  const openEdgeMapper = useCallback((edge: Edge<CanvasEdgeData>, x: number, y: number) => {
     if (!edge.source || !edge.target) return;
     const sourceContext = getNodeResourceContext(edge.source);
     const targetContext = getNodeResourceContext(edge.target);
@@ -394,14 +408,7 @@ export default function CenterPanel({
         sourceContext.attributes[0]?.name ??
         "id";
 
-      const existingMappings = Array.isArray((edge.data as any)?.mappings)
-        ? ((edge.data as any).mappings as Array<{
-            fromNodeId: string;
-            toNodeId: string;
-            sourceExpression: string;
-            targetAttribute: string;
-          }>)
-        : [];
+      const existingMappings = getEdgeMappings(edge);
 
       const existingMapping = existingMappings[0];
       const defaultFrom = existingMapping?.fromNodeId ?? edge.source;
@@ -434,7 +441,7 @@ export default function CenterPanel({
         buildTerraformRef(defaultFrom, sourceAttr),
       targetAttribute: existingMapping?.targetAttribute ?? preferredTarget,
     });
-  }, [buildTerraformRef, getNodeResourceContext]);
+  }, [buildTerraformRef, getEdgeMappings, getNodeResourceContext]);
 
   const handleEdgeContextMenu: EdgeMouseHandler = useCallback(
     (event, edge) => {
@@ -537,6 +544,10 @@ export default function CenterPanel({
           onDrop={handleDrop}
           onInit={setReactFlowInstance}
           nodeTypes={stableNodeTypes}
+<<<<<<< HEAD
+=======
+          edgeTypes={stableEdgeTypes}
+>>>>>>> ec59cc5 (added connections on edge)
           connectionMode={ConnectionMode.Loose}
           elevateNodesOnSelect={false}
           selectionOnDrag={true}

@@ -20,7 +20,11 @@ import {
   type Connection,
   type Edge,
 } from "reactflow";
-import type { CanvasTerraformNodeData } from "../canvas/types";
+import type {
+  CanvasEdgeData,
+  CanvasEdgeMapping,
+  CanvasTerraformNodeData,
+} from "../canvas/types";
 import {
   applyManualContainerResizeEffects,
   placeCanvasNodeFromUserAction,
@@ -42,7 +46,7 @@ export default function WorkspaceView({ viewId: _viewId }: WorkspaceViewProps) {
 
   const [bottomHeight, setBottomHeight] = useState(288);
   const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdgeData>([]);
   const activeDragNodeIdRef = useRef<string | null>(null);
   const dragSubtreeSnapshotRef = useRef<
     Map<string, { parentNode?: string; position: { x: number; y: number } }> | null
@@ -118,7 +122,16 @@ export default function WorkspaceView({ viewId: _viewId }: WorkspaceViewProps) {
 
   const onConnect = useCallback(
     (connection: Connection) => {
-      setEdges((currentEdges) => addEdge(connection, currentEdges));
+      setEdges((currentEdges) =>
+        addEdge(
+          {
+            ...connection,
+            type: "mappingEdge",
+            data: { mappings: [] },
+          },
+          currentEdges,
+        ),
+      );
     },
     [setEdges],
   );
@@ -160,13 +173,8 @@ export default function WorkspaceView({ viewId: _viewId }: WorkspaceViewProps) {
       setEdges((currentEdges) =>
         currentEdges.map((edge) => {
           if (edge.id !== payload.edgeId) return edge;
-          const previousMappings = Array.isArray((edge.data as any)?.mappings)
-            ? ((edge.data as any).mappings as Array<{
-                fromNodeId: string;
-                toNodeId: string;
-                sourceExpression: string;
-                targetAttribute: string;
-              }>)
+          const previousMappings = Array.isArray(edge.data?.mappings)
+            ? (edge.data.mappings as CanvasEdgeMapping[])
             : [];
 
           const nextMappings = [
@@ -178,6 +186,12 @@ export default function WorkspaceView({ viewId: _viewId }: WorkspaceViewProps) {
             {
               fromNodeId: payload.fromNodeId,
               toNodeId: payload.toNodeId,
+              fromNodeLabel:
+                nodes.find((node) => node.id === payload.fromNodeId)?.data.label ??
+                payload.fromNodeId,
+              toNodeLabel:
+                nodes.find((node) => node.id === payload.toNodeId)?.data.label ??
+                payload.toNodeId,
               sourceExpression: payload.sourceExpression,
               targetAttribute: payload.targetAttribute,
             },
@@ -185,11 +199,12 @@ export default function WorkspaceView({ viewId: _viewId }: WorkspaceViewProps) {
 
           return {
             ...edge,
+            type: "mappingEdge",
             data: {
               ...(edge.data ?? {}),
               mappings: nextMappings,
             },
-          } as Edge;
+          } as Edge<CanvasEdgeData>;
         }),
       );
     },

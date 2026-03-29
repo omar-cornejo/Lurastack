@@ -1,5 +1,22 @@
 import type { TerraformNodeSchema } from "../models/testNodes";
 
+export type CanvasEdgeMapping = {
+  fromNodeId: string;
+  toNodeId: string;
+  fromNodeLabel?: string;
+  toNodeLabel?: string;
+  sourceExpression: string;
+  targetAttribute: string;
+};
+
+export type CanvasEdgeData = {
+  mappings?: CanvasEdgeMapping[];
+  labelOffset?: {
+    x: number;
+    y: number;
+  };
+};
+
 export type CanvasTerraformNodeData = {
   resourceId: string;
   schemaId: string;
