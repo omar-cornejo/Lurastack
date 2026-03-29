@@ -569,6 +569,7 @@ export default function WorkspaceView({ viewId: _viewId }: WorkspaceViewProps) {
           <BottomPanel
             onHeightChange={setBottomHeight}
             nodes={nodes}
+            edges={edges}
             resources={project.resources}
             schemas={TEST_NODE_SCHEMAS}
           />

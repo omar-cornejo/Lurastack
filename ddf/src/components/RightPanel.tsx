@@ -554,6 +554,7 @@ export const RightPanel = ({
                               </div>
                             ) : null}
                           </div>
+
                         </div>
                       </div>
                     </div>

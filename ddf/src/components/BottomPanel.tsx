@@ -5,8 +5,8 @@ import "xterm/css/xterm.css";
 import { Icon } from '@iconify/react';
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type { Node } from "reactflow";
-import type { CanvasTerraformNodeData } from "../canvas/types";
+import type { Edge, Node } from "reactflow";
+import type { CanvasEdgeData, CanvasTerraformNodeData } from "../canvas/types";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
@@ -14,6 +14,7 @@ import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 type BottomPanelProps = {
   onHeightChange?: (height: number) => void;
   nodes: Node<CanvasTerraformNodeData>[];
+  edges: Edge<CanvasEdgeData>[];
   resources: TerraformResource[];
   schemas: TerraformNodeSchema[];
 };
@@ -23,7 +24,7 @@ type BottomPanelTab = "terminal" | "mapper";
 const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
 
 
-export default function BottomPanel({ onHeightChange, nodes, resources, schemas }: BottomPanelProps) {
+export default function BottomPanel({ onHeightChange, nodes, edges, resources, schemas }: BottomPanelProps) {
   const [open, setOpen] = useState(true);
   const [height, setHeight] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
@@ -35,6 +36,7 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
     Array<"required" | "optional" | "computed">
   >([]);
   const [attributeTypeFilters, setAttributeTypeFilters] = useState<string[]>([]);
+  const [mapperSourceFilter, setMapperSourceFilter] = useState<"properties" | "connections" | "container">("properties");
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -174,6 +176,107 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
         return left.key.localeCompare(right.key);
       });
   }, [filteredMapperProperties]);
+
+  const mapperIncomingConnectionMappings = useMemo(() => {
+    if (!activeMapperItem) {
+      return [] as Array<{
+        edgeId: string;
+        fromNodeId: string;
+        fromNodeLabel: string;
+        sourceExpression: string;
+        targetAttribute: string;
+      }>;
+    }
+
+    const targetNodeId = activeMapperItem.node.id;
+    const collected: Array<{
+      edgeId: string;
+      fromNodeId: string;
+      fromNodeLabel: string;
+      sourceExpression: string;
+      targetAttribute: string;
+    }> = [];
+
+    edges.forEach((edge) => {
+      const mappings = Array.isArray(edge.data?.mappings) ? edge.data.mappings : [];
+      mappings
+        .filter((mapping) => mapping.toNodeId === targetNodeId)
+        .forEach((mapping) => {
+          const fromNode = nodes.find((node) => node.id === mapping.fromNodeId);
+          collected.push({
+            edgeId: edge.id,
+            fromNodeId: mapping.fromNodeId,
+            fromNodeLabel:
+              mapping.fromNodeLabel ?? fromNode?.data.label ?? mapping.fromNodeId,
+            sourceExpression: mapping.sourceExpression,
+            targetAttribute: mapping.targetAttribute,
+          });
+        });
+    });
+
+    return collected;
+  }, [activeMapperItem, edges, nodes]);
+
+  const mapperIncomingGrouped = useMemo(() => {
+    const grouped = new Map<string, {
+      fromNodeLabel: string;
+      entries: Array<{
+        edgeId: string;
+        sourceExpression: string;
+        targetAttribute: string;
+      }>;
+    }>();
+
+    mapperIncomingConnectionMappings.forEach((mapping) => {
+      if (!grouped.has(mapping.fromNodeId)) {
+        grouped.set(mapping.fromNodeId, {
+          fromNodeLabel: mapping.fromNodeLabel,
+          entries: [],
+        });
+      }
+
+      grouped.get(mapping.fromNodeId)!.entries.push({
+        edgeId: mapping.edgeId,
+        sourceExpression: mapping.sourceExpression,
+        targetAttribute: mapping.targetAttribute,
+      });
+    });
+
+    return Array.from(grouped.values());
+  }, [mapperIncomingConnectionMappings]);
+
+  const mapperInheritedFromContainer = useMemo(() => {
+    if (!activeMapperItem?.node.parentNode) {
+      return [] as Array<{
+        containerLabel: string;
+        attributeName: string;
+        sourceExpression: string;
+      }>;
+    }
+
+    const parentNode = nodes.find((node) => node.id === activeMapperItem.node.parentNode);
+    if (!parentNode) return [];
+
+    const parentResource = resources.find((resource) => resource.id === parentNode.data.resourceId);
+    if (!parentResource) return [];
+
+    const parentSchema = schemas.find((schema) => schema.id === parentResource.schemaId);
+    const parentProps = getInspectorPropertiesForSchema(parentSchema);
+    const configuredKeys = Object.keys(parentResource.config.attributes ?? {});
+    const schemaKeys = parentProps.map((prop) => prop.name);
+    const allKeys = Array.from(new Set([...schemaKeys, ...configuredKeys]))
+      .filter(Boolean)
+      .sort((left, right) => left.localeCompare(right));
+
+    const prefix = parentResource.kind === "data" ? "data." : "";
+    const baseRef = `${prefix}${parentResource.type}.${parentResource.name}`;
+
+    return allKeys.map((attributeName) => ({
+      containerLabel: parentNode.data.label,
+      attributeName,
+      sourceExpression: `${baseRef}.${attributeName}`,
+    }));
+  }, [activeMapperItem, nodes, resources, schemas]);
 
 
   useEffect(() => {
@@ -538,12 +641,128 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
                             </div>
                           ) : null}
                         </div>
+
+                        <div className="ml-auto flex gap-1">
+                          <button
+                            type="button"
+                            onClick={() => setMapperSourceFilter("properties")}
+                            className={`rounded px-2 py-1 text-[11px] font-semibold border ${
+                              mapperSourceFilter === "properties"
+                                ? "border-blue-300 bg-blue-100 text-blue-700"
+                                : "border-gray-300 bg-white text-gray-600"
+                            }`}
+                          >
+                            Properties
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMapperSourceFilter("connections")}
+                            className={`rounded px-2 py-1 text-[11px] font-semibold border ${
+                              mapperSourceFilter === "connections"
+                                ? "border-blue-300 bg-blue-100 text-blue-700"
+                                : "border-gray-300 bg-white text-gray-600"
+                            }`}
+                          >
+                            Connections
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMapperSourceFilter("container")}
+                            className={`rounded px-2 py-1 text-[11px] font-semibold border ${
+                              mapperSourceFilter === "container"
+                                ? "border-blue-300 bg-blue-100 text-blue-700"
+                                : "border-gray-300 bg-white text-gray-600"
+                            }`}
+                          >
+                            Container
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    {groupedMapperProperties.map((group) => (
+                  {mapperSourceFilter === "connections" && (
+                    <div className="rounded border border-gray-200 bg-white p-2">
+                      <div className="mb-1 w-full border-b border-gray-200 pb-1 flex items-center justify-between text-left">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-700 break-all">
+                          From connections
+                        </span>
+                      </div>
+
+                      {mapperIncomingGrouped.length === 0 ? (
+                        <div className="rounded border border-dashed border-gray-300 p-2 text-xs text-gray-500">
+                          No incoming mapped attributes for this resource.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {mapperIncomingGrouped.map((group) => (
+                            <div key={group.fromNodeLabel} className="rounded border border-gray-200 bg-gray-50 p-2">
+                              <div className="mb-1 text-[11px] font-semibold text-gray-700">{group.fromNodeLabel}</div>
+                              <div className="flex flex-wrap gap-1">
+                                {group.entries.map((entry, index) => (
+                                  <div
+                                    key={`${entry.edgeId}-${entry.targetAttribute}-${index}`}
+                                    className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] text-blue-800 break-all cursor-grab"
+                                    draggable
+                                    onDragStart={(event) => {
+                                      event.dataTransfer.setData(OBJECT_MAPPER_REF_MIME, entry.sourceExpression);
+                                      event.dataTransfer.setData("text/plain", entry.sourceExpression);
+                                      event.dataTransfer.effectAllowed = "copy";
+                                    }}
+                                    title={`Mapped to ${entry.targetAttribute}`}
+                                  >
+                                    {entry.sourceExpression}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {mapperSourceFilter === "container" && (
+                    <div className="rounded border border-gray-200 bg-white p-2">
+                      <div className="mb-1 w-full border-b border-gray-200 pb-1 flex items-center justify-between text-left">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-700 break-all">
+                          From container
+                        </span>
+                      </div>
+
+                      {mapperInheritedFromContainer.length === 0 ? (
+                        <div className="rounded border border-dashed border-gray-300 p-2 text-xs text-gray-500">
+                          This resource is not inside a container or no inherited attributes are available.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="text-[11px] font-semibold text-gray-700">
+                            {mapperInheritedFromContainer[0]?.containerLabel}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {mapperInheritedFromContainer.map((item) => (
+                              <div
+                                key={item.sourceExpression}
+                                className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] text-emerald-800 break-all cursor-grab"
+                                draggable
+                                onDragStart={(event) => {
+                                  event.dataTransfer.setData(OBJECT_MAPPER_REF_MIME, item.sourceExpression);
+                                  event.dataTransfer.setData("text/plain", item.sourceExpression);
+                                  event.dataTransfer.effectAllowed = "copy";
+                                }}
+                              >
+                                {item.sourceExpression}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {mapperSourceFilter === "properties" ? (
+                    <div className="space-y-2">
+                      {groupedMapperProperties.map((group) => (
                       <div key={group.key} className="rounded border border-gray-200 bg-white p-2">
                         <div className="mb-1 w-full border-b border-gray-200 pb-1 flex items-center justify-between text-left">
                           <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-700 break-all">
@@ -610,14 +829,15 @@ export default function BottomPanel({ onHeightChange, nodes, resources, schemas 
                           })}
                         </div>
                       </div>
-                    ))}
+                      ))}
 
-                    {groupedMapperProperties.length === 0 ? (
-                      <div className="rounded border border-dashed border-gray-300 p-2 text-xs text-gray-500">
-                        No attributes match the current filters.
-                      </div>
-                    ) : null}
-                  </div>
+                      {groupedMapperProperties.length === 0 ? (
+                        <div className="rounded border border-dashed border-gray-300 p-2 text-xs text-gray-500">
+                          No attributes match the current filters.
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               )}
             </div>
