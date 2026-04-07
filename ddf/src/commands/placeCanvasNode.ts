@@ -430,6 +430,18 @@ export const applyManualContainerResizeEffects = (
     }
   };
 
+  const hasValidParentAnchor = (
+    node: CanvasNode,
+  ) => {
+    if (!node.parentNode) return true;
+
+    return (
+      node.position.x >= CONTAINER_PADDING_X &&
+      node.position.y >= CONTAINER_HEADER_SPACE
+    );
+  };
+
+
   for (const container of resizedContainers) {
     const minSize = recomputeContainerSizeFromChildren(workingNodes, container.id);
     if (!minSize) continue;
