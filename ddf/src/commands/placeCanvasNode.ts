@@ -228,8 +228,21 @@ export const expandAncestorContainers = (nodes: CanvasNode[], startNodeId: strin
     const requiredHeight =
       child.position.y + childSize.height + CONTAINER_PADDING_BOTTOM;
 
-    const nextWidth = Math.max(parentSize.width - shiftX, requiredWidth - shiftX);
-    const nextHeight = Math.max(parentSize.height - shiftY, requiredHeight - shiftY);
+    let nextWidth = Math.max(parentSize.width - shiftX, requiredWidth - shiftX);
+    let nextHeight = Math.max(parentSize.height - shiftY, requiredHeight - shiftY);
+
+    let limitReached = false;
+    if (nextWidth > MAX_CONTAINER_DIMENSION || nextHeight > MAX_CONTAINER_DIMENSION) {
+      warn(
+        `No se puede expandir '${parent.data?.label || parent.id}' más allá del límite de ${MAX_CONTAINER_DIMENSION}px.`,
+        "RESIZE_ANCESTOR_BLOCKED"
+      );
+      
+      // Aplicamos un "clamp" para que visualmente no sobrepase el límite
+      nextWidth = Math.min(nextWidth, MAX_CONTAINER_DIMENSION);
+      nextHeight = Math.min(nextHeight, MAX_CONTAINER_DIMENSION);
+      limitReached = true;
+    }
 
     if (shiftX !== 0 || shiftY !== 0) {
       parent.position = {
@@ -736,7 +749,7 @@ const canExpandHierarchyForPlacement = (
     if (nextWidth > MAX_CONTAINER_DIMENSION || nextHeight > MAX_CONTAINER_DIMENSION) {
       return {
         ok: false,
-        reason: `Container expansion exceeds ${MAX_CONTAINER_DIMENSION}px limit`,
+        reason: `La expansión del ancestro '${parent.data?.label || parent.id}' supera el límite de ${MAX_CONTAINER_DIMENSION}px`,
       };
     }
 
