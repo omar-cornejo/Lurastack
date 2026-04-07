@@ -451,9 +451,16 @@ export const applyManualContainerResizeEffects = (
     const minDefault = getContainerMinimumSize();
 
     // Detect which edges the user dragged by checking position changes.
-    // Left/top drags change position; right/bottom drags only change dimensions.
     const rawDx = container.position.x - prev.position.x;
     const rawDy = container.position.y - prev.position.y;
+
+    // FIX: Derivamos el delta real a partir del cambio en las dimensiones.
+    // Como expandAncestorContainers resetea position.x/y para mantener el padding,
+    // el rawDx original de React Flow se acumula exponencialmente. 
+    // Las dimensiones (width/height) no sufren este bucle y nos dan el delta exacto.
+    const actualDx = rawDx !== 0 ? -(rfSize.width - prevSize.width) : 0;
+    const actualDy = rawDy !== 0 ? -(rfSize.height - prevSize.height) : 0;
+
 
     // Children bounding box (original relative coords, before any offset)
     const directChildren = workingNodes.filter(
@@ -483,15 +490,15 @@ export const applyManualContainerResizeEffects = (
 
     if (rawDx !== 0) {
       // LEFT edge was dragged → right edge stays anchored at prevRight
-      let allowedDx = rawDx;
+      let allowedDx = actualDx;
 
-      if (rawDx > 0 && hasChildren) {
+      if (actualDx > 0 && hasChildren) {
         // Shrinking from left: after shifting children left by dx,
         // no child can have relative x < CONTAINER_PADDING_X
         const maxFromChildren = childMinX - CONTAINER_PADDING_X;
         const maxFromMinWidth = prevSize.width - minDefault.width;
         allowedDx = Math.min(
-          rawDx,
+          actualDx,
           Math.max(0, maxFromChildren),
           Math.max(0, maxFromMinWidth),
         );
@@ -522,14 +529,14 @@ export const applyManualContainerResizeEffects = (
 
     if (rawDy !== 0) {
       // TOP edge was dragged → bottom edge stays anchored at prevBottom
-      let allowedDy = rawDy;
+      let allowedDy = actualDy;
 
-      if (rawDy > 0 && hasChildren) {
+      if (actualDy > 0 && hasChildren) {
         // Shrinking from top: no child can have relative y < CONTAINER_HEADER_SPACE
         const maxFromChildren = childMinY - CONTAINER_HEADER_SPACE;
         const maxFromMinHeight = prevSize.height - minDefault.height;
         allowedDy = Math.min(
-          rawDy,
+          actualDy,
           Math.max(0, maxFromChildren),
           Math.max(0, maxFromMinHeight),
         );
