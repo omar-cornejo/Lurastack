@@ -443,59 +443,147 @@ export const applyManualContainerResizeEffects = (
 
 
   for (const container of resizedContainers) {
-    const minSize = recomputeContainerSizeFromChildren(workingNodes, container.id);
-    if (!minSize) continue;
+    const prev = previousNodeMap.get(container.id);
+    if (!prev) continue;
 
-    const previousNode = previousNodeMap.get(container.id);
-    const previousSize = previousNode ? getNodeSize(previousNode) : getNodeSize(container);
+    const prevSize = getNodeSize(prev);
+    const rfSize = getNodeSize(container);
+    const minDefault = getContainerMinimumSize();
 
-    const currentSize = getNodeSize(container);
-    let nextWidth = Math.max(currentSize.width, minSize.width);
-    let nextHeight = Math.max(currentSize.height, minSize.height);
+    // Detect which edges the user dragged by checking position changes.
+    // Left/top drags change position; right/bottom drags only change dimensions.
+    const rawDx = container.position.x - prev.position.x;
+    const rawDy = container.position.y - prev.position.y;
 
-    let dx = 0;
-    let dy = 0;
+    // Children bounding box (original relative coords, before any offset)
+    const directChildren = workingNodes.filter(
+      (n) => n.parentNode === container.id,
+    );
+    const hasChildren = directChildren.length > 0;
+    let childMinX = Infinity;
+    let childMinY = Infinity;
+    let childMaxRight = 0;
+    let childMaxBottom = 0;
 
-    if (previousNode) {
-      const rawDx = container.position.x - previousNode.position.x;
-      const rawDy = container.position.y - previousNode.position.y;
-
-      const actualDWidth = nextWidth - previousSize.width;
-      const actualDHeight = nextHeight - previousSize.height;
-
-      if (rawDx !== 0) dx = -actualDWidth;
-      if (rawDy !== 0) dy = -actualDHeight;
-
-      container.position = {
-        x: previousNode.position.x + dx,
-        y: previousNode.position.y + dy,
-      };
+    for (const child of directChildren) {
+      const cs = getNodeSize(child);
+      childMinX = Math.min(childMinX, child.position.x);
+      childMinY = Math.min(childMinY, child.position.y);
+      childMaxRight = Math.max(childMaxRight, child.position.x + cs.width);
+      childMaxBottom = Math.max(childMaxBottom, child.position.y + cs.height);
     }
 
+    // Previous anchored edges
+    const prevRight = prev.position.x + prevSize.width;
+    const prevBottom = prev.position.y + prevSize.height;
+
+    // === HORIZONTAL ===
+    let newLeft: number;
+    let newWidth: number;
+
+    if (rawDx !== 0) {
+      // LEFT edge was dragged → right edge stays anchored at prevRight
+      let allowedDx = rawDx;
+
+      if (rawDx > 0 && hasChildren) {
+        // Shrinking from left: after shifting children left by dx,
+        // no child can have relative x < CONTAINER_PADDING_X
+        const maxFromChildren = childMinX - CONTAINER_PADDING_X;
+        const maxFromMinWidth = prevSize.width - minDefault.width;
+        allowedDx = Math.min(
+          rawDx,
+          Math.max(0, maxFromChildren),
+          Math.max(0, maxFromMinWidth),
+        );
+      }
+
+      newLeft = prev.position.x + allowedDx;
+      newWidth = prevRight - newLeft;
+
+      // Final clamps (order matters: min first, then max, then re-anchor)
+      newWidth = Math.max(newWidth, minDefault.width);
+      newWidth = Math.min(newWidth, MAX_CONTAINER_DIMENSION);
+      newLeft = prevRight - newWidth;
+    } else {
+      // RIGHT edge was dragged (or no horizontal change) → left stays fixed
+      newLeft = prev.position.x;
+      newWidth = rfSize.width;
+
+      if (hasChildren) {
+        newWidth = Math.max(newWidth, childMaxRight + CONTAINER_PADDING_X);
+      }
+      newWidth = Math.max(newWidth, minDefault.width);
+      newWidth = Math.min(newWidth, MAX_CONTAINER_DIMENSION);
+    }
+
+    // === VERTICAL ===
+    let newTop: number;
+    let newHeight: number;
+
+    if (rawDy !== 0) {
+      // TOP edge was dragged → bottom edge stays anchored at prevBottom
+      let allowedDy = rawDy;
+
+      if (rawDy > 0 && hasChildren) {
+        // Shrinking from top: no child can have relative y < CONTAINER_HEADER_SPACE
+        const maxFromChildren = childMinY - CONTAINER_HEADER_SPACE;
+        const maxFromMinHeight = prevSize.height - minDefault.height;
+        allowedDy = Math.min(
+          rawDy,
+          Math.max(0, maxFromChildren),
+          Math.max(0, maxFromMinHeight),
+        );
+      }
+
+      newTop = prev.position.y + allowedDy;
+      newHeight = prevBottom - newTop;
+
+      newHeight = Math.max(newHeight, minDefault.height);
+      newHeight = Math.min(newHeight, MAX_CONTAINER_DIMENSION);
+      newTop = prevBottom - newHeight;
+    } else {
+      // BOTTOM edge was dragged (or no vertical change) → top stays fixed
+      newTop = prev.position.y;
+      newHeight = rfSize.height;
+
+      if (hasChildren) {
+        newHeight = Math.max(newHeight, childMaxBottom + CONTAINER_PADDING_BOTTOM);
+      }
+      newHeight = Math.max(newHeight, minDefault.height);
+      newHeight = Math.min(newHeight, MAX_CONTAINER_DIMENSION);
+    }
+
+    // Position delta — used to offset children so they keep absolute position
+    const dx = newLeft - prev.position.x;
+    const dy = newTop - prev.position.y;
+
+    // Apply position and dimensions
+    container.position = { x: newLeft, y: newTop };
+    container.style = { ...container.style, width: newWidth, height: newHeight };
+
+    // Offset children to preserve their absolute positions
     if (dx !== 0 || dy !== 0) {
-      applyOffsets(new Map(workingNodes.map(n => [n.id, n])), container.id, dx, dy);
+      applyOffsets(
+        new Map(workingNodes.map((n) => [n.id, n])),
+        container.id,
+        dx,
+        dy,
+      );
     }
 
-    if (nextWidth !== currentSize.width || nextHeight !== currentSize.height) {
-      container.style = {
-        ...container.style,
-        width: nextWidth,
-        height: nextHeight,
-      };
-    }
-
+    // Only run collision / hierarchy checks when the absolute footprint grew
     const isExpansion =
-      nextWidth > previousSize.width ||
-      nextHeight > previousSize.height ||
-      dx !== 0 || dy !== 0;
+      newWidth > prevSize.width ||
+      newHeight > prevSize.height ||
+      dx < 0 ||
+      dy < 0;
 
     if (!isExpansion) {
       continue;
     }
 
-
     if (hasSameLayerCollision(workingNodes, container.id)) {
-      restorePreviousTransform(container, previousNode);
+      restorePreviousTransform(container, prev);
       warn(
         `Cannot resize '${container.data.label}': expansion collides with a sibling in the same layer.`,
         "RESIZE_SIBLING_COLLISION",
@@ -508,11 +596,11 @@ export const applyManualContainerResizeEffects = (
         workingNodes,
         container.parentNode,
         container.position,
-        { width: nextWidth, height: nextHeight },
+        { width: newWidth, height: newHeight },
       );
 
       if (!expansionCheck.ok) {
-        restorePreviousTransform(container, previousNode);
+        restorePreviousTransform(container, prev);
         warn(
           `Cannot resize '${container.data.label}': ${expansionCheck.reason}`,
           "RESIZE_ANCESTOR_BLOCKED",
@@ -520,7 +608,6 @@ export const applyManualContainerResizeEffects = (
         continue;
       }
     }
-
   }
 
   for (const container of resizedContainers) {
