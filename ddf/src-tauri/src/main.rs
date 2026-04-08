@@ -8,6 +8,7 @@ fn main() {
             terminal_commands::init_terminal_session,
             terminal_commands::write_to_pty,
             terminal_commands::close_terminal_session,
+            terraform_actions::terraform_lsp_diagnostics,
             terraform_actions::terraform_validate
         ])
         .plugin(tauri_plugin_fs::init())

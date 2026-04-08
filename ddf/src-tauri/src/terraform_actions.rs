@@ -1,10 +1,14 @@
 use std::{
     fs,
+    io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
-    process::Command,
+    process::{Command, Stdio},
+    sync::mpsc,
+    time::{Duration, Instant},
 };
 
 use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 
 #[derive(Debug, Deserialize)]
 struct TerraformValidateJson {
@@ -54,6 +58,12 @@ pub struct TerraformValidateResult {
     init_ran: bool,
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerraformLspDiagnosticsResult {
+    diagnostics: Vec<TerraformValidateDiagnostic>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TerraformSourceFile {
@@ -81,39 +91,32 @@ fn sanitize_tf_file_name(raw_name: &str) -> Result<String, String> {
     Ok(file_name)
 }
 
-#[tauri::command]
-pub async fn terraform_validate(project_dir: String, files: Vec<TerraformSourceFile>) -> Result<TerraformValidateResult, String> {
-    tauri::async_runtime::spawn_blocking(move || terraform_validate_sync(project_dir, files))
-        .await
-        .map_err(|error| format!("Error interno ejecutando validate: {error}"))?
-}
-
-fn terraform_validate_sync(project_dir: String, files: Vec<TerraformSourceFile>) -> Result<TerraformValidateResult, String> {
-    if project_dir.trim().is_empty() {
-        return Err("No se recibió directorio de proyecto para validate.".to_string());
-    }
-
-    let project_dir_path = PathBuf::from(project_dir.trim());
-    if !project_dir_path.exists() {
-        return Err("El directorio del proyecto no existe para validate.".to_string());
-    }
-
+fn sync_project_tf_files(
+    project_dir_path: &PathBuf,
+    files: &[TerraformSourceFile],
+) -> Result<Vec<TerraformSourceFile>, String> {
     if files.is_empty() {
         return Err("No hay archivos Terraform para validar.".to_string());
     }
 
+    let mut normalized_files = Vec::<TerraformSourceFile>::new();
     let mut provided_tf_names = std::collections::HashSet::<String>::new();
 
-    for file in &files {
+    for file in files {
         let file_name = sanitize_tf_file_name(&file.name)?;
         provided_tf_names.insert(file_name.clone());
 
         let file_path = project_dir_path.join(&file_name);
         fs::write(&file_path, &file.content)
             .map_err(|error| format!("No se pudo escribir archivo temporal '{}': {error}", file_name))?;
+
+        normalized_files.push(TerraformSourceFile {
+            name: file_name,
+            content: file.content.clone(),
+        });
     }
 
-    let entries = fs::read_dir(&project_dir_path)
+    let entries = fs::read_dir(project_dir_path)
         .map_err(|error| format!("No se pudo leer directorio del proyecto para validate: {error}"))?;
 
     for entry in entries {
@@ -142,6 +145,332 @@ fn terraform_validate_sync(project_dir: String, files: Vec<TerraformSourceFile>)
 
         let _ = fs::remove_file(&path);
     }
+
+    Ok(normalized_files)
+}
+
+fn to_file_uri(path: &PathBuf) -> String {
+    let normalized = path.to_string_lossy().replace(' ', "%20");
+    format!("file://{normalized}")
+}
+
+fn send_lsp_message(writer: &mut dyn Write, payload: &Value) -> Result<(), String> {
+    let body = payload.to_string();
+    let header = format!("Content-Length: {}\r\n\r\n", body.len());
+    writer
+        .write_all(header.as_bytes())
+        .map_err(|error| format!("No se pudo escribir header LSP: {error}"))?;
+    writer
+        .write_all(body.as_bytes())
+        .map_err(|error| format!("No se pudo escribir body LSP: {error}"))?;
+    writer
+        .flush()
+        .map_err(|error| format!("No se pudo flush LSP: {error}"))?;
+    Ok(())
+}
+
+fn severity_from_lsp(severity: Option<u64>) -> String {
+    match severity {
+        Some(1) => "error".to_string(),
+        Some(2) => "warning".to_string(),
+        Some(3) => "info".to_string(),
+        Some(4) => "info".to_string(),
+        _ => "error".to_string(),
+    }
+}
+
+fn basename_from_uri(uri: &str) -> Option<String> {
+    let without_scheme = uri.strip_prefix("file://").unwrap_or(uri);
+    let normalized = without_scheme.replace('\\', "/");
+    normalized
+        .split('/')
+        .next_back()
+        .map(|value| value.replace("%20", " "))
+}
+
+fn diagnostics_from_lsp_notification(message: &Value) -> Vec<TerraformValidateDiagnostic> {
+    let method = message.get("method").and_then(Value::as_str);
+    if method != Some("textDocument/publishDiagnostics") {
+        return vec![];
+    }
+
+    let params = match message.get("params") {
+        Some(value) => value,
+        None => return vec![],
+    };
+
+    let file_name = params
+        .get("uri")
+        .and_then(Value::as_str)
+        .and_then(basename_from_uri);
+
+    let diagnostics = params
+        .get("diagnostics")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default();
+
+    diagnostics
+        .into_iter()
+        .map(|diagnostic| {
+            let message_text = diagnostic
+                .get("message")
+                .and_then(Value::as_str)
+                .unwrap_or("Diagnóstico terraform-ls")
+                .to_string();
+
+            let summary = message_text.lines().next().unwrap_or("Diagnóstico terraform-ls").to_string();
+
+            let start_line = diagnostic
+                .get("range")
+                .and_then(|range| range.get("start"))
+                .and_then(|start| start.get("line"))
+                .and_then(Value::as_u64)
+                .map(|line| line as usize + 1);
+
+            let start_column = diagnostic
+                .get("range")
+                .and_then(|range| range.get("start"))
+                .and_then(|start| start.get("character"))
+                .and_then(Value::as_u64)
+                .map(|column| column as usize + 1);
+
+            let end_line = diagnostic
+                .get("range")
+                .and_then(|range| range.get("end"))
+                .and_then(|end| end.get("line"))
+                .and_then(Value::as_u64)
+                .map(|line| line as usize + 1);
+
+            let end_column = diagnostic
+                .get("range")
+                .and_then(|range| range.get("end"))
+                .and_then(|end| end.get("character"))
+                .and_then(Value::as_u64)
+                .map(|column| column as usize + 1);
+
+            TerraformValidateDiagnostic {
+                severity: severity_from_lsp(
+                    diagnostic.get("severity").and_then(Value::as_u64),
+                ),
+                summary,
+                detail: message_text,
+                filename: file_name.clone(),
+                start_line,
+                start_column,
+                end_line,
+                end_column,
+            }
+        })
+        .collect()
+}
+
+fn terraform_lsp_diagnostics_sync(
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+) -> Result<TerraformLspDiagnosticsResult, String> {
+    if project_dir.trim().is_empty() {
+        return Err("No se recibió directorio de proyecto para terraform-ls.".to_string());
+    }
+
+    let project_dir_path = PathBuf::from(project_dir.trim());
+    if !project_dir_path.exists() {
+        return Err("El directorio del proyecto no existe para terraform-ls.".to_string());
+    }
+
+    let normalized_files = sync_project_tf_files(&project_dir_path, &files)?;
+
+    let mut child = match Command::new("terraform-ls")
+        .arg("serve")
+        .current_dir(&project_dir_path)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+    {
+        Ok(child) => child,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            return Err(
+                "terraform-ls no está instalado o no está en PATH. Instálalo (HashiCorp Terraform Language Server) y reinicia la app."
+                    .to_string(),
+            )
+        }
+        Err(error) => return Err(format!("No se pudo iniciar terraform-ls: {error}")),
+    };
+
+    let mut stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "terraform-ls no expuso stdin".to_string())?;
+    let stdout = child
+        .stdout
+        .take()
+        .ok_or_else(|| "terraform-ls no expuso stdout".to_string())?;
+
+    let (tx, rx) = mpsc::channel::<Value>();
+    std::thread::spawn(move || {
+        let mut reader = BufReader::new(stdout);
+        loop {
+            let mut content_length: usize = 0;
+            loop {
+                let mut line = String::new();
+                match reader.read_line(&mut line) {
+                    Ok(0) => return,
+                    Ok(_) => {
+                        let trimmed = line.trim_end_matches(['\r', '\n']);
+                        if trimmed.is_empty() {
+                            break;
+                        }
+                        let lower = trimmed.to_ascii_lowercase();
+                        if let Some(value) = lower.strip_prefix("content-length:") {
+                            content_length = value.trim().parse::<usize>().unwrap_or(0);
+                        }
+                    }
+                    Err(_) => return,
+                }
+            }
+
+            if content_length == 0 {
+                continue;
+            }
+
+            let mut body = vec![0u8; content_length];
+            if reader.read_exact(&mut body).is_err() {
+                return;
+            }
+
+            if let Ok(text) = String::from_utf8(body) {
+                if let Ok(json_value) = serde_json::from_str::<Value>(&text) {
+                    let _ = tx.send(json_value);
+                }
+            }
+        }
+    });
+
+    let root_uri = to_file_uri(&project_dir_path);
+
+    send_lsp_message(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "processId": std::process::id(),
+                "clientInfo": { "name": "ddf", "version": "0.1.0" },
+                "rootUri": root_uri,
+                "workspaceFolders": [
+                    { "uri": to_file_uri(&project_dir_path), "name": "ddf" }
+                ],
+                "capabilities": {}
+            }
+        }),
+    )?;
+
+    let wait_init_until = Instant::now() + Duration::from_millis(1200);
+    while Instant::now() < wait_init_until {
+        match rx.recv_timeout(Duration::from_millis(150)) {
+            Ok(msg) => {
+                if msg.get("id").and_then(Value::as_u64) == Some(1) {
+                    break;
+                }
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(_) => break,
+        }
+    }
+
+    send_lsp_message(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0",
+            "method": "initialized",
+            "params": {}
+        }),
+    )?;
+
+    for file in &normalized_files {
+        let file_uri = to_file_uri(&project_dir_path.join(&file.name));
+        send_lsp_message(
+            &mut stdin,
+            &json!({
+                "jsonrpc": "2.0",
+                "method": "textDocument/didOpen",
+                "params": {
+                    "textDocument": {
+                        "uri": file_uri,
+                        "languageId": "terraform",
+                        "version": 1,
+                        "text": file.content,
+                    }
+                }
+            }),
+        )?;
+    }
+
+    let mut diagnostics = Vec::<TerraformValidateDiagnostic>::new();
+    let collect_until = Instant::now() + Duration::from_millis(1500);
+    while Instant::now() < collect_until {
+        match rx.recv_timeout(Duration::from_millis(180)) {
+            Ok(msg) => {
+                diagnostics.extend(diagnostics_from_lsp_notification(&msg));
+            }
+            Err(mpsc::RecvTimeoutError::Timeout) => continue,
+            Err(_) => break,
+        }
+    }
+
+    let _ = send_lsp_message(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "shutdown",
+            "params": Value::Null
+        }),
+    );
+    let _ = send_lsp_message(
+        &mut stdin,
+        &json!({
+            "jsonrpc": "2.0",
+            "method": "exit",
+            "params": Value::Null
+        }),
+    );
+    let _ = child.kill();
+    let _ = child.wait();
+
+    Ok(TerraformLspDiagnosticsResult { diagnostics })
+}
+
+#[tauri::command]
+pub async fn terraform_lsp_diagnostics(
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+) -> Result<TerraformLspDiagnosticsResult, String> {
+    tauri::async_runtime::spawn_blocking(move || terraform_lsp_diagnostics_sync(project_dir, files))
+        .await
+        .map_err(|error| format!("Error interno ejecutando terraform-ls: {error}"))?
+}
+
+#[tauri::command]
+pub async fn terraform_validate(project_dir: String, files: Vec<TerraformSourceFile>) -> Result<TerraformValidateResult, String> {
+    tauri::async_runtime::spawn_blocking(move || terraform_validate_sync(project_dir, files))
+        .await
+        .map_err(|error| format!("Error interno ejecutando validate: {error}"))?
+}
+
+fn terraform_validate_sync(project_dir: String, files: Vec<TerraformSourceFile>) -> Result<TerraformValidateResult, String> {
+    if project_dir.trim().is_empty() {
+        return Err("No se recibió directorio de proyecto para validate.".to_string());
+    }
+
+    let project_dir_path = PathBuf::from(project_dir.trim());
+    if !project_dir_path.exists() {
+        return Err("El directorio del proyecto no existe para validate.".to_string());
+    }
+
+    let _ = sync_project_tf_files(&project_dir_path, &files)?;
 
     let terraform_data_dir = project_dir_path.join(".terraform");
     let needs_init = !terraform_data_dir.exists();
