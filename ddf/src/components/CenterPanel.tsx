@@ -673,6 +673,10 @@ export default function CenterPanel({
           defaultEdgeOptions={stableDefaultEdgeOptions}
           connectionMode={ConnectionMode.Loose}
           elevateNodesOnSelect={false}
+          panOnDrag={[1]}
+          selectionOnDrag
+          selectionKeyCode="Shift"
+          multiSelectionKeyCode="Shift"
           proOptions={{ hideAttribution: true }}
           fitView
           minZoom={0.2}
