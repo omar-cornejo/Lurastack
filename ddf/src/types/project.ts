@@ -54,6 +54,6 @@ export type DdfProject = {
 
 export type RecentProject = {
   name: string;
-  fileName: string;
+  path: string;
   updatedAt: string;
 };

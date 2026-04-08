@@ -43,6 +43,8 @@ const DEFAULT_EDGE_OPTIONS = {
   zIndex: 10000,
   interactionWidth: 32,
 };
+const STABLE_NODE_TYPES = Object.freeze({ ...canvasNodeTypes });
+const STABLE_EDGE_TYPES = Object.freeze({ ...canvasEdgeTypes });
 
 type CenterPanelProps = {
   nodes: Node<CanvasTerraformNodeData>[];
@@ -683,8 +685,8 @@ export default function CenterPanel({
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onInit={setReactFlowInstance}
-          nodeTypes={canvasNodeTypes}
-          edgeTypes={canvasEdgeTypes}
+          nodeTypes={STABLE_NODE_TYPES}
+          edgeTypes={STABLE_EDGE_TYPES}
           defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
           connectionMode={ConnectionMode.Loose}
           elevateNodesOnSelect={false}

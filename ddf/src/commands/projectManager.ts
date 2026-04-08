@@ -27,7 +27,14 @@ export function getRecentProjects(): RecentProject[] {
   try {
     const raw = localStorage.getItem(RECENT_KEY);
     if (!raw) return [];
-    return JSON.parse(raw) as RecentProject[];
+    const parsed = JSON.parse(raw) as Array<Partial<RecentProject>>;
+    return parsed
+      .filter((entry): entry is RecentProject =>
+        typeof entry?.name === "string" &&
+        typeof entry?.path === "string" &&
+        typeof entry?.updatedAt === "string",
+      )
+      .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
   } catch {
     return [];
   }

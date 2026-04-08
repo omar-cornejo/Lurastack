@@ -43,9 +43,26 @@ export default function BottomPanel({ onHeightChange, nodes, edges, resources, s
   const term = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
   const terminalDisposedRef = useRef(false);
+  const fitFrameRef = useRef<number | null>(null);
+
+  const cancelScheduledFit = () => {
+    if (fitFrameRef.current !== null) {
+      cancelAnimationFrame(fitFrameRef.current);
+      fitFrameRef.current = null;
+    }
+  };
+
+  const scheduleSafeFitTerminal = () => {
+    cancelScheduledFit();
+    fitFrameRef.current = requestAnimationFrame(() => {
+      fitFrameRef.current = null;
+      safeFitTerminal();
+    });
+  };
 
   const safeFitTerminal = () => {
-    if (terminalDisposedRef.current || !term.current || !fitAddon.current) return;
+    if (terminalDisposedRef.current || !term.current || !fitAddon.current || !terminalRef.current) return;
+    if (!open || activeTab !== "terminal") return;
     try {
       fitAddon.current.fit();
     } catch {
@@ -300,7 +317,7 @@ export default function BottomPanel({ onHeightChange, nodes, edges, resources, s
     term.current.open(terminalRef.current);
     setTimeout(() => {
       if (terminalDisposedRef.current) return;
-      safeFitTerminal();
+      scheduleSafeFitTerminal();
       term.current?.focus();
     }, 0);
 
@@ -318,11 +335,12 @@ export default function BottomPanel({ onHeightChange, nodes, edges, resources, s
       }
     });
 
-    const onWindowResize = () => safeFitTerminal();
+    const onWindowResize = () => scheduleSafeFitTerminal();
     window.addEventListener('resize', onWindowResize);
 
     return () => {
       terminalDisposedRef.current = true;
+      cancelScheduledFit();
       unlisten.then((f) => f());
       window.removeEventListener('resize', onWindowResize);
       try {
@@ -336,13 +354,13 @@ export default function BottomPanel({ onHeightChange, nodes, edges, resources, s
   }, []);
 
   useEffect(() => {
-    safeFitTerminal();
-  }, [height]);
+    scheduleSafeFitTerminal();
+  }, [height, open, activeTab]);
 
   useEffect(() => {
     if (activeTab === "terminal") {
       requestAnimationFrame(() => {
-        safeFitTerminal();
+        scheduleSafeFitTerminal();
         term.current?.focus();
       });
     }
@@ -352,13 +370,14 @@ export default function BottomPanel({ onHeightChange, nodes, edges, resources, s
     if (!panelRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      safeFitTerminal();
+      scheduleSafeFitTerminal();
     });
 
     resizeObserver.observe(panelRef.current);
 
     return () => {
       resizeObserver.disconnect();
+      cancelScheduledFit();
     };
   }, []);
 

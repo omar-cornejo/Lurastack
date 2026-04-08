@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
@@ -14,6 +15,22 @@ type CodePanelProps = {
   initialCustomFiles?: DdfCodeFile[];
   onCustomFilesChange?: (files: DdfCodeFile[]) => void;
   onUpdateAttribute: (resourceId: string, attribute: string, value: unknown) => void;
+};
+
+type TerraformValidationDiagnostic = {
+  severity: string;
+  summary: string;
+  detail: string;
+  filename?: string;
+  startLine?: number;
+  startColumn?: number;
+  endLine?: number;
+  endColumn?: number;
+};
+
+type TerraformValidationResult = {
+  ok: boolean;
+  diagnostics: TerraformValidationDiagnostic[];
 };
 
 const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
@@ -55,6 +72,13 @@ const tokenProperty = "text-[#9cdcfe]";
 const tokenString = "text-[#ce9178]";
 const tokenPunctuation = "text-[#d4d4d4]";
 
+const basename = (input?: string) => {
+  if (!input) return undefined;
+  const normalized = input.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  return parts[parts.length - 1];
+};
+
 export default function CodePanel({
   resources,
   schemas,
@@ -68,6 +92,10 @@ export default function CodePanel({
   const [activeFileId, setActiveFileId] = useState<string>("main.tf");
   const [customFiles, setCustomFiles] = useState<DdfCodeFile[]>(initialCustomFiles ?? []);
   const [newFileName, setNewFileName] = useState("");
+  const [isValidatingTerraform, setIsValidatingTerraform] = useState(false);
+  const [validationDiagnostics, setValidationDiagnostics] = useState<TerraformValidationDiagnostic[]>([]);
+  const [validationWasSuccessful, setValidationWasSuccessful] = useState<boolean | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const codeEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const lineGutterRef = useRef<HTMLDivElement | null>(null);
 
@@ -153,6 +181,59 @@ export default function CodePanel({
   const auxiliaryContent = activeCustomFile?.content ?? "";
 
   const lineCount = Math.max(1, auxiliaryContent.split("\n").length);
+
+  const diagnosticsForActiveFile = useMemo(() => {
+    const activeName = activeFileId === "main.tf" ? "main.tf" : activeCustomFile?.name;
+    const normalizedActive = basename(activeName)?.toLowerCase();
+    if (!normalizedActive) return [];
+
+    return validationDiagnostics.filter((diagnostic) => {
+      const fileName = basename(diagnostic.filename)?.toLowerCase();
+      return fileName === normalizedActive;
+    });
+  }, [activeCustomFile?.name, activeFileId, validationDiagnostics]);
+
+  const activeFileDiagnosticLines = useMemo(() => {
+    const lines = new Set<number>();
+    diagnosticsForActiveFile.forEach((diagnostic) => {
+      if (typeof diagnostic.startLine === "number" && diagnostic.startLine > 0) {
+        lines.add(diagnostic.startLine);
+      }
+    });
+    return lines;
+  }, [diagnosticsForActiveFile]);
+
+  const runTerraformValidate = async () => {
+    if (!isTauriRuntime) {
+      setValidationError("terraform validate solo está disponible en la app de escritorio (Tauri).");
+      setValidationWasSuccessful(null);
+      return;
+    }
+
+    if (!projectDir) {
+      setValidationError("Abre o guarda un proyecto para ejecutar terraform validate.");
+      setValidationWasSuccessful(null);
+      return;
+    }
+
+    setIsValidatingTerraform(true);
+    setValidationError(null);
+
+    try {
+      const result = await invoke<TerraformValidationResult>("terraform_validate", {
+        projectDir,
+      });
+
+      setValidationDiagnostics(result.diagnostics ?? []);
+      setValidationWasSuccessful(result.ok);
+    } catch (error) {
+      setValidationDiagnostics([]);
+      setValidationWasSuccessful(false);
+      setValidationError(String(error));
+    } finally {
+      setIsValidatingTerraform(false);
+    }
+  };
 
   const handleAuxiliaryContentChange = (next: string) => {
     setCustomFiles((current) =>
@@ -260,14 +341,71 @@ export default function CodePanel({
 
         <main className="flex min-h-0 flex-1 flex-col">
           <div className="border-b border-slate-700 px-4 py-2">
-            <h2 className="text-sm font-semibold text-slate-100">
-              {visibleFiles.find((file) => file.id === activeFileId)?.name ?? "main.tf"}
-            </h2>
-            <p className="text-xs text-slate-400">
-              {activeFileId === "main.tf"
-                ? "Only attribute values are editable in this file."
-                : "Editable HCL draft file."}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-semibold text-slate-100">
+                  {visibleFiles.find((file) => file.id === activeFileId)?.name ?? "main.tf"}
+                </h2>
+                <p className="text-xs text-slate-400">
+                  {activeFileId === "main.tf"
+                    ? "Only attribute values are editable in this file."
+                    : "Editable HCL draft file."}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void runTerraformValidate()}
+                disabled={isValidatingTerraform}
+                className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-200 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isValidatingTerraform ? "Validating..." : "Terraform validate"}
+              </button>
+            </div>
+
+            {validationError ? (
+              <div className="mt-2 rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-200">
+                {validationError}
+              </div>
+            ) : null}
+
+            {validationWasSuccessful === true ? (
+              <div className="mt-2 rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">
+                terraform validate: sin errores.
+              </div>
+            ) : null}
+
+            {validationDiagnostics.length > 0 ? (
+              <div className="mt-2 max-h-36 space-y-1 overflow-auto rounded border border-slate-700 bg-[#252526] p-2 text-xs text-slate-200">
+                {validationDiagnostics.map((diagnostic, index) => {
+                  const diagnosticSeverity = diagnostic.severity?.toLowerCase() ?? "error";
+                  const severityClass = diagnosticSeverity === "warning" ? "text-amber-300" : "text-red-300";
+                  const fileName = basename(diagnostic.filename);
+                  const lineLabel =
+                    typeof diagnostic.startLine === "number" ? `:${diagnostic.startLine}` : "";
+
+                  return (
+                    <div
+                      key={`${diagnostic.summary}-${diagnostic.startLine ?? "x"}-${index}`}
+                      className="rounded border border-slate-700/80 bg-[#1e1e1e] px-2 py-1"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`font-semibold uppercase ${severityClass}`}>
+                          {diagnosticSeverity}
+                        </span>
+                        <span className="text-slate-100">{diagnostic.summary}</span>
+                      </div>
+                      {fileName ? (
+                        <div className="text-slate-400">{fileName}{lineLabel}</div>
+                      ) : null}
+                      {diagnostic.detail ? (
+                        <div className="mt-1 whitespace-pre-wrap text-slate-300">{diagnostic.detail}</div>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto p-2 font-mono text-xs text-slate-200">
@@ -414,7 +552,12 @@ export default function CodePanel({
                   className="overflow-hidden border-r border-slate-800 bg-[#252526] px-2 py-2 text-right text-[11px] leading-5 text-slate-500"
                 >
                   {Array.from({ length: lineCount }, (_, index) => (
-                    <div key={index}>{index + 1}</div>
+                    <div
+                      key={index}
+                      className={activeFileDiagnosticLines.has(index + 1) ? "bg-red-500/20 text-red-300" : undefined}
+                    >
+                      {index + 1}
+                    </div>
                   ))}
                 </div>
                 <textarea

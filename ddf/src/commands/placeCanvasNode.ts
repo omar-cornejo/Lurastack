@@ -231,7 +231,6 @@ export const expandAncestorContainers = (nodes: CanvasNode[], startNodeId: strin
     let nextWidth = Math.max(parentSize.width - shiftX, requiredWidth - shiftX);
     let nextHeight = Math.max(parentSize.height - shiftY, requiredHeight - shiftY);
 
-    let limitReached = false;
     if (nextWidth > MAX_CONTAINER_DIMENSION || nextHeight > MAX_CONTAINER_DIMENSION) {
       warn(
         `No se puede expandir '${parent.data?.label || parent.id}' más allá del límite de ${MAX_CONTAINER_DIMENSION}px.`,
@@ -241,7 +240,6 @@ export const expandAncestorContainers = (nodes: CanvasNode[], startNodeId: strin
       // Aplicamos un "clamp" para que visualmente no sobrepase el límite
       nextWidth = Math.min(nextWidth, MAX_CONTAINER_DIMENSION);
       nextHeight = Math.min(nextHeight, MAX_CONTAINER_DIMENSION);
-      limitReached = true;
     }
 
     if (shiftX !== 0 || shiftY !== 0) {
@@ -442,18 +440,6 @@ export const applyManualContainerResizeEffects = (
       applyOffsets(new Map(workingNodes.map(n => [n.id, n])), target.id, -dx, -dy);
     }
   };
-
-  const hasValidParentAnchor = (
-    node: CanvasNode,
-  ) => {
-    if (!node.parentNode) return true;
-
-    return (
-      node.position.x >= CONTAINER_PADDING_X &&
-      node.position.y >= CONTAINER_HEADER_SPACE
-    );
-  };
-
 
   for (const container of resizedContainers) {
     const prev = previousNodeMap.get(container.id);

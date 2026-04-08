@@ -318,8 +318,16 @@ function RecentCard({
   onRemove: (e: React.MouseEvent) => void;
 }) {
   return (
-    <button
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
       className="group w-full text-left flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-900 border border-gray-800 hover:border-blue-600 hover:bg-gray-800 transition-all"
     >
       <Icon icon="mdi:layers-outline" className="text-blue-500 text-xl shrink-0" />
@@ -330,6 +338,7 @@ function RecentCard({
       <div className="flex flex-col items-end gap-1.5 shrink-0">
         <span className="text-[10px] text-gray-600">{formatDate(entry.updatedAt)}</span>
         <button
+          type="button"
           onClick={onRemove}
           title="Remove from recent"
           className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all"
@@ -337,6 +346,6 @@ function RecentCard({
           <Icon icon="mdi:close" className="text-xs" />
         </button>
       </div>
-    </button>
+    </div>
   );
 }
