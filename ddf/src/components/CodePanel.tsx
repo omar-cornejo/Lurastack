@@ -5,6 +5,7 @@ import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 import type { DdfCodeFile } from "../types/project";
+import type { BottomPanelLogEntry, BottomPanelLogLevel } from "../types/logs";
 
 type CodePanelProps = {
   resources: TerraformResource[];
@@ -15,6 +16,8 @@ type CodePanelProps = {
   initialCustomFiles?: DdfCodeFile[];
   onCustomFilesChange?: (files: DdfCodeFile[]) => void;
   onUpdateAttribute: (resourceId: string, attribute: string, value: unknown) => void;
+  onValidationLogs?: (entries: BottomPanelLogEntry[]) => void;
+  onOpenLogsPanel?: () => void;
 };
 
 type TerraformValidationDiagnostic = {
@@ -31,6 +34,12 @@ type TerraformValidationDiagnostic = {
 type TerraformValidationResult = {
   ok: boolean;
   diagnostics: TerraformValidationDiagnostic[];
+  initRan: boolean;
+};
+
+type TerraformSourceFile = {
+  name: string;
+  content: string;
 };
 
 const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
@@ -88,6 +97,8 @@ export default function CodePanel({
   initialCustomFiles,
   onCustomFilesChange,
   onUpdateAttribute,
+  onValidationLogs,
+  onOpenLogsPanel,
 }: CodePanelProps) {
   const [activeFileId, setActiveFileId] = useState<string>("main.tf");
   const [customFiles, setCustomFiles] = useState<DdfCodeFile[]>(initialCustomFiles ?? []);
@@ -204,32 +215,122 @@ export default function CodePanel({
   }, [diagnosticsForActiveFile]);
 
   const runTerraformValidate = async () => {
+    onOpenLogsPanel?.();
+
     if (!isTauriRuntime) {
       setValidationError("terraform validate solo está disponible en la app de escritorio (Tauri).");
       setValidationWasSuccessful(null);
+      onValidationLogs?.([
+        {
+          id: `validate-${Date.now()}-runtime`,
+          timestamp: new Date().toISOString(),
+          level: "error",
+          title: "Validate no disponible",
+          message: "terraform validate solo está disponible en la app de escritorio (Tauri).",
+        },
+      ]);
       return;
     }
 
     if (!projectDir) {
       setValidationError("Abre o guarda un proyecto para ejecutar terraform validate.");
       setValidationWasSuccessful(null);
+      onValidationLogs?.([
+        {
+          id: `validate-${Date.now()}-project`,
+          timestamp: new Date().toISOString(),
+          level: "error",
+          title: "Validate no disponible",
+          message: "Abre o guarda un proyecto para ejecutar terraform validate.",
+        },
+      ]);
       return;
     }
+
+    onValidationLogs?.([
+      {
+        id: `validate-${Date.now()}-start`,
+        timestamp: new Date().toISOString(),
+        level: "info",
+        title: "Ejecutando validate",
+        message: "Iniciando terraform validate...",
+      },
+    ]);
 
     setIsValidatingTerraform(true);
     setValidationError(null);
 
     try {
+      const files: TerraformSourceFile[] = [
+        {
+          name: "main.tf",
+          content: buildMainTerraformFile(resources, cloudProvider, _region),
+        },
+        ...customFiles.map((file) => ({
+          name: file.name,
+          content: file.content,
+        })),
+      ];
+
       const result = await invoke<TerraformValidationResult>("terraform_validate", {
         projectDir,
+        files,
       });
 
       setValidationDiagnostics(result.diagnostics ?? []);
       setValidationWasSuccessful(result.ok);
+
+      const now = new Date().toISOString();
+      const logsFromDiagnostics = (result.diagnostics ?? []).map((diagnostic, index) => {
+        const severity = (diagnostic.severity?.toLowerCase() ?? "error");
+        const level: BottomPanelLogLevel =
+          severity === "warning"
+            ? "warning"
+            : severity === "error"
+              ? "error"
+              : "info";
+
+        return {
+          id: `validate-${Date.now()}-${index}`,
+          timestamp: now,
+          level,
+          title: diagnostic.summary || "Diagnóstico de Terraform",
+          message: diagnostic.detail || diagnostic.summary || "Sin detalle.",
+          fileName: basename(diagnostic.filename),
+          line: diagnostic.startLine,
+        } satisfies BottomPanelLogEntry;
+      });
+
+      if (!logsFromDiagnostics.length) {
+        onValidationLogs?.([
+          {
+            id: `validate-${Date.now()}-ok`,
+            timestamp: now,
+            level: result.ok ? "success" : "error",
+            title: result.ok ? "Terraform válido" : "Terraform inválido",
+            message: result.ok
+              ? result.initRan
+                ? "terraform init + validate completados sin errores."
+                : "terraform validate completado sin errores."
+              : "terraform validate devolvió error sin diagnósticos detallados.",
+          },
+        ]);
+      } else {
+        onValidationLogs?.(logsFromDiagnostics);
+      }
     } catch (error) {
       setValidationDiagnostics([]);
       setValidationWasSuccessful(false);
       setValidationError(String(error));
+      onValidationLogs?.([
+        {
+          id: `validate-${Date.now()}-exception`,
+          timestamp: new Date().toISOString(),
+          level: "error",
+          title: "Error ejecutando validate",
+          message: String(error),
+        },
+      ]);
     } finally {
       setIsValidatingTerraform(false);
     }
@@ -576,3 +677,44 @@ export default function CodePanel({
     </section>
   );
 }
+
+const toHclLiteral = (value: unknown): string => {
+  if (typeof value === "boolean" || typeof value === "number") return String(value);
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) {
+      return trimmed;
+    }
+    return `"${trimmed.replace(/"/g, '\\"')}"`;
+  }
+  if (value === null || value === undefined) return '""';
+  return `"${String(value).replace(/"/g, '\\"')}"`;
+};
+
+const buildMainTerraformFile = (
+  resources: TerraformResource[],
+  cloudProvider: "aws",
+  region: string,
+) => {
+  let hcl = "terraform {\n";
+  hcl += "  required_providers {\n";
+  hcl += `    ${cloudProvider} = {\n`;
+  hcl += `      source  = \"hashicorp/${cloudProvider}\"\n`;
+  hcl += "      version = \"~> 5.0\"\n";
+  hcl += "    }\n";
+  hcl += "  }\n";
+  hcl += "}\n\n";
+  hcl += `provider \"${cloudProvider}\" {\n`;
+  hcl += `  region = \"${region}\"\n`;
+  hcl += "}\n\n";
+
+  resources.forEach((resource) => {
+    hcl += `${resource.kind ?? "resource"} \"${resource.type}\" \"${resource.name}\" {\n`;
+    Object.entries(resource.config.attributes ?? {}).forEach(([key, value]) => {
+      hcl += `  ${key} = ${toHclLiteral(value)}\n`;
+    });
+    hcl += "}\n\n";
+  });
+
+  return hcl;
+};

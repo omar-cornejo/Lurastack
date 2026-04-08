@@ -31,6 +31,14 @@ function formatDate(iso: string): string {
   }
 }
 
+function toDirectoryPath(path: string | null): string | null {
+  if (!path) return null;
+  const normalized = path.replace(/\\/g, "/");
+  const lastSlash = normalized.lastIndexOf("/");
+  if (lastSlash <= 0) return path;
+  return normalized.slice(0, lastSlash);
+}
+
 export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
   const [recent, setRecent] = useState<RecentProject[]>([]);
   const [error, setError] = useState("");
@@ -108,6 +116,8 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
     removeFromRecent(path);
     setRecent(getRecentProjects());
   };
+
+  const selectedDirectoryPath = toDirectoryPath(chosenPath);
 
   // ── Render ───────────────────────────────────────────────────────────────
 
@@ -194,7 +204,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
             </label>
             <div className="flex gap-2 items-center">
               <div className="flex-1 bg-gray-800 border border-gray-700 rounded px-3 py-2 text-[11px] text-gray-400 truncate min-w-0">
-                {chosenPath ?? (
+                {selectedDirectoryPath ?? (
                   <span className="text-gray-600 italic">No location chosen</span>
                 )}
               </div>

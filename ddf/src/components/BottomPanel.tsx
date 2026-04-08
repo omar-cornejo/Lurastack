@@ -10,6 +10,7 @@ import type { CanvasEdgeData, CanvasTerraformNodeData } from "../canvas/types";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
+import type { BottomPanelLogEntry } from "../types/logs";
 
 type BottomPanelProps = {
   onHeightChange?: (height: number) => void;
@@ -17,18 +18,33 @@ type BottomPanelProps = {
   edges: Edge<CanvasEdgeData>[];
   resources: TerraformResource[];
   schemas: TerraformNodeSchema[];
+  mode?: "canvas" | "code";
+  logs?: BottomPanelLogEntry[];
+  openSignal?: number;
+  preferredTab?: "terminal" | "logs";
 };
 
-type BottomPanelTab = "terminal" | "mapper";
+type BottomPanelTab = "terminal" | "mapper" | "logs";
 
 const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
 
 
-export default function BottomPanel({ onHeightChange, nodes, edges, resources, schemas }: BottomPanelProps) {
+export default function BottomPanel({
+  onHeightChange,
+  nodes,
+  edges,
+  resources,
+  schemas,
+  mode = "canvas",
+  logs = [],
+  openSignal = 0,
+  preferredTab,
+}: BottomPanelProps) {
+  const showMapperTab = mode === "canvas";
   const [open, setOpen] = useState(true);
   const [height, setHeight] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
-  const [activeTab, setActiveTab] = useState<BottomPanelTab>("terminal");
+  const [activeTab, setActiveTab] = useState<BottomPanelTab>(mode === "code" ? "logs" : "terminal");
   const [selectedMapperResourceId, setSelectedMapperResourceId] = useState<string | undefined>(undefined);
   const [resourceSearch, setResourceSearch] = useState("");
   const [attributeSearch, setAttributeSearch] = useState("");
@@ -44,6 +60,27 @@ export default function BottomPanel({ onHeightChange, nodes, edges, resources, s
   const fitAddon = useRef<FitAddon | null>(null);
   const terminalDisposedRef = useRef(false);
   const fitFrameRef = useRef<number | null>(null);
+  const handledOpenSignalRef = useRef<number>(openSignal);
+
+  const sortedLogs = useMemo(
+    () => [...logs].sort((left, right) => right.timestamp.localeCompare(left.timestamp)),
+    [logs],
+  );
+
+  useEffect(() => {
+    if (mode === "code" && activeTab === "mapper") {
+      setActiveTab("logs");
+    }
+  }, [activeTab, mode]);
+
+  useEffect(() => {
+    if (openSignal === handledOpenSignalRef.current) return;
+    handledOpenSignalRef.current = openSignal;
+    setOpen(true);
+    if (preferredTab) {
+      setActiveTab(preferredTab);
+    }
+  }, [openSignal, preferredTab]);
 
   const cancelScheduledFit = () => {
     if (fitFrameRef.current !== null) {
@@ -470,16 +507,29 @@ export default function BottomPanel({ onHeightChange, nodes, edges, resources, s
           >
             Terminal
           </button>
+          {showMapperTab ? (
+            <button
+              type="button"
+              onClick={() => setActiveTab("mapper")}
+              className={`px-2 py-1 rounded text-xs border ${
+                activeTab === "mapper"
+                  ? "border-blue-500 text-blue-600 bg-white"
+                  : "border-gray-300 text-gray-500 hover:text-gray-700 bg-white"
+              }`}
+            >
+              Object Mapper
+            </button>
+          ) : null}
           <button
             type="button"
-            onClick={() => setActiveTab("mapper")}
+            onClick={() => setActiveTab("logs")}
             className={`px-2 py-1 rounded text-xs border ${
-              activeTab === "mapper"
+              activeTab === "logs"
                 ? "border-blue-500 text-blue-600 bg-white"
                 : "border-gray-300 text-gray-500 hover:text-gray-700 bg-white"
             }`}
           >
-            Object Mapper
+            Logs
           </button>
         </div>
       </header>
@@ -861,6 +911,58 @@ export default function BottomPanel({ onHeightChange, nodes, edges, resources, s
               )}
             </div>
           </div>
+        </div>
+
+        <div
+          className="h-full w-full overflow-auto bg-white p-2"
+          style={{ display: activeTab === "logs" ? "block" : "none" }}
+        >
+          {sortedLogs.length === 0 ? (
+            <div className="rounded border border-dashed border-gray-300 p-3 text-xs text-gray-500">
+              No logs yet.
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sortedLogs.map((log) => {
+                const accentClass =
+                  log.level === "error"
+                    ? "border-red-300 bg-red-50"
+                    : log.level === "warning"
+                      ? "border-amber-300 bg-amber-50"
+                      : log.level === "success"
+                        ? "border-emerald-300 bg-emerald-50"
+                        : "border-slate-300 bg-slate-50";
+
+                const textClass =
+                  log.level === "error"
+                    ? "text-red-700"
+                    : log.level === "warning"
+                      ? "text-amber-700"
+                      : log.level === "success"
+                        ? "text-emerald-700"
+                        : "text-slate-700";
+
+                return (
+                  <div key={log.id} className={`rounded border px-3 py-2 text-xs ${accentClass}`}>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div className={`font-semibold uppercase ${textClass}`}>{log.level}</div>
+                      <div className="text-[10px] text-gray-500">
+                        {new Date(log.timestamp).toLocaleTimeString()}
+                      </div>
+                    </div>
+                    <div className="font-semibold text-gray-800">{log.title}</div>
+                    {(log.fileName || typeof log.line === "number") ? (
+                      <div className="mt-1 text-[10px] text-gray-500">
+                        {log.fileName ?? "terraform"}
+                        {typeof log.line === "number" ? `:${log.line}` : ""}
+                      </div>
+                    ) : null}
+                    <div className="mt-1 whitespace-pre-wrap text-gray-700">{log.message}</div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </aside>

@@ -34,6 +34,7 @@ import { createTerraformResourceFromSchema } from "../models/terraform/createTer
 import { warn } from "../commands/warn";
 import { TEST_NODE_SCHEMAS } from "../models/testNodes";
 import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
+import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 
 type WorkspaceViewProps = {
@@ -73,6 +74,8 @@ export default function WorkspaceView({
   });
   const [codeFiles, setCodeFiles] = useState<DdfCodeFile[]>(initialState?.codeFiles ?? []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
+  const [codeLogs, setCodeLogs] = useState<BottomPanelLogEntry[]>([]);
+  const [codeBottomOpenSignal, setCodeBottomOpenSignal] = useState(0);
   const hclPersistenceDisabledRef = useRef(false);
 
   // Report state changes for project save / autosave
@@ -532,6 +535,12 @@ export default function WorkspaceView({
     [],
   );
 
+  const appendCodeValidationLogs = useCallback((entries: BottomPanelLogEntry[]) => {
+    if (!entries.length) return;
+    setCodeLogs((current) => [...entries, ...current].slice(0, 200));
+    setCodeBottomOpenSignal((current) => current + 1);
+  }, []);
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <Header
@@ -597,6 +606,8 @@ export default function WorkspaceView({
             edges={edges}
             resources={project.resources}
             schemas={TEST_NODE_SCHEMAS}
+            mode="canvas"
+            logs={codeLogs}
           />
         </div>
 
@@ -607,16 +618,31 @@ export default function WorkspaceView({
             pointerEvents: activeSection === "code" ? "auto" : "none",
           }}
         >
-          <main className="flex h-full min-h-0 w-full overflow-hidden bg-white">
-            <CodePanel
+          <main className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white">
+            <div className="min-h-0 flex-1">
+              <CodePanel
+                resources={project.resources}
+                schemas={TEST_NODE_SCHEMAS}
+                cloudProvider={cloudProvider}
+                region={providerRegion}
+                projectDir={projectDir}
+                initialCustomFiles={codeFiles}
+                onCustomFilesChange={setCodeFiles}
+                onUpdateAttribute={updateResourceAttributeById}
+                onValidationLogs={appendCodeValidationLogs}
+                onOpenLogsPanel={() => setCodeBottomOpenSignal((current) => current + 1)}
+              />
+            </div>
+
+            <BottomPanel
+              nodes={nodes}
+              edges={edges}
               resources={project.resources}
               schemas={TEST_NODE_SCHEMAS}
-              cloudProvider={cloudProvider}
-              region={providerRegion}
-              projectDir={projectDir}
-              initialCustomFiles={codeFiles}
-              onCustomFilesChange={setCodeFiles}
-              onUpdateAttribute={updateResourceAttributeById}
+              mode="code"
+              logs={codeLogs}
+              openSignal={codeBottomOpenSignal}
+              preferredTab="logs"
             />
           </main>
         </div>

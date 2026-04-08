@@ -3,7 +3,9 @@ import {
   readDir,
   writeTextFile,
   remove,
+  rename,
   mkdir,
+  exists,
   BaseDirectory,
 } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-dialog";
@@ -286,4 +288,75 @@ export function projectNameToSlug(name: string): string {
 
 export function projectNameToFileName(name: string): string {
   return projectNameToSlug(name) + ".ddf";
+}
+
+export function viewNameToFolderName(name: string): string {
+  const cleaned = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return cleaned || "view";
+}
+
+export function getViewsDir(projectDir: string): string {
+  return `${projectDir}/views`;
+}
+
+export function getViewDir(projectDir: string, viewName: string): string {
+  return `${getViewsDir(projectDir)}/${viewNameToFolderName(viewName)}`;
+}
+
+export async function ensureViewDir(projectDir: string, viewName: string): Promise<string> {
+  const viewDir = getViewDir(projectDir, viewName);
+  await mkdir(viewDir, { recursive: true });
+  return viewDir;
+}
+
+export async function ensureProjectLayout(
+  projectDir: string,
+  viewNames: string[],
+): Promise<void> {
+  await mkdir(projectDir, { recursive: true });
+  await mkdir(getViewsDir(projectDir), { recursive: true });
+
+  for (const viewName of viewNames) {
+    const viewDir = await ensureViewDir(projectDir, viewName);
+    const viewMainTf = `${viewDir}/main.tf`;
+    const hasMainTf = await exists(viewMainTf);
+    if (!hasMainTf) {
+      await writeTextFile(viewMainTf, "");
+    }
+  }
+}
+
+export async function removeViewDir(projectDir: string, viewName: string): Promise<void> {
+  const viewDir = getViewDir(projectDir, viewName);
+  const viewExists = await exists(viewDir);
+  if (!viewExists) return;
+  await remove(viewDir, { recursive: true });
+}
+
+export async function renameViewDir(
+  projectDir: string,
+  previousViewName: string,
+  nextViewName: string,
+): Promise<void> {
+  const previousDir = getViewDir(projectDir, previousViewName);
+  const nextDir = getViewDir(projectDir, nextViewName);
+
+  if (previousDir === nextDir) return;
+
+  const previousExists = await exists(previousDir);
+  if (!previousExists) {
+    await ensureViewDir(projectDir, nextViewName);
+    return;
+  }
+
+  const nextExists = await exists(nextDir);
+  if (nextExists) {
+    throw new Error("Ya existe una carpeta para ese nombre de view.");
+  }
+
+  await rename(previousDir, nextDir);
 }

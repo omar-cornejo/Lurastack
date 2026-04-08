@@ -11,6 +11,7 @@ type GlobalBarProps = {
   onSwitchView: (id: string) => void;
   onCreateView: () => void;
   onCloseView: (id: string) => void;
+  onRenameView: (id: string, nextName: string) => void;
   onNewProject: () => void;
   onOpenProject: () => Promise<void>;
   onSaveProject: () => Promise<void>;
@@ -33,6 +34,7 @@ export default function GlobalBar({
   onSwitchView,
   onCreateView,
   onCloseView,
+  onRenameView,
   onNewProject,
   onOpenProject,
   onSaveProject,
@@ -41,6 +43,8 @@ export default function GlobalBar({
   onToggleAutosave,
 }: GlobalBarProps) {
   const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [editingViewId, setEditingViewId] = useState<string | null>(null);
+  const [editingViewName, setEditingViewName] = useState("");
   const barRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,6 +60,24 @@ export default function GlobalBar({
   const toggleMenu = (name: string) =>
     setOpenMenu((prev) => (prev === name ? null : name));
   const closeMenu = () => setOpenMenu(null);
+
+  const startEditingView = (view: ViewInfo) => {
+    setEditingViewId(view.id);
+    setEditingViewName(view.name);
+  };
+
+  const commitViewRename = (view: ViewInfo) => {
+    const trimmed = editingViewName.trim();
+    setEditingViewId(null);
+    setEditingViewName("");
+    if (!trimmed || trimmed === view.name) return;
+    onRenameView(view.id, trimmed);
+  };
+
+  const cancelViewRename = () => {
+    setEditingViewId(null);
+    setEditingViewName("");
+  };
 
   const menus: { name: string; entries: MenuEntry[] }[] = [
     {
@@ -195,7 +217,37 @@ export default function GlobalBar({
                 style={{ minWidth: 90, maxWidth: 180 }}
               >
                 <Icon icon="mdi:layers-outline" className="text-[13px] shrink-0 opacity-60" />
-                <span className="truncate text-[11px] flex-1">{view.name}</span>
+                {editingViewId === view.id ? (
+                  <input
+                    autoFocus
+                    value={editingViewName}
+                    onChange={(event) => setEditingViewName(event.target.value)}
+                    onClick={(event) => event.stopPropagation()}
+                    onBlur={() => commitViewRename(view)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        commitViewRename(view);
+                      }
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        cancelViewRename();
+                      }
+                    }}
+                    className="min-w-0 flex-1 rounded border border-blue-500 bg-gray-900 px-1.5 py-0.5 text-[11px] text-white outline-none"
+                  />
+                ) : (
+                  <span
+                    className="truncate text-[11px] flex-1"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      startEditingView(view);
+                    }}
+                    title="Click to rename"
+                  >
+                    {view.name}
+                  </span>
+                )}
                 {views.length > 1 && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onCloseView(view.id); }}
