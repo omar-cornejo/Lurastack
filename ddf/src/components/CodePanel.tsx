@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { readDir, readTextFile, remove, writeTextFile } from "@tauri-apps/plugin-fs";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
+import type { DdfCodeFile } from "../types/project";
 
 type CodePanelProps = {
   resources: TerraformResource[];
@@ -10,6 +11,8 @@ type CodePanelProps = {
   cloudProvider: "aws";
   region: string;
   projectDir?: string;
+  initialCustomFiles?: DdfCodeFile[];
+  onCustomFilesChange?: (files: DdfCodeFile[]) => void;
   onUpdateAttribute: (resourceId: string, attribute: string, value: unknown) => void;
 };
 
@@ -47,52 +50,38 @@ const toEditableLiteral = (value: unknown): string => {
   return `"${String(value).replace(/"/g, '\\"')}"`;
 };
 
+const tokenKeyword = "text-[#c586c0]";
+const tokenProperty = "text-[#9cdcfe]";
+const tokenString = "text-[#ce9178]";
+const tokenPunctuation = "text-[#d4d4d4]";
+
 export default function CodePanel({
   resources,
   schemas,
   cloudProvider,
   region: _region,
   projectDir,
+  initialCustomFiles,
+  onCustomFilesChange,
   onUpdateAttribute,
 }: CodePanelProps) {
   const [activeFileId, setActiveFileId] = useState<string>("main.tf");
-  const [customFiles, setCustomFiles] = useState<Array<{ id: string; name: string; content: string }>>([]);
+  const [customFiles, setCustomFiles] = useState<DdfCodeFile[]>(initialCustomFiles ?? []);
   const [newFileName, setNewFileName] = useState("");
   const codeEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const lineGutterRef = useRef<HTMLDivElement | null>(null);
-  const saveTimersRef = useRef<Map<string, number>>(new Map());
 
   const isTauriRuntime =
     typeof window !== "undefined" &&
     !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
-  const clearFileSaveTimer = useCallback((fileId: string) => {
-    const timer = saveTimersRef.current.get(fileId);
-    if (timer) {
-      window.clearTimeout(timer);
-      saveTimersRef.current.delete(fileId);
-    }
-  }, []);
-
-  const persistCustomFile = useCallback(
-    async (fileName: string, content: string) => {
-      if (!isTauriRuntime || !projectDir) return;
-      await writeTextFile(`${projectDir}/${fileName}`, content);
-    },
-    [isTauriRuntime, projectDir],
-  );
+  useEffect(() => {
+    if (!onCustomFilesChange) return;
+    onCustomFilesChange(customFiles);
+  }, [customFiles, onCustomFilesChange]);
 
   useEffect(() => {
-    saveTimersRef.current.forEach((timer) => window.clearTimeout(timer));
-    saveTimersRef.current.clear();
-  }, []);
-
-  useEffect(() => {
-    if (!isTauriRuntime || !projectDir) {
-      setCustomFiles([]);
-      setActiveFileId("main.tf");
-      return;
-    }
+    if (!isTauriRuntime || !projectDir) return;
 
     let cancelled = false;
 
@@ -114,14 +103,15 @@ export default function CodePanel({
         );
 
         if (!cancelled) {
-          setCustomFiles(loadedFiles);
+          setCustomFiles(loadedFiles.length > 0 ? loadedFiles : (initialCustomFiles ?? []));
           setActiveFileId((current) => {
             if (current === "main.tf") return current;
-            return loadedFiles.some((file) => file.id === current) ? current : "main.tf";
+            const visible = loadedFiles.length > 0 ? loadedFiles : (initialCustomFiles ?? []);
+            return visible.some((file) => file.id === current) ? current : "main.tf";
           });
         }
       } catch {
-        if (!cancelled) setCustomFiles([]);
+        if (!cancelled) setCustomFiles(initialCustomFiles ?? []);
       }
     };
 
@@ -130,6 +120,7 @@ export default function CodePanel({
     return () => {
       cancelled = true;
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTauriRuntime, projectDir]);
 
   const resourcesWithSchemas = useMemo(
@@ -164,10 +155,9 @@ export default function CodePanel({
   const lineCount = Math.max(1, auxiliaryContent.split("\n").length);
 
   const handleAuxiliaryContentChange = (next: string) => {
-    const activeId = activeFileId;
     setCustomFiles((current) =>
       current.map((file) =>
-        file.id === activeId
+        file.id === activeFileId
           ? {
               ...file,
               content: next,
@@ -175,14 +165,6 @@ export default function CodePanel({
           : file,
       ),
     );
-
-    if (activeId === "main.tf") return;
-
-    clearFileSaveTimer(activeId);
-    const timer = window.setTimeout(() => {
-      void persistCustomFile(activeId, next);
-    }, 250);
-    saveTimersRef.current.set(activeId, timer);
   };
 
   const addCustomFile = () => {
@@ -203,17 +185,11 @@ export default function CodePanel({
     ]);
     setActiveFileId(normalized);
     setNewFileName("");
-    void persistCustomFile(normalized, "");
   };
 
   const removeCustomFile = (fileId: string) => {
-    clearFileSaveTimer(fileId);
     setCustomFiles((current) => current.filter((file) => file.id !== fileId));
     setActiveFileId((current) => (current === fileId ? "main.tf" : current));
-
-    if (isTauriRuntime && projectDir) {
-      void remove(`${projectDir}/${fileId}`).catch(() => {});
-    }
   };
 
   const handleEditorScroll = () => {
@@ -304,35 +280,45 @@ export default function CodePanel({
                 <div className="space-y-0 bg-[#1e1e1e]">
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 text-slate-300">terraform {'{'}</div>
+                    <div className="px-2 py-1 text-slate-300">
+                      <span className={tokenKeyword}>terraform</span> <span className={tokenPunctuation}>{"{"}</span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-6 text-slate-300">required_providers {'{'}</div>
+                    <div className="px-2 py-1 pl-6 text-slate-300">
+                      <span className={tokenKeyword}>required_providers</span> <span className={tokenPunctuation}>{"{"}</span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-10 text-slate-300">{cloudProvider} = {'{'}</div>
+                    <div className="px-2 py-1 pl-10 text-slate-300">
+                      <span className={tokenProperty}>{cloudProvider}</span> <span className={tokenPunctuation}>=</span> <span className={tokenPunctuation}>{"{"}</span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-14 text-slate-300">source = "hashicorp/{cloudProvider}"</div>
+                    <div className="px-2 py-1 pl-14 text-slate-300">
+                      <span className={tokenProperty}>source</span> <span className={tokenPunctuation}>=</span> <span className={tokenString}>"hashicorp/{cloudProvider}"</span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-14 text-slate-300">version = "~&gt; 5.0"</div>
+                    <div className="px-2 py-1 pl-14 text-slate-300">
+                      <span className={tokenProperty}>version</span> <span className={tokenPunctuation}>=</span> <span className={tokenString}>"~&gt; 5.0"</span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-10 text-slate-300">{'}'}</div>
+                    <div className="px-2 py-1 pl-10 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-6 text-slate-300">{'}'}</div>
+                    <div className="px-2 py-1 pl-6 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 text-slate-300">{'}'}</div>
+                    <div className="px-2 py-1 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
@@ -340,15 +326,19 @@ export default function CodePanel({
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 text-slate-300">provider "{cloudProvider}" {'{'}</div>
+                    <div className="px-2 py-1 text-slate-300">
+                      <span className={tokenKeyword}>provider</span> <span className={tokenString}>"{cloudProvider}"</span> <span className={tokenPunctuation}>{"{"}</span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-6 text-slate-300">region = "{_region}"</div>
+                    <div className="px-2 py-1 pl-6 text-slate-300">
+                      <span className={tokenProperty}>region</span> <span className={tokenPunctuation}>=</span> <span className={tokenString}>"{_region}"</span>
+                    </div>
                   </div>
                   <div className="grid grid-cols-[48px_1fr]">
                     <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 text-slate-300">{'}'}</div>
+                    <div className="px-2 py-1 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
                   </div>
 
                   {resourcesWithSchemas.map(({ resource, schema }) => {
@@ -371,7 +361,10 @@ export default function CodePanel({
                         <div className="grid grid-cols-[48px_1fr]">
                           <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
                           <div className="px-2 py-1 text-slate-300">
-                            {(resource.kind ?? "resource")} "{resource.type}" "{resource.name}" {'{'}
+                            <span className={tokenKeyword}>{resource.kind ?? "resource"}</span>{" "}
+                            <span className={tokenString}>"{resource.type}"</span>{" "}
+                            <span className={tokenString}>"{resource.name}"</span>{" "}
+                            <span className={tokenPunctuation}>{"{"}</span>
                           </div>
                         </div>
 
@@ -384,11 +377,11 @@ export default function CodePanel({
                             <div key={`${resource.id}-${attributeKey}`} className="grid grid-cols-[48px_1fr]">
                               <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
                               <label className="flex items-center gap-2 px-2 py-1 pl-6">
-                                <span className="min-w-[220px] break-all text-slate-300">
+                                <span className={`min-w-[220px] break-all ${tokenProperty}`}>
                                   {attributeKey}
                                   {isRequired ? <span className="ml-1 text-red-400">*</span> : null}
                                 </span>
-                                <span>=</span>
+                                <span className={tokenPunctuation}>=</span>
                                 <input
                                   value={displayValue}
                                   onChange={(event) =>
@@ -398,7 +391,7 @@ export default function CodePanel({
                                       parseHclInputToAttribute(event.target.value),
                                     )
                                   }
-                                  className="w-full rounded border border-slate-600 bg-[#252526] px-2 py-1 text-xs text-slate-200 outline-none focus:border-slate-400"
+                                  className={`w-full rounded border border-slate-600 bg-[#252526] px-2 py-1 text-xs ${tokenString} outline-none focus:border-slate-400`}
                                 />
                               </label>
                             </div>
@@ -407,7 +400,7 @@ export default function CodePanel({
 
                         <div className="grid grid-cols-[48px_1fr]">
                           <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                          <div className="px-2 py-1 text-slate-300">{'}'}</div>
+                          <div className="px-2 py-1 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
                         </div>
                       </div>
                     );

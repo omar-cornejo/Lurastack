@@ -33,7 +33,7 @@ import {
 import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
 import { warn } from "../commands/warn";
 import { TEST_NODE_SCHEMAS } from "../models/testNodes";
-import type { DdfViewSnapshot } from "../types/project";
+import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 
 type WorkspaceViewProps = {
@@ -71,6 +71,7 @@ export default function WorkspaceView({
     provider: "registry.terraform.io/hashicorp/aws",
     resources: initialState?.resources ?? [],
   });
+  const [codeFiles, setCodeFiles] = useState<DdfCodeFile[]>(initialState?.codeFiles ?? []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const hclPersistenceDisabledRef = useRef(false);
 
@@ -84,11 +85,12 @@ export default function WorkspaceView({
         resources: project.resources,
         nodes: snapshotNodes(nodes),
         edges: snapshotEdges(edges),
+        codeFiles,
       });
     }, 800);
     return () => clearTimeout(timeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [nodes, edges, project.resources]);
+  }, [nodes, edges, project.resources, codeFiles]);
 
   const buildSubtreeSnapshot = useCallback(
     (rootId: string) => {
@@ -612,6 +614,8 @@ export default function WorkspaceView({
               cloudProvider={cloudProvider}
               region={providerRegion}
               projectDir={projectDir}
+              initialCustomFiles={codeFiles}
+              onCustomFilesChange={setCodeFiles}
               onUpdateAttribute={updateResourceAttributeById}
             />
           </main>

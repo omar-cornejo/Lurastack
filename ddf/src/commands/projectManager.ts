@@ -1,6 +1,8 @@
 import {
   readTextFile,
+  readDir,
   writeTextFile,
+  remove,
   mkdir,
   BaseDirectory,
 } from "@tauri-apps/plugin-fs";
@@ -123,6 +125,37 @@ export async function writeMainTf(projectDir: string, hclContent: string): Promi
   await writeTextFile(`${projectDir}/main.tf`, hclContent);
 }
 
+export async function syncAuxiliaryTfFiles(
+  projectDir: string,
+  files: Array<{ name: string; content: string }>,
+): Promise<void> {
+  const desiredFiles = files
+    .map((file) => {
+      const trimmed = file.name.trim();
+      const normalized = trimmed.toLowerCase().endsWith(".tf") ? trimmed : `${trimmed}.tf`;
+      return { name: normalized, content: file.content };
+    })
+    .filter((file) => file.name.toLowerCase() !== "main.tf");
+
+  const desiredNames = new Set(desiredFiles.map((file) => file.name));
+
+  const entries = await readDir(projectDir);
+  const existingTfNames = entries
+    .filter((entry) => entry.isFile && typeof entry.name === "string")
+    .map((entry) => entry.name as string)
+    .filter((name) => name.toLowerCase().endsWith(".tf") && name.toLowerCase() !== "main.tf");
+
+  await Promise.all(
+    existingTfNames
+      .filter((name) => !desiredNames.has(name))
+      .map((name) => remove(`${projectDir}/${name}`)),
+  );
+
+  await Promise.all(
+    desiredFiles.map((file) => writeTextFile(`${projectDir}/${file.name}`, file.content)),
+  );
+}
+
 /**
  * Opens an "Open file" dialog and returns the chosen absolute path, or null if cancelled.
  */
@@ -224,7 +257,7 @@ export function createEmptyProject(name: string): DdfProject {
     meta: { name, createdAt: now, updatedAt: now },
     settings: { autosave: false },
     activeViewId: viewId,
-    views: [{ id: viewId, name: "View 1", resources: [], nodes: [], edges: [] }],
+    views: [{ id: viewId, name: "View 1", resources: [], nodes: [], edges: [], codeFiles: [] }],
   };
 }
 

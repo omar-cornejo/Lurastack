@@ -23,12 +23,19 @@ export type DdfSerializedEdge = {
   data?: CanvasEdgeData;
 };
 
+export type DdfCodeFile = {
+  id: string;
+  name: string;
+  content: string;
+};
+
 export type DdfViewSnapshot = {
   id: string;
   name: string;
   resources: TerraformResource[];
   nodes: DdfSerializedNode[];
   edges: DdfSerializedEdge[];
+  codeFiles?: DdfCodeFile[];
 };
 
 export type DdfProject = {

@@ -7,6 +7,7 @@ import { ViewInfo } from "./types/views";
 import type { DdfProject, DdfViewSnapshot } from "./types/project";
 import {
   saveProjectToPath,
+  syncAuxiliaryTfFiles,
   loadProjectFromPath,
   buildProjectSnapshot,
   createEmptyProject,
@@ -66,6 +67,16 @@ export default function App() {
     [project, activeViewId],
   );
 
+  const persistProjectBundle = useCallback(
+    async (snapshot: DdfProject, filePath: string) => {
+      await saveProjectToPath(snapshot, filePath);
+      const projectDir = getProjectDir(filePath);
+      const activeView = snapshot.views.find((view) => view.id === snapshot.activeViewId);
+      await syncAuxiliaryTfFiles(projectDir, activeView?.codeFiles ?? []);
+    },
+    [],
+  );
+
   // ── Project actions ───────────────────────────────────────────────────────
 
   /** Called by WelcomeScreen after the user fills the new-project form */
@@ -106,13 +117,13 @@ export default function App() {
     if (!project || !projectFilePath) return;
     try {
       const snap = assembleSave();
-      await saveProjectToPath(snap, projectFilePath);
+      await persistProjectBundle(snap, projectFilePath);
       setProject(snap);
       sileo.success({ title: "Project saved." });
     } catch {
       sileo.error({ title: "Failed to save project." });
     }
-  }, [project, projectFilePath, assembleSave]);
+  }, [project, projectFilePath, assembleSave, persistProjectBundle]);
 
   const handleSaveProjectAs = useCallback(async () => {
     if (!project) return;
@@ -127,14 +138,14 @@ export default function App() {
       ?? project.meta.name;
     try {
       const snap = assembleSave(newName);
-      await saveProjectToPath(snap, newPath);
+      await persistProjectBundle(snap, newPath);
       setProject(snap);
       setProjectFilePath(newPath);
       sileo.success({ title: `Saved as "${newName}".` });
     } catch {
       sileo.error({ title: "Failed to save project." });
     }
-  }, [project, assembleSave]);
+  }, [project, assembleSave, persistProjectBundle]);
 
   const handleOpenProject = useCallback(async () => {
     const path = await pickOpenPath();
@@ -166,16 +177,28 @@ export default function App() {
         );
 
         if (projectFilePath) {
-          void saveProjectToPath(updated, projectFilePath).catch(() => {
+          void persistProjectBundle(updated, projectFilePath).catch(() => {
             sileo.error({ title: "Failed to save autosave setting." });
           });
+
+          if (next) {
+            window.setTimeout(() => {
+              const refreshed = buildProjectSnapshot(
+                { ...updated, activeViewId },
+                viewSnapshotsRef.current,
+              );
+              void persistProjectBundle(refreshed, projectFilePath).catch(() => {
+                sileo.error({ title: "Failed to capture autosave snapshot." });
+              });
+            }, 900);
+          }
         }
 
         return updated;
       });
       return next;
     });
-  }, [activeViewId, projectFilePath]);
+  }, [activeViewId, projectFilePath, persistProjectBundle]);
 
   // Called (debounced) by each WorkspaceView when its state changes
   const handleViewStateChange = useCallback(
@@ -186,9 +209,9 @@ export default function App() {
         { ...project, activeViewId },
         viewSnapshotsRef.current,
       );
-      void saveProjectToPath(snap, projectFilePath).then(() => setProject(snap));
+      void persistProjectBundle(snap, projectFilePath).then(() => setProject(snap));
     },
-    [autosave, projectFilePath, project, activeViewId],
+    [autosave, projectFilePath, project, activeViewId, persistProjectBundle],
   );
 
   // ── View actions ──────────────────────────────────────────────────────────
@@ -201,6 +224,7 @@ export default function App() {
       resources: [],
       nodes: [],
       edges: [],
+      codeFiles: [],
     };
     viewSnapshotsRef.current.set(v.id, snap);
     setViews((prev) => [...prev, v]);
