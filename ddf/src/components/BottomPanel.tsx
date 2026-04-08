@@ -22,6 +22,8 @@ type BottomPanelProps = {
   logs?: BottomPanelLogEntry[];
   openSignal?: number;
   preferredTab?: "terminal" | "logs";
+  projectDir?: string;
+  enabled?: boolean;
 };
 
 type BottomPanelTab = "terminal" | "mapper" | "logs";
@@ -39,6 +41,8 @@ export default function BottomPanel({
   logs = [],
   openSignal = 0,
   preferredTab,
+  projectDir,
+  enabled = true,
 }: BottomPanelProps) {
   const showMapperTab = mode === "canvas";
   const [open, setOpen] = useState(true);
@@ -96,6 +100,10 @@ export default function BottomPanel({
       safeFitTerminal();
     });
   };
+
+  const isTauriRuntime =
+    typeof window !== "undefined" &&
+    !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
   const safeFitTerminal = () => {
     if (terminalDisposedRef.current || !term.current || !fitAddon.current || !terminalRef.current) return;
@@ -338,6 +346,7 @@ export default function BottomPanel({
   }, [height, open]);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!terminalRef.current) return;
     terminalDisposedRef.current = false;
 
@@ -358,9 +367,15 @@ export default function BottomPanel({
       term.current?.focus();
     }, 0);
 
+    if (isTauriRuntime) {
+      void invoke("init_terminal_session", { cwd: projectDir ?? "" }).catch(() => {
+        // ignore init errors here; logs/terminal output will surface backend details
+      });
+    }
+
     term.current.onData((data: string) => {
       if (terminalDisposedRef.current) return;
-      invoke("write_to_pty", { input: data });
+      void invoke("write_to_pty", { input: data });
     });
 
     const unlisten = listen<string>("pty-output", (event) => {
@@ -380,6 +395,11 @@ export default function BottomPanel({
       cancelScheduledFit();
       unlisten.then((f) => f());
       window.removeEventListener('resize', onWindowResize);
+      if (isTauriRuntime) {
+        void invoke("close_terminal_session").catch(() => {
+          // ignore close race conditions
+        });
+      }
       try {
         term.current?.dispose();
       } catch {
@@ -388,7 +408,7 @@ export default function BottomPanel({
       term.current = null;
       fitAddon.current = null;
     };
-  }, []);
+  }, [enabled, isTauriRuntime, projectDir]);
 
   useEffect(() => {
     scheduleSafeFitTerminal();

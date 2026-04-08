@@ -435,6 +435,7 @@ export default function App() {
                 viewId={view.id}
                 viewName={view.name}
                 projectDir={projectDir ? getViewDir(projectDir, view.name) : undefined}
+                isVisible={view.id === activeViewId}
                 initialState={viewSnapshotsRef.current.get(view.id)}
                 onStateChange={handleViewStateChange}
               />

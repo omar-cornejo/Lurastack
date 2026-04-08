@@ -104,9 +104,6 @@ export default function CodePanel({
   const [customFiles, setCustomFiles] = useState<DdfCodeFile[]>(initialCustomFiles ?? []);
   const [newFileName, setNewFileName] = useState("");
   const [isValidatingTerraform, setIsValidatingTerraform] = useState(false);
-  const [validationDiagnostics, setValidationDiagnostics] = useState<TerraformValidationDiagnostic[]>([]);
-  const [validationWasSuccessful, setValidationWasSuccessful] = useState<boolean | null>(null);
-  const [validationError, setValidationError] = useState<string | null>(null);
   const codeEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const lineGutterRef = useRef<HTMLDivElement | null>(null);
 
@@ -193,33 +190,10 @@ export default function CodePanel({
 
   const lineCount = Math.max(1, auxiliaryContent.split("\n").length);
 
-  const diagnosticsForActiveFile = useMemo(() => {
-    const activeName = activeFileId === "main.tf" ? "main.tf" : activeCustomFile?.name;
-    const normalizedActive = basename(activeName)?.toLowerCase();
-    if (!normalizedActive) return [];
-
-    return validationDiagnostics.filter((diagnostic) => {
-      const fileName = basename(diagnostic.filename)?.toLowerCase();
-      return fileName === normalizedActive;
-    });
-  }, [activeCustomFile?.name, activeFileId, validationDiagnostics]);
-
-  const activeFileDiagnosticLines = useMemo(() => {
-    const lines = new Set<number>();
-    diagnosticsForActiveFile.forEach((diagnostic) => {
-      if (typeof diagnostic.startLine === "number" && diagnostic.startLine > 0) {
-        lines.add(diagnostic.startLine);
-      }
-    });
-    return lines;
-  }, [diagnosticsForActiveFile]);
-
   const runTerraformValidate = async () => {
     onOpenLogsPanel?.();
 
     if (!isTauriRuntime) {
-      setValidationError("terraform validate solo está disponible en la app de escritorio (Tauri).");
-      setValidationWasSuccessful(null);
       onValidationLogs?.([
         {
           id: `validate-${Date.now()}-runtime`,
@@ -233,8 +207,6 @@ export default function CodePanel({
     }
 
     if (!projectDir) {
-      setValidationError("Abre o guarda un proyecto para ejecutar terraform validate.");
-      setValidationWasSuccessful(null);
       onValidationLogs?.([
         {
           id: `validate-${Date.now()}-project`,
@@ -258,7 +230,6 @@ export default function CodePanel({
     ]);
 
     setIsValidatingTerraform(true);
-    setValidationError(null);
 
     try {
       const files: TerraformSourceFile[] = [
@@ -273,12 +244,8 @@ export default function CodePanel({
       ];
 
       const result = await invoke<TerraformValidationResult>("terraform_validate", {
-        projectDir,
         files,
       });
-
-      setValidationDiagnostics(result.diagnostics ?? []);
-      setValidationWasSuccessful(result.ok);
 
       const now = new Date().toISOString();
       const logsFromDiagnostics = (result.diagnostics ?? []).map((diagnostic, index) => {
@@ -319,9 +286,6 @@ export default function CodePanel({
         onValidationLogs?.(logsFromDiagnostics);
       }
     } catch (error) {
-      setValidationDiagnostics([]);
-      setValidationWasSuccessful(false);
-      setValidationError(String(error));
       onValidationLogs?.([
         {
           id: `validate-${Date.now()}-exception`,
@@ -463,50 +427,6 @@ export default function CodePanel({
                 {isValidatingTerraform ? "Validating..." : "Terraform validate"}
               </button>
             </div>
-
-            {validationError ? (
-              <div className="mt-2 rounded border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-200">
-                {validationError}
-              </div>
-            ) : null}
-
-            {validationWasSuccessful === true ? (
-              <div className="mt-2 rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs text-emerald-200">
-                terraform validate: sin errores.
-              </div>
-            ) : null}
-
-            {validationDiagnostics.length > 0 ? (
-              <div className="mt-2 max-h-36 space-y-1 overflow-auto rounded border border-slate-700 bg-[#252526] p-2 text-xs text-slate-200">
-                {validationDiagnostics.map((diagnostic, index) => {
-                  const diagnosticSeverity = diagnostic.severity?.toLowerCase() ?? "error";
-                  const severityClass = diagnosticSeverity === "warning" ? "text-amber-300" : "text-red-300";
-                  const fileName = basename(diagnostic.filename);
-                  const lineLabel =
-                    typeof diagnostic.startLine === "number" ? `:${diagnostic.startLine}` : "";
-
-                  return (
-                    <div
-                      key={`${diagnostic.summary}-${diagnostic.startLine ?? "x"}-${index}`}
-                      className="rounded border border-slate-700/80 bg-[#1e1e1e] px-2 py-1"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className={`font-semibold uppercase ${severityClass}`}>
-                          {diagnosticSeverity}
-                        </span>
-                        <span className="text-slate-100">{diagnostic.summary}</span>
-                      </div>
-                      {fileName ? (
-                        <div className="text-slate-400">{fileName}{lineLabel}</div>
-                      ) : null}
-                      {diagnostic.detail ? (
-                        <div className="mt-1 whitespace-pre-wrap text-slate-300">{diagnostic.detail}</div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : null}
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto p-2 font-mono text-xs text-slate-200">
@@ -653,12 +573,7 @@ export default function CodePanel({
                   className="overflow-hidden border-r border-slate-800 bg-[#252526] px-2 py-2 text-right text-[11px] leading-5 text-slate-500"
                 >
                   {Array.from({ length: lineCount }, (_, index) => (
-                    <div
-                      key={index}
-                      className={activeFileDiagnosticLines.has(index + 1) ? "bg-red-500/20 text-red-300" : undefined}
-                    >
-                      {index + 1}
-                    </div>
+                    <div key={index}>{index + 1}</div>
                   ))}
                 </div>
                 <textarea

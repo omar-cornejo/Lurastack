@@ -41,6 +41,7 @@ type WorkspaceViewProps = {
   viewId: string;
   viewName?: string;
   projectDir?: string;
+  isVisible?: boolean;
   initialState?: DdfViewSnapshot;
   onStateChange?: (viewId: string, snapshot: DdfViewSnapshot) => void;
 };
@@ -49,6 +50,7 @@ export default function WorkspaceView({
   viewId,
   viewName = "View",
   projectDir,
+  isVisible = true,
   initialState,
   onStateChange,
 }: WorkspaceViewProps) {
@@ -608,6 +610,8 @@ export default function WorkspaceView({
             schemas={TEST_NODE_SCHEMAS}
             mode="canvas"
             logs={codeLogs}
+            projectDir={projectDir}
+            enabled={isVisible && activeSection === "canvas"}
           />
         </div>
 
@@ -643,6 +647,8 @@ export default function WorkspaceView({
               logs={codeLogs}
               openSignal={codeBottomOpenSignal}
               preferredTab="logs"
+              projectDir={projectDir}
+              enabled={isVisible && activeSection === "code"}
             />
           </main>
         </div>
