@@ -112,6 +112,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![write_to_pty])
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .run(tauri::generate_context!())
         .expect("error mientras se ejecutaba la aplicación Tauri");
 }

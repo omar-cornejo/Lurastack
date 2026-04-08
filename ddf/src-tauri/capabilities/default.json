@@ -7,7 +7,25 @@
     "core:default",
     "opener:default",
     "fs:allow-write-text-file",
+    "fs:allow-read-text-file",
     "fs:allow-appdata-write",
-    "fs:allow-appdata-write-recursive"
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-mkdir",
+    "fs:allow-exists",
+    "fs:allow-read-dir",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$HOME/**" },
+        { "path": "$APPDATA/**" },
+        { "path": "$DOCUMENT/**" },
+        { "path": "$DESKTOP/**" }
+      ]
+    }
   ]
 }

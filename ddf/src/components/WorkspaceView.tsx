@@ -33,30 +33,60 @@ import {
 import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
 import { warn } from "../commands/warn";
 import { TEST_NODE_SCHEMAS } from "../models/testNodes";
+import type { DdfViewSnapshot } from "../types/project";
+import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 
 type WorkspaceViewProps = {
   viewId: string;
+  viewName?: string;
+  initialState?: DdfViewSnapshot;
+  onStateChange?: (viewId: string, snapshot: DdfViewSnapshot) => void;
 };
 
-export default function WorkspaceView({ viewId: _viewId }: WorkspaceViewProps) {
+export default function WorkspaceView({
+  viewId,
+  viewName = "View",
+  initialState,
+  onStateChange,
+}: WorkspaceViewProps) {
   const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
   const [activeSection, setActiveSection] = useState<"canvas" | "code">("canvas");
   const [cloudProvider, setCloudProvider] = useState<"aws">("aws");
   const [providerRegion] = useState("eu-west-1");
 
   const [bottomHeight, setBottomHeight] = useState(288);
-  const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdgeData>([]);
+  const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>(
+    initialState ? restoreNodes(initialState.nodes) : [],
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdgeData>(
+    initialState ? restoreEdges(initialState.edges) : [],
+  );
   const activeDragNodeIdRef = useRef<string | null>(null);
   const dragSubtreeSnapshotRef = useRef<
     Map<string, { parentNode?: string; position: { x: number; y: number } }> | null
   >(null);
   const [project, setProject] = useState<TerraformProject>({
     provider: "registry.terraform.io/hashicorp/aws",
-    resources: [],
+    resources: initialState?.resources ?? [],
   });
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const hclPersistenceDisabledRef = useRef(false);
+
+  // Report state changes for project save / autosave
+  useEffect(() => {
+    if (!onStateChange) return;
+    const timeout = setTimeout(() => {
+      onStateChange(viewId, {
+        id: viewId,
+        name: viewName,
+        resources: project.resources,
+        nodes: snapshotNodes(nodes),
+        edges: snapshotEdges(edges),
+      });
+    }, 800);
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges, project.resources]);
 
   const buildSubtreeSnapshot = useCallback(
     (rootId: string) => {
