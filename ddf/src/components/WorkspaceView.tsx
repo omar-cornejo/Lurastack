@@ -611,6 +611,7 @@ export default function WorkspaceView({
               schemas={TEST_NODE_SCHEMAS}
               cloudProvider={cloudProvider}
               region={providerRegion}
+              projectDir={projectDir}
               onUpdateAttribute={updateResourceAttributeById}
             />
           </main>
