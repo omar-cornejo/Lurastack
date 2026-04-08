@@ -39,6 +39,7 @@ import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../com
 type WorkspaceViewProps = {
   viewId: string;
   viewName?: string;
+  projectDir?: string;
   initialState?: DdfViewSnapshot;
   onStateChange?: (viewId: string, snapshot: DdfViewSnapshot) => void;
 };
@@ -46,6 +47,7 @@ type WorkspaceViewProps = {
 export default function WorkspaceView({
   viewId,
   viewName = "View",
+  projectDir,
   initialState,
   onStateChange,
 }: WorkspaceViewProps) {
@@ -297,31 +299,28 @@ export default function WorkspaceView({
   }, [cloudProvider, providerRegion]);
 
   const saveProjectToHCL = async (proj: TerraformProject) => {
-    if (hclPersistenceDisabledRef.current) {
-      return;
-    }
+    if (hclPersistenceDisabledRef.current) return;
 
     const isTauriRuntime =
       typeof window !== "undefined" &&
       !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
-    if (!isTauriRuntime) {
-      return;
-    }
+    if (!isTauriRuntime) return;
 
     const hcl = buildGlobalHcl(proj);
     try {
-      await writeTextFile("main.tf", hcl, {
-        baseDir: BaseDirectory.AppData,
-      });
+      if (projectDir) {
+        await writeTextFile(`${projectDir}/main.tf`, hcl);
+      } else {
+        await writeTextFile("main.tf", hcl, { baseDir: BaseDirectory.AppData });
+      }
     } catch (error) {
       const errorMessage = String(error);
       if (errorMessage.includes("not allowed")) {
         hclPersistenceDisabledRef.current = true;
       }
-
       warn(
-        "No se pudo guardar el archivo HCL en AppData (revisa permisos Tauri fs).",
+        "No se pudo guardar el archivo HCL (revisa permisos Tauri fs).",
         "TAURI_FS_PERSIST",
       );
       console.warn("Failed to persist HCL file via Tauri fs plugin:", error);

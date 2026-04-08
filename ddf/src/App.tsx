@@ -10,7 +10,8 @@ import {
   loadProjectFromPath,
   buildProjectSnapshot,
   createEmptyProject,
-  projectNameToFileName,
+  getProjectDir,
+  writeMainTf,
   pickSavePath,
   pickOpenPath,
 } from "./commands/projectManager";
@@ -82,6 +83,7 @@ export default function App() {
         const newProject = createEmptyProject(name);
         try {
           await saveProjectToPath(newProject, filePath);
+          await writeMainTf(getProjectDir(filePath), "");
         } catch {
           sileo.error({ title: "Could not save project." });
           return;
@@ -114,8 +116,7 @@ export default function App() {
 
   const handleSaveProjectAs = useCallback(async () => {
     if (!project) return;
-    const defaultName = projectNameToFileName(project.meta.name);
-    const newPath = await pickSavePath(defaultName);
+    const newPath = await pickSavePath(project.meta.name);
     if (!newPath) return;
     // Derive name from filename
     const newName = newPath
@@ -153,12 +154,28 @@ export default function App() {
   const handleToggleAutosave = useCallback(() => {
     setAutosave((prev) => {
       const next = !prev;
-      setProject((p) =>
-        p ? { ...p, settings: { ...p.settings, autosave: next } } : p,
-      );
+      setProject((p) => {
+        if (!p) return p;
+        const updated = buildProjectSnapshot(
+          {
+            ...p,
+            activeViewId,
+            settings: { ...p.settings, autosave: next },
+          },
+          viewSnapshotsRef.current,
+        );
+
+        if (projectFilePath) {
+          void saveProjectToPath(updated, projectFilePath).catch(() => {
+            sileo.error({ title: "Failed to save autosave setting." });
+          });
+        }
+
+        return updated;
+      });
       return next;
     });
-  }, []);
+  }, [activeViewId, projectFilePath]);
 
   // Called (debounced) by each WorkspaceView when its state changes
   const handleViewStateChange = useCallback(
@@ -217,6 +234,7 @@ export default function App() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   const hasProject = project !== null;
+  const projectDir = projectFilePath ? getProjectDir(projectFilePath) : undefined;
 
   return (
     <div className="h-screen flex flex-col overflow-hidden">
@@ -256,6 +274,7 @@ export default function App() {
               <WorkspaceView
                 viewId={view.id}
                 viewName={view.name}
+                projectDir={projectDir}
                 initialState={viewSnapshotsRef.current.get(view.id)}
                 onStateChange={handleViewStateChange}
               />

@@ -1,9 +1,10 @@
 import {
   readTextFile,
   writeTextFile,
+  mkdir,
   BaseDirectory,
 } from "@tauri-apps/plugin-fs";
-import { open, save } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-dialog";
 import type { DdfProject, DdfViewSnapshot, RecentProject } from "../types/project";
 import type { Node, Edge } from "reactflow";
 import type { CanvasTerraformNodeData, CanvasEdgeData } from "../canvas/types";
@@ -90,16 +91,36 @@ export async function loadProjectFromPath(absolutePath: string): Promise<DdfProj
 // ── Native dialog pickers ────────────────────────────────────────────────────
 
 /**
- * Opens a "Save As" dialog and returns the chosen absolute path, or null if cancelled.
+ * Opens a directory picker, creates a <slug>/ subfolder, and returns the .ddf path inside it.
+ * Returns null if cancelled.
  */
-export async function pickSavePath(defaultName: string): Promise<string | null> {
+export async function pickSavePath(projectName: string): Promise<string | null> {
   if (!isTauri()) return null;
-  const result = await save({
-    title: "Save project",
-    filters: [{ name: "DDF Project", extensions: ["ddf"] }],
-    defaultPath: defaultName,
+  const result = await open({
+    title: "Choose project location",
+    directory: true,
+    multiple: false,
   });
-  return result ?? null;
+  if (!result) return null;
+  const parentDir = typeof result === "string" ? result : (result as string[])[0];
+  if (!parentDir) return null;
+  const slug = projectNameToSlug(projectName);
+  const projectDir = `${parentDir}/${slug}`;
+  await mkdir(projectDir, { recursive: true });
+  return `${projectDir}/${slug}.ddf`;
+}
+
+/** Returns the directory containing the .ddf file. */
+export function getProjectDir(ddfPath: string): string {
+  const normalized = ddfPath.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  parts.pop();
+  return parts.join("/");
+}
+
+/** Writes HCL content to main.tf inside the project directory. */
+export async function writeMainTf(projectDir: string, hclContent: string): Promise<void> {
+  await writeTextFile(`${projectDir}/main.tf`, hclContent);
 }
 
 /**
@@ -219,10 +240,10 @@ export function buildProjectSnapshot(
   };
 }
 
+export function projectNameToSlug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "project";
+}
+
 export function projectNameToFileName(name: string): string {
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return (slug || "project") + ".ddf";
+  return projectNameToSlug(name) + ".ddf";
 }

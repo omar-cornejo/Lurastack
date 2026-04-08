@@ -5,7 +5,6 @@ import {
   removeFromRecent,
   pickOpenPath,
   loadProjectFromPath,
-  projectNameToFileName,
   pickSavePath,
 } from "../commands/projectManager";
 import type { RecentProject } from "../types/project";
@@ -54,7 +53,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
     if (!trimmed) { setNameError("Project name is required"); return; }
     setPickingDir(true);
     try {
-      const path = await pickSavePath(projectNameToFileName(trimmed));
+      const path = await pickSavePath(trimmed);
       if (path) setChosenPath(path);
     } catch (e) {
       setError(String(e));
