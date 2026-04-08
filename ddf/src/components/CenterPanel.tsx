@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } fro
 import {
   Background,
   BackgroundVariant,
+  ControlButton,
   ConnectionMode,
   Controls,
   MiniMap,
@@ -104,6 +105,7 @@ export default function CenterPanel({
     x: number;
     y: number;
   } | null>(null);
+  const [activeLayer, setActiveLayer] = useState(0);
 
   const stableNodeTypes = useMemo(() => canvasNodeTypes, []);
   const stableEdgeTypes = useMemo(() => canvasEdgeTypes, []);
@@ -150,6 +152,18 @@ export default function CenterPanel({
     return cache;
   }, [nodes]);
 
+  const maxLayer = useMemo(() => {
+    let maxDepth = 0;
+
+    for (const depth of nodeDepthMap.values()) {
+      if (depth > maxDepth) {
+        maxDepth = depth;
+      }
+    }
+
+    return maxDepth;
+  }, [nodeDepthMap]);
+
   const nodesWithDropTarget = useMemo(
     () =>
       nodes.map((node) => {
@@ -186,6 +200,125 @@ export default function CenterPanel({
       }),
     [activeDropContainerId, nodeDepthMap, nodes],
   );
+
+  const nodeById = useMemo(
+    () => new Map(nodesWithDropTarget.map((node) => [node.id, node])),
+    [nodesWithDropTarget],
+  );
+
+  const visibleLayerNodeIds = useMemo(() => {
+    if (activeLayer === 0) {
+      return new Set(nodesWithDropTarget.map((node) => node.id));
+    }
+
+    return new Set(
+      nodesWithDropTarget
+        .filter((node) => (nodeDepthMap.get(node.id) ?? 0) === activeLayer)
+        .map((node) => node.id),
+    );
+  }, [activeLayer, nodeDepthMap, nodesWithDropTarget]);
+
+  const ghostContainerNodeIds = useMemo(() => {
+    if (activeLayer === 0) {
+      return new Set<string>();
+    }
+
+    const ghostIds = new Set<string>();
+
+    for (const visibleId of visibleLayerNodeIds) {
+      let current = nodeById.get(visibleId);
+
+      while (current?.parentNode) {
+        const parentNode = nodeById.get(current.parentNode);
+        if (!parentNode) break;
+
+        if (parentNode.data.isContainer) {
+          ghostIds.add(parentNode.id);
+        }
+
+        current = parentNode;
+      }
+    }
+
+    return ghostIds;
+  }, [activeLayer, nodeById, visibleLayerNodeIds]);
+
+  const layerScopedNodes = useMemo(
+    () =>
+      nodesWithDropTarget.map((node) => {
+        const isVisibleInLayer = visibleLayerNodeIds.has(node.id);
+        const isGhostContainer = ghostContainerNodeIds.has(node.id);
+
+        if (isVisibleInLayer) {
+          if (
+            !node.hidden &&
+            node.selectable !== false &&
+            node.draggable !== false &&
+            !node.data.isLayerGhost
+          ) {
+            return node;
+          }
+
+          return {
+            ...node,
+            hidden: false,
+            selectable: true,
+            draggable: true,
+            data: {
+              ...node.data,
+              isLayerGhost: false,
+            },
+          };
+        }
+
+        if (isGhostContainer) {
+          if (
+            !node.hidden &&
+            node.selectable === false &&
+            node.draggable === false &&
+            !!node.data.isLayerGhost
+          ) {
+            return node;
+          }
+
+          return {
+            ...node,
+            hidden: false,
+            selectable: false,
+            draggable: false,
+            data: {
+              ...node.data,
+              isLayerGhost: true,
+            },
+          };
+        }
+
+        if (
+          node.hidden &&
+          node.selectable === false &&
+          node.draggable === false &&
+          !node.data.isLayerGhost
+        ) {
+          return node;
+        }
+
+        return {
+          ...node,
+          hidden: true,
+          selectable: false,
+          draggable: false,
+          data: {
+            ...node.data,
+            isLayerGhost: false,
+          },
+        };
+      }),
+    [ghostContainerNodeIds, nodesWithDropTarget, visibleLayerNodeIds],
+  );
+
+  useEffect(() => {
+    setActiveLayer((current) => (current > maxLayer ? 0 : current));
+  }, [maxLayer]);
 
   const applyPlacementIndicator = useCallback((targetContainerId?: string) => {
     setActiveDropContainerId((current) => {
@@ -517,7 +650,7 @@ export default function CenterPanel({
         onDragLeave={handleDragLeave}
       >
         <ReactFlow
-          nodes={nodesWithDropTarget}
+          nodes={layerScopedNodes}
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
@@ -555,7 +688,17 @@ export default function CenterPanel({
             className="!bg-white !border !border-slate-300 !shadow-md"
           />
 
-          <Controls position="top-right" showInteractive={false} />
+          <Controls position="top-right" showInteractive={false}>
+            <ControlButton
+              onClick={() =>
+                setActiveLayer((current) => (current >= maxLayer ? 0 : current + 1))
+              }
+              title={`Layer ${activeLayer}`}
+              aria-label="Cambiar capa visible"
+            >
+              {activeLayer}
+            </ControlButton>
+          </Controls>
 
           <Background
             id="primary-grid"

@@ -11,7 +11,7 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
           data.isDropTarget
             ? "border-emerald-500 ring-2 ring-emerald-300"
             : "border-blue-300"
-        }`}
+        } ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}
       >
         <NodeResizer
           isVisible={selected}
@@ -68,7 +68,7 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
   }
 
   return (
-    <div className="h-full w-full rounded-md border border-slate-300 bg-white px-3 py-2 shadow-sm">
+    <div className={`h-full w-full rounded-md border border-slate-300 bg-white px-3 py-2 shadow-sm ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}>
       <Handle type="target" id="top" position={Position.Top} className="!bg-slate-500" />
       <Handle type="source" id="top" position={Position.Top} className="!bg-slate-500" />
 

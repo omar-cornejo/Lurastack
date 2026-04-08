@@ -26,4 +26,5 @@ export type CanvasTerraformNodeData = {
   terraformKind: TerraformNodeSchema["terraformKind"];
   isContainer: boolean;
   isDropTarget?: boolean;
+  isLayerGhost?: boolean;
 };
