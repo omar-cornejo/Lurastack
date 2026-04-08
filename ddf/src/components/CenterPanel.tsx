@@ -38,6 +38,12 @@ import {
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 import "reactflow/dist/style.css";
 
+const MIDDLE_MOUSE_PAN_BUTTONS: number[] = [1];
+const DEFAULT_EDGE_OPTIONS = {
+  zIndex: 10000,
+  interactionWidth: 32,
+};
+
 type CenterPanelProps = {
   nodes: Node<CanvasTerraformNodeData>[];
   edges: Edge<CanvasEdgeData>[];
@@ -106,16 +112,6 @@ export default function CenterPanel({
     y: number;
   } | null>(null);
   const [activeLayer, setActiveLayer] = useState(0);
-
-  const stableNodeTypes = useMemo(() => canvasNodeTypes, []);
-  const stableEdgeTypes = useMemo(() => canvasEdgeTypes, []);
-  const stableDefaultEdgeOptions = useMemo(
-    () => ({
-      zIndex: 10000,
-      interactionWidth: 32,
-    }),
-    [],
-  );
 
   const getEdgeMappings = useCallback(
     (edge: Edge<CanvasEdgeData>): CanvasEdgeMapping[] =>
@@ -204,6 +200,14 @@ export default function CenterPanel({
   const nodeById = useMemo(
     () => new Map(nodesWithDropTarget.map((node) => [node.id, node])),
     [nodesWithDropTarget],
+  );
+  const resourceById = useMemo(
+    () => new Map(resources.map((resource) => [resource.id, resource])),
+    [resources],
+  );
+  const schemaById = useMemo(
+    () => new Map(schemas.map((schema) => [schema.id, schema])),
+    [schemas],
   );
 
   const visibleLayerNodeIds = useMemo(() => {
@@ -316,6 +320,20 @@ export default function CenterPanel({
     [ghostContainerNodeIds, nodesWithDropTarget, visibleLayerNodeIds],
   );
 
+  const layerScopedEdges = useMemo(() => {
+    if (activeLayer === 0) {
+      return edges;
+    }
+
+    return edges.filter(
+      (edge) =>
+        !!edge.source &&
+        !!edge.target &&
+        visibleLayerNodeIds.has(edge.source) &&
+        visibleLayerNodeIds.has(edge.target),
+    );
+  }, [activeLayer, edges, visibleLayerNodeIds]);
+
   useEffect(() => {
     setActiveLayer((current) => (current > maxLayer ? 0 : current));
   }, [maxLayer]);
@@ -352,8 +370,7 @@ export default function CenterPanel({
     (event, draggingNode) => {
       if (!reactFlowInstance) return;
 
-      const currentNode = nodes.find((node) => node.id === draggingNode.id);
-      if (!currentNode) return;
+      if (!nodeById.has(draggingNode.id)) return;
 
       const nextNodes = nodes.map((node) =>
         node.id === draggingNode.id
@@ -389,7 +406,7 @@ export default function CenterPanel({
 
       applyPlacementIndicator(pointerTarget?.id);
     },
-    [applyPlacementIndicator, nodes, reactFlowInstance],
+    [applyPlacementIndicator, nodeById, nodes, reactFlowInstance],
   );
 
   const handleNodeDragStop: NodeDragHandler = useCallback(
@@ -487,15 +504,13 @@ export default function CenterPanel({
   );
 
   const getNodeResourceContext = useCallback((nodeId: string) => {
-    const node = nodes.find((candidate) => candidate.id === nodeId);
+    const node = nodeById.get(nodeId);
     if (!node) return undefined;
 
-    const resource = resources.find(
-      (candidate) => candidate.id === node.data.resourceId,
-    );
+    const resource = resourceById.get(node.data.resourceId);
     if (!resource) return undefined;
 
-    const schema = schemas.find((candidate) => candidate.id === node.data.schemaId);
+    const schema = schemaById.get(node.data.schemaId);
     if (!schema) return undefined;
 
     const attributes = getInspectorPropertiesForSchema(schema);
@@ -506,7 +521,7 @@ export default function CenterPanel({
       schema,
       attributes,
     };
-  }, [nodes, resources, schemas]);
+  }, [nodeById, resourceById, schemaById]);
 
   const buildTerraformRef = useCallback((nodeId: string, attributeName: string) => {
     const context = getNodeResourceContext(nodeId);
@@ -651,7 +666,7 @@ export default function CenterPanel({
       >
         <ReactFlow
           nodes={layerScopedNodes}
-          edges={edges}
+          edges={layerScopedEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
@@ -668,15 +683,16 @@ export default function CenterPanel({
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onInit={setReactFlowInstance}
-          nodeTypes={stableNodeTypes}
-          edgeTypes={stableEdgeTypes}
-          defaultEdgeOptions={stableDefaultEdgeOptions}
+          nodeTypes={canvasNodeTypes}
+          edgeTypes={canvasEdgeTypes}
+          defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}
           connectionMode={ConnectionMode.Loose}
           elevateNodesOnSelect={false}
-          panOnDrag={[1]}
-          selectionOnDrag
+          panOnDrag={MIDDLE_MOUSE_PAN_BUTTONS}
+          selectionOnDrag={activeLayer === 0}
           selectionKeyCode="Shift"
           multiSelectionKeyCode="Shift"
+          onlyRenderVisibleElements
           proOptions={{ hideAttribution: true }}
           fitView
           minZoom={0.2}
@@ -808,7 +824,7 @@ export default function CenterPanel({
                   className="w-full rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5 text-slate-700 outline-none focus:border-blue-400 focus:bg-white"
                 >
                   {[edgeMapper.endpointA, edgeMapper.endpointB].map((endpointId) => {
-                    const endpointNode = nodes.find((node) => node.id === endpointId);
+                    const endpointNode = nodeById.get(endpointId);
                     return (
                       <option key={endpointId} value={endpointId}>
                         {endpointNode?.data.label ?? endpointId}
@@ -841,7 +857,7 @@ export default function CenterPanel({
                   className="w-full rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5 text-slate-700 outline-none focus:border-blue-400 focus:bg-white"
                 >
                   {[edgeMapper.endpointA, edgeMapper.endpointB].map((endpointId) => {
-                    const endpointNode = nodes.find((node) => node.id === endpointId);
+                    const endpointNode = nodeById.get(endpointId);
                     return (
                       <option key={endpointId} value={endpointId}>
                         {endpointNode?.data.label ?? endpointId}
