@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { readDir, readTextFile } from "@tauri-apps/plugin-fs";
+import { readDir, readTextFile, writeTextFile, remove, rename, mkdir } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
@@ -45,6 +45,27 @@ type TerraformSourceFile = {
   name: string;
   content: string;
 };
+
+type ExplorerNode = {
+  id: string;
+  name: string;
+  relativePath: string;
+  isDirectory: boolean;
+  children?: ExplorerNode[];
+};
+
+type PendingDeleteTarget = {
+  name: string;
+  relativePath: string;
+  isDirectory: boolean;
+};
+
+const EXPLORER_IGNORED_DIRS = new Set([
+  ".terraform",
+  ".git",
+  "node_modules",
+  "target",
+]);
 
 const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 
@@ -98,69 +119,177 @@ export default function CodePanel({
   cloudProvider,
   region: _region,
   projectDir,
-  initialCustomFiles,
   onCustomFilesChange,
   onUpdateAttribute,
   onValidationLogs,
   onOpenLogsPanel,
 }: CodePanelProps) {
-  const [activeFileId, setActiveFileId] = useState<string>("main.tf");
-  const [customFiles, setCustomFiles] = useState<DdfCodeFile[]>(initialCustomFiles ?? []);
-  const [newFileName, setNewFileName] = useState("");
+  const [activeFilePath, setActiveFilePath] = useState<string>("main.tf");
+  const [fileTree, setFileTree] = useState<ExplorerNode[]>([]);
+  const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
+  const [openFileContents, setOpenFileContents] = useState<Record<string, string>>({});
+  const [focusedNodePath, setFocusedNodePath] = useState<string>("main.tf");
+  const [isExplorerBusy, setIsExplorerBusy] = useState(false);
+  const [createMode, setCreateMode] = useState<"file" | "folder" | null>(null);
+  const [createParentPath, setCreateParentPath] = useState<string>("");
+  const [createName, setCreateName] = useState("");
+  const [renameTargetPath, setRenameTargetPath] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<PendingDeleteTarget | null>(null);
   const [isValidatingTerraform, setIsValidatingTerraform] = useState(false);
   const codeEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const lineGutterRef = useRef<HTMLDivElement | null>(null);
+  const saveTimeoutRef = useRef<number | null>(null);
+  const topLevelSyncSignatureRef = useRef<string>("");
 
   const isTauriRuntime =
     typeof window !== "undefined" &&
     !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
-  useEffect(() => {
-    if (!onCustomFilesChange) return;
-    onCustomFilesChange(customFiles);
-  }, [customFiles, onCustomFilesChange]);
+  const normalizePath = (value: string) => value.replace(/\\/g, "/").replace(/\/+/g, "/");
+
+  const parentPathOf = (value: string) => {
+    const normalized = normalizePath(value);
+    const idx = normalized.lastIndexOf("/");
+    return idx >= 0 ? normalized.slice(0, idx) : "";
+  };
+
+  const joinRelative = (left: string, right: string) => {
+    if (!left) return right;
+    return `${left}/${right}`;
+  };
+
+  const toAbsolute = (relativePath: string) => {
+    if (!projectDir) return relativePath;
+    return relativePath ? `${projectDir}/${relativePath}` : projectDir;
+  };
+
+  const sortNodes = (nodes: ExplorerNode[]) =>
+    [...nodes].sort((a, b) => {
+      if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+      return a.name.localeCompare(b.name);
+    });
+
+  const loadTreeRecursive = async (basePath: string, relativeBase = ""): Promise<ExplorerNode[]> => {
+    let entries;
+    try {
+      entries = await readDir(basePath);
+    } catch {
+      return [];
+    }
+
+    const nodes = await Promise.all(
+      entries
+        .filter((entry) => typeof entry.name === "string")
+        .filter((entry) => {
+          const name = String(entry.name ?? "");
+          if (!entry.isDirectory) return true;
+          if (EXPLORER_IGNORED_DIRS.has(name)) return false;
+          if (name.startsWith(".")) return false;
+          return true;
+        })
+        .map(async (entry) => {
+          const name = entry.name as string;
+          const relativePath = joinRelative(relativeBase, name);
+          if (entry.isDirectory) {
+            const children = await loadTreeRecursive(`${basePath}/${name}`, relativePath);
+            return {
+              id: relativePath,
+              name,
+              relativePath,
+              isDirectory: true,
+              children: sortNodes(children),
+            } satisfies ExplorerNode;
+          }
+
+          return {
+            id: relativePath,
+            name,
+            relativePath,
+            isDirectory: false,
+          } satisfies ExplorerNode;
+        }),
+    );
+
+    return sortNodes(nodes);
+  };
+
+  const refreshExplorerTree = async () => {
+    if (!projectDir || !isTauriRuntime) return;
+    setIsExplorerBusy(true);
+    try {
+      const loaded = await loadTreeRecursive(projectDir, "");
+      setFileTree(loaded);
+      setExpandedDirs((current) => {
+        const next = new Set(current);
+        next.add("");
+        return next;
+      });
+      const existingPaths = new Set<string>();
+      const collect = (nodes: ExplorerNode[]) => {
+        nodes.forEach((node) => {
+          existingPaths.add(node.relativePath);
+          if (node.children?.length) collect(node.children);
+        });
+      };
+      collect(loaded);
+      setActiveFilePath((current) => (current === "main.tf" || existingPaths.has(current) ? current : "main.tf"));
+    } finally {
+      setIsExplorerBusy(false);
+    }
+  };
+
+  const syncTopLevelTfFilesToParent = async () => {
+    if (!onCustomFilesChange || !projectDir || !isTauriRuntime) return;
+    try {
+      const entries = await readDir(projectDir);
+      const tfFiles = entries
+        .filter((entry) => entry.isFile && typeof entry.name === "string")
+        .map((entry) => entry.name as string)
+        .filter((name) => name.toLowerCase().endsWith(".tf") && name.toLowerCase() !== "main.tf")
+        .sort((a, b) => a.localeCompare(b));
+
+      const files: DdfCodeFile[] = await Promise.all(
+        tfFiles.map(async (name) => ({
+          id: name,
+          name,
+          content: await readTextFile(`${projectDir}/${name}`),
+        })),
+      );
+
+      const nextSignature = JSON.stringify(
+        files.map((file) => ({ name: file.name, content: file.content })),
+      );
+      if (topLevelSyncSignatureRef.current === nextSignature) {
+        return;
+      }
+      topLevelSyncSignatureRef.current = nextSignature;
+
+      onCustomFilesChange(files);
+    } catch {
+      // ignore sync errors
+    }
+  };
 
   useEffect(() => {
     if (!isTauriRuntime || !projectDir) return;
 
     let cancelled = false;
 
-    const loadCustomFiles = async () => {
+    const loadExplorer = async () => {
       try {
-        const entries = await readDir(projectDir);
-        const tfFileNames = entries
-          .filter((entry) => entry.isFile && typeof entry.name === "string")
-          .map((entry) => entry.name as string)
-          .filter((name) => name.toLowerCase().endsWith(".tf") && name.toLowerCase() !== "main.tf")
-          .sort((a, b) => a.localeCompare(b));
-
-        const loadedFiles = await Promise.all(
-          tfFileNames.map(async (name) => ({
-            id: name,
-            name,
-            content: await readTextFile(`${projectDir}/${name}`),
-          })),
-        );
-
-        if (!cancelled) {
-          setCustomFiles(loadedFiles.length > 0 ? loadedFiles : (initialCustomFiles ?? []));
-          setActiveFileId((current) => {
-            if (current === "main.tf") return current;
-            const visible = loadedFiles.length > 0 ? loadedFiles : (initialCustomFiles ?? []);
-            return visible.some((file) => file.id === current) ? current : "main.tf";
-          });
-        }
+        await refreshExplorerTree();
+        await syncTopLevelTfFilesToParent();
       } catch {
-        if (!cancelled) setCustomFiles(initialCustomFiles ?? []);
+        if (!cancelled) setFileTree([]);
       }
     };
 
-    void loadCustomFiles();
+    void loadExplorer();
 
     return () => {
       cancelled = true;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTauriRuntime, projectDir]);
 
   const resourcesWithSchemas = useMemo(
@@ -172,27 +301,194 @@ export default function CodePanel({
     [resources, schemas],
   );
 
-  const staticFiles = useMemo(
-    () => [{ id: "main.tf", name: "main.tf", deletable: false }],
-    [],
-  );
-
-  const visibleFiles = useMemo(
-    () => [
-      ...staticFiles,
-      ...customFiles.map((file) => ({ id: file.id, name: file.name, deletable: true })),
-    ],
-    [customFiles, staticFiles],
-  );
-
-  const activeCustomFile = useMemo(
-    () => customFiles.find((file) => file.id === activeFileId),
-    [activeFileId, customFiles],
-  );
-
-  const auxiliaryContent = activeCustomFile?.content ?? "";
+  const auxiliaryContent = openFileContents[activeFilePath] ?? "";
 
   const lineCount = Math.max(1, auxiliaryContent.split("\n").length);
+
+  const loadFileIntoEditor = async (relativePath: string) => {
+    if (!projectDir || relativePath === "main.tf") {
+      setActiveFilePath(relativePath);
+      return;
+    }
+
+    try {
+      const content = await readTextFile(toAbsolute(relativePath));
+      setOpenFileContents((current) => ({
+        ...current,
+        [relativePath]: content,
+      }));
+      setActiveFilePath(relativePath);
+    } catch {
+      setOpenFileContents((current) => ({
+        ...current,
+        [relativePath]: "",
+      }));
+      setActiveFilePath(relativePath);
+    }
+  };
+
+  const flattenTree = (nodes: ExplorerNode[]): ExplorerNode[] => {
+    const collected: ExplorerNode[] = [];
+    const visit = (entries: ExplorerNode[]) => {
+      entries.forEach((entry) => {
+        collected.push(entry);
+        if (entry.children?.length) visit(entry.children);
+      });
+    };
+    visit(nodes);
+    return collected;
+  };
+
+  const findNodeByPath = (relativePath: string): ExplorerNode | undefined => {
+    if (!relativePath) return undefined;
+    return flattenTree(fileTree).find((entry) => entry.relativePath === relativePath);
+  };
+
+  const getCreateBasePath = () => {
+    const focused = findNodeByPath(focusedNodePath);
+    if (!focused) return "";
+    if (focused.isDirectory) return focused.relativePath;
+    return parentPathOf(focused.relativePath);
+  };
+
+  const getEditorTitle = () => {
+    if (!activeFilePath) return "main.tf";
+    const node = findNodeByPath(activeFilePath);
+    return node?.name ?? activeFilePath;
+  };
+
+  const openCreatePrompt = (mode: "file" | "folder") => {
+    setCreateMode(mode);
+    setCreateParentPath(getCreateBasePath());
+    setCreateName("");
+  };
+
+  const submitCreate = async () => {
+    if (!createMode || !projectDir) return;
+    const raw = createName.trim();
+    if (!raw) return;
+
+    const normalizedName = createMode === "file" && !raw.includes(".") ? `${raw}.tf` : raw;
+    const relativePath = createParentPath ? `${createParentPath}/${normalizedName}` : normalizedName;
+
+    try {
+      if (createMode === "folder") {
+        await mkdir(toAbsolute(relativePath), { recursive: true });
+      } else {
+        await writeTextFile(toAbsolute(relativePath), "");
+      }
+
+      await refreshExplorerTree();
+      await syncTopLevelTfFilesToParent();
+
+      if (createMode === "file") {
+        await loadFileIntoEditor(relativePath);
+      } else {
+        setExpandedDirs((current) => {
+          const next = new Set(current);
+          next.add(relativePath);
+          if (createParentPath) next.add(createParentPath);
+          return next;
+        });
+      }
+    } catch {
+      // ignore create failures
+    } finally {
+      setCreateMode(null);
+      setCreateName("");
+    }
+  };
+
+  const beginRename = (relativePath: string) => {
+    const node = findNodeByPath(relativePath);
+    if (!node) return;
+    setRenameTargetPath(relativePath);
+    setRenameValue(node.name);
+  };
+
+  const submitRename = async () => {
+    if (!renameTargetPath || !projectDir) return;
+    const nextName = renameValue.trim();
+    if (!nextName) return;
+    const parentPath = parentPathOf(renameTargetPath);
+    const nextRelativePath = parentPath ? `${parentPath}/${nextName}` : nextName;
+
+    try {
+      await rename(toAbsolute(renameTargetPath), toAbsolute(nextRelativePath));
+      await refreshExplorerTree();
+      await syncTopLevelTfFilesToParent();
+
+      if (activeFilePath === renameTargetPath) {
+        setActiveFilePath(nextRelativePath);
+      }
+      if (focusedNodePath === renameTargetPath) {
+        setFocusedNodePath(nextRelativePath);
+      }
+      if (openFileContents[renameTargetPath] !== undefined) {
+        setOpenFileContents((current) => {
+          const { [renameTargetPath]: previous, ...rest } = current;
+          return previous === undefined ? current : { ...rest, [nextRelativePath]: previous };
+        });
+      }
+    } catch {
+      // ignore rename failures
+    } finally {
+      setRenameTargetPath(null);
+      setRenameValue("");
+    }
+  };
+
+  const confirmDeleteNode = (relativePath: string) => {
+    const node = findNodeByPath(relativePath);
+    if (!node) return;
+    setPendingDelete({
+      name: node.name,
+      relativePath,
+      isDirectory: node.isDirectory,
+    });
+  };
+
+  const executeDelete = async () => {
+    if (!pendingDelete || !projectDir) return;
+    try {
+      await remove(toAbsolute(pendingDelete.relativePath), { recursive: pendingDelete.isDirectory });
+      await refreshExplorerTree();
+      await syncTopLevelTfFilesToParent();
+
+      if (
+        activeFilePath === pendingDelete.relativePath ||
+        activeFilePath.startsWith(`${pendingDelete.relativePath}/`)
+      ) {
+        setActiveFilePath("main.tf");
+      }
+
+      setOpenFileContents((current) => {
+        const next = { ...current };
+        Object.keys(next).forEach((key) => {
+          if (key === pendingDelete.relativePath || key.startsWith(`${pendingDelete.relativePath}/`)) {
+            delete next[key];
+          }
+        });
+        return next;
+      });
+    } catch {
+      // ignore delete failures
+    } finally {
+      setPendingDelete(null);
+    }
+  };
+
+  const toggleDirectory = (relativePath: string) => {
+    setExpandedDirs((current) => {
+      const next = new Set(current);
+      if (next.has(relativePath)) {
+        next.delete(relativePath);
+      } else {
+        next.add(relativePath);
+      }
+      return next;
+    });
+  };
 
   const runTerraformValidate = async () => {
     onOpenLogsPanel();
@@ -246,15 +542,26 @@ export default function CodePanel({
     setIsValidatingTerraform(true);
 
     try {
+      const tfNodes = flattenTree(fileTree)
+        .filter((node) => !node.isDirectory)
+        .filter((node) => node.relativePath.toLowerCase().endsWith(".tf"))
+        .filter((node) => node.relativePath !== "main.tf");
+
+      const additionalFiles = await Promise.all(
+        tfNodes.map(async (node) => ({
+          name: node.relativePath,
+          content:
+            openFileContents[node.relativePath] ??
+            (await readTextFile(toAbsolute(node.relativePath))),
+        })),
+      );
+
       const files: TerraformSourceFile[] = [
         {
           name: "main.tf",
           content: buildMainTerraformFile(resources, cloudProvider, _region),
         },
-        ...customFiles.map((file) => ({
-          name: file.name,
-          content: file.content,
-        })),
+        ...additionalFiles,
       ];
 
       try {
@@ -386,41 +693,24 @@ export default function CodePanel({
   };
 
   const handleAuxiliaryContentChange = (next: string) => {
-    setCustomFiles((current) =>
-      current.map((file) =>
-        file.id === activeFileId
-          ? {
-              ...file,
-              content: next,
-            }
-          : file,
-      ),
-    );
-  };
-
-  const addCustomFile = () => {
-    const raw = newFileName.trim();
-    if (!raw) return;
-
-    const normalized = raw.endsWith(".tf") ? raw : `${raw}.tf`;
-    const exists = visibleFiles.some((file) => file.name.toLowerCase() === normalized.toLowerCase());
-    if (exists) return;
-
-    setCustomFiles((current) => [
+    if (activeFilePath === "main.tf" || !projectDir) return;
+    setOpenFileContents((current) => ({
       ...current,
-      {
-        id: normalized,
-        name: normalized,
-        content: "",
-      },
-    ]);
-    setActiveFileId(normalized);
-    setNewFileName("");
-  };
+      [activeFilePath]: next,
+    }));
 
-  const removeCustomFile = (fileId: string) => {
-    setCustomFiles((current) => current.filter((file) => file.id !== fileId));
-    setActiveFileId((current) => (current === fileId ? "main.tf" : current));
+    if (saveTimeoutRef.current !== null) {
+      window.clearTimeout(saveTimeoutRef.current);
+    }
+
+    const targetFile = activeFilePath;
+    saveTimeoutRef.current = window.setTimeout(() => {
+      void writeTextFile(toAbsolute(targetFile), next)
+        .then(() => syncTopLevelTfFilesToParent())
+        .catch(() => {
+          // ignore write errors
+        });
+    }, 180);
   };
 
   const handleEditorScroll = () => {
@@ -435,57 +725,177 @@ export default function CodePanel({
     return current;
   };
 
-  return (
-    <section className="h-full min-h-0 w-full overflow-hidden bg-[#1e1e1e]">
-      <div className="flex h-full min-h-0 w-full">
-        <aside className="w-56 shrink-0 border-r border-slate-700 bg-[#252526] p-2">
-          <div className="mb-2 px-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Files</div>
+  const renderExplorerNode = (node: ExplorerNode, depth = 0) => {
+    const isExpanded = node.isDirectory && expandedDirs.has(node.relativePath);
+    const isFocused = focusedNodePath === node.relativePath;
+    const isActiveFile = !node.isDirectory && activeFilePath === node.relativePath;
+    const isRenaming = renameTargetPath === node.relativePath;
 
-          <div className="space-y-1">
-            {visibleFiles.map((file) => (
-              <div key={file.id} className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setActiveFileId(file.id)}
-                  className={`flex-1 rounded px-2 py-1 text-left text-xs ${
-                    activeFileId === file.id
-                      ? "bg-slate-700 text-slate-100"
-                      : "text-slate-300 hover:bg-slate-700/60"
-                  }`}
-                >
-                  {file.name}
-                </button>
-
-                {file.deletable ? (
-                  <button
-                    type="button"
-                    onClick={() => removeCustomFile(file.id)}
-                    className="rounded px-1.5 py-1 text-[10px] text-slate-400 hover:bg-slate-700/60 hover:text-slate-200"
-                    aria-label={`Delete ${file.name}`}
-                    title="Delete file"
-                  >
-                    ✕
-                  </button>
-                ) : null}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 border-t border-slate-700 pt-3">
-            <div className="mb-1 px-1 text-[11px] text-slate-400">New file</div>
-            <input
-              value={newFileName}
-              onChange={(event) => setNewFileName(event.target.value)}
-              placeholder="example.tf"
-              className="w-full rounded border border-slate-600 bg-[#1e1e1e] px-2 py-1 text-xs text-slate-200 outline-none focus:border-slate-400"
-            />
+    return (
+      <div key={node.id}>
+        <div
+          className={`group flex items-center gap-1 rounded px-1 py-0.5 text-xs ${
+            isActiveFile ? "bg-slate-700 text-slate-100" : isFocused ? "bg-slate-700/60 text-slate-200" : "text-slate-300 hover:bg-slate-700/50"
+          }`}
+          style={{ paddingLeft: `${depth * 12 + 4}px` }}
+        >
+          {node.isDirectory ? (
             <button
               type="button"
-              onClick={addCustomFile}
-              className="mt-2 w-full rounded border border-slate-600 px-2 py-1 text-xs text-slate-200 hover:bg-slate-700/50"
+              onClick={() => {
+                toggleDirectory(node.relativePath);
+                setFocusedNodePath(node.relativePath);
+              }}
+              className="text-[11px] text-slate-400 hover:text-slate-100"
+              title={isExpanded ? "Collapse folder" : "Expand folder"}
             >
-              Create file
+              {isExpanded ? "▾" : "▸"}
             </button>
+          ) : (
+            <span className="w-3 text-center text-[11px] text-slate-500">•</span>
+          )}
+
+          {isRenaming ? (
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(event) => setRenameValue(event.target.value)}
+              onBlur={() => void submitRename()}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void submitRename();
+                }
+                if (event.key === "Escape") {
+                  setRenameTargetPath(null);
+                  setRenameValue("");
+                }
+              }}
+              className="w-full rounded border border-slate-500 bg-[#1e1e1e] px-1 py-0.5 text-xs text-slate-100 outline-none"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setFocusedNodePath(node.relativePath);
+                if (node.isDirectory) {
+                  toggleDirectory(node.relativePath);
+                  return;
+                }
+                void loadFileIntoEditor(node.relativePath);
+              }}
+              className="flex-1 truncate text-left"
+              title={node.relativePath}
+            >
+              {node.name}
+            </button>
+          )}
+
+          <div className="hidden items-center gap-1 group-hover:flex">
+            <button
+              type="button"
+              onClick={() => beginRename(node.relativePath)}
+              className="rounded px-1 text-[10px] text-slate-400 hover:bg-slate-600 hover:text-slate-100"
+              title="Rename"
+            >
+              ✎
+            </button>
+            {node.relativePath !== "main.tf" ? (
+              <button
+                type="button"
+                onClick={() => confirmDeleteNode(node.relativePath)}
+                className="rounded px-1 text-[10px] text-slate-400 hover:bg-slate-600 hover:text-slate-100"
+                title="Delete"
+              >
+                ✕
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {node.isDirectory && isExpanded && node.children?.length
+          ? node.children.map((child) => renderExplorerNode(child, depth + 1))
+          : null}
+      </div>
+    );
+  };
+
+  return (
+    <section className="relative h-full min-h-0 w-full overflow-hidden bg-[#1e1e1e]">
+      <div className="flex h-full min-h-0 w-full">
+        <aside className="w-72 shrink-0 border-r border-slate-700 bg-[#252526] p-2">
+          <div className="mb-2 flex items-center justify-between px-2">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Explorer</div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => openCreatePrompt("file")}
+                className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
+                title="New file"
+              >
+                +F
+              </button>
+              <button
+                type="button"
+                onClick={() => openCreatePrompt("folder")}
+                className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
+                title="New folder"
+              >
+                +D
+              </button>
+              <button
+                type="button"
+                onClick={() => void refreshExplorerTree()}
+                className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
+                title="Refresh"
+              >
+                ↻
+              </button>
+            </div>
+          </div>
+
+          {createMode ? (
+            <div className="mb-2 rounded border border-slate-700 bg-[#1e1e1e] p-2 text-xs">
+              <div className="mb-1 text-slate-400">
+                New {createMode === "file" ? "file" : "folder"} in {createParentPath || "/"}
+              </div>
+              <input
+                autoFocus
+                value={createName}
+                onChange={(event) => setCreateName(event.target.value)}
+                placeholder={createMode === "file" ? "example.tf" : "modules"}
+                className="w-full rounded border border-slate-600 bg-[#252526] px-2 py-1 text-xs text-slate-200 outline-none focus:border-slate-400"
+              />
+              <div className="mt-2 flex justify-end gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateMode(null);
+                    setCreateName("");
+                  }}
+                  className="rounded border border-slate-600 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700/40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void submitCreate()}
+                  className="rounded border border-slate-500 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-700/60"
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="max-h-[calc(100%-5rem)] overflow-auto">
+            {isExplorerBusy ? (
+              <div className="px-2 py-2 text-xs text-slate-500">Loading explorer...</div>
+            ) : fileTree.length === 0 ? (
+              <div className="px-2 py-2 text-xs text-slate-500">No files found in this view folder.</div>
+            ) : (
+              fileTree.map((node) => renderExplorerNode(node, 0))
+            )}
           </div>
         </aside>
 
@@ -494,10 +904,10 @@ export default function CodePanel({
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-sm font-semibold text-slate-100">
-                  {visibleFiles.find((file) => file.id === activeFileId)?.name ?? "main.tf"}
+                  {getEditorTitle()}
                 </h2>
                 <p className="text-xs text-slate-400">
-                  {activeFileId === "main.tf"
+                  {activeFilePath === "main.tf"
                     ? "Only attribute values are editable in this file."
                     : "Editable HCL draft file."}
                 </p>
@@ -515,7 +925,7 @@ export default function CodePanel({
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto p-2 font-mono text-xs text-slate-200">
-            {activeFileId === "main.tf" ? (
+            {activeFilePath === "main.tf" ? (
               resourcesWithSchemas.length === 0 ? (
                 <div className="rounded border border-dashed border-slate-600 bg-[#252526] p-4 text-center text-slate-400">
                   No resources in canvas yet.
@@ -674,6 +1084,33 @@ export default function CodePanel({
           </div>
         </main>
       </div>
+      {pendingDelete ? (
+        <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/45">
+          <div className="w-[420px] max-w-[92vw] rounded-lg border border-gray-700 bg-gray-900 p-4 text-sm text-gray-200 shadow-2xl">
+            <h3 className="text-base font-semibold text-white">Delete {pendingDelete.isDirectory ? "folder" : "file"}</h3>
+            <p className="mt-2 text-xs text-gray-300">
+              Are you sure you want to delete <span className="font-semibold text-white">{pendingDelete.name}</span>? This action cannot be undone.
+            </p>
+
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingDelete(null)}
+                className="rounded border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void executeDelete()}
+                className="rounded border border-red-500/70 bg-red-600/20 px-3 py-1.5 text-xs text-red-200 hover:bg-red-600/35"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </section>
   );
 }
