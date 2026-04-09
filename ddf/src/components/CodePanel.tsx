@@ -60,13 +60,6 @@ type PendingDeleteTarget = {
   isDirectory: boolean;
 };
 
-const EXPLORER_IGNORED_DIRS = new Set([
-  ".terraform",
-  ".git",
-  "node_modules",
-  "target",
-]);
-
 const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 
 const parseHclInputToAttribute = (input: string): unknown => {
@@ -181,13 +174,6 @@ export default function CodePanel({
     const nodes = await Promise.all(
       entries
         .filter((entry) => typeof entry.name === "string")
-        .filter((entry) => {
-          const name = String(entry.name ?? "");
-          if (!entry.isDirectory) return true;
-          if (EXPLORER_IGNORED_DIRS.has(name)) return false;
-          if (name.startsWith(".")) return false;
-          return true;
-        })
         .map(async (entry) => {
           const name = entry.name as string;
           const relativePath = joinRelative(relativeBase, name);
