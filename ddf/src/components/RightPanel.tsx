@@ -36,6 +36,8 @@ type RightPanelProps = {
 };
 
 const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
+const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
+let latestMapperDragPayload = "";
 
 const terraformRefPattern = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 
@@ -174,6 +176,27 @@ export const RightPanel = ({
   const [attributeTypeFilters, setAttributeTypeFilters] = useState<string[]>([]);
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+
+    const channel = new BroadcastChannel(BOTTOM_PANEL_CHANNEL);
+    channel.onmessage = (event: MessageEvent) => {
+      const message = event.data as
+        | {
+            type?: string;
+            value?: string;
+          }
+        | undefined;
+
+      if (!message || message.type !== "mapper-drag") return;
+      latestMapperDragPayload = message.value ?? "";
+    };
+
+    return () => {
+      channel.close();
+    };
+  }, []);
 
   const inspectorProperties = useMemo<InspectorProperty[]>(() => {
     return getInspectorPropertiesForSchema(selectedSchema);
@@ -615,7 +638,8 @@ export const RightPanel = ({
                                     event.preventDefault();
                                     const droppedValue =
                                       event.dataTransfer.getData(OBJECT_MAPPER_REF_MIME) ||
-                                      event.dataTransfer.getData("text/plain");
+                                      event.dataTransfer.getData("text/plain") ||
+                                      latestMapperDragPayload;
                                     const mapped = normalizeMappedReference(
                                       droppedValue,
                                       property.name,

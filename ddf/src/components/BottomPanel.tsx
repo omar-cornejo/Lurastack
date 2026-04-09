@@ -5,6 +5,7 @@ import "xterm/css/xterm.css";
 import { Icon } from '@iconify/react';
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Edge, Node } from "reactflow";
 import type { CanvasEdgeData, CanvasTerraformNodeData } from "../canvas/types";
 import type { TerraformResource } from "../models/terraform";
@@ -24,11 +25,15 @@ type BottomPanelProps = {
   preferredTab?: "terminal" | "logs";
   projectDir?: string;
   enabled?: boolean;
+  viewId?: string;
+  showPopoutButton?: boolean;
+  suppressTerminal?: boolean;
 };
 
 type BottomPanelTab = "terminal" | "mapper" | "logs";
 
 const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
+const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
 
 
 export default function BottomPanel({
@@ -43,6 +48,9 @@ export default function BottomPanel({
   preferredTab,
   projectDir,
   enabled = true,
+  viewId,
+  showPopoutButton = true,
+  suppressTerminal = false,
 }: BottomPanelProps) {
   const showMapperTab = mode === "canvas";
   const [open, setOpen] = useState(true);
@@ -63,6 +71,7 @@ export default function BottomPanel({
   const term = useRef<Terminal | null>(null);
   const fitAddon = useRef<FitAddon | null>(null);
   const terminalDisposedRef = useRef(false);
+  const terminalReadyRef = useRef(false);
   const fitFrameRef = useRef<number | null>(null);
   const handledOpenSignalRef = useRef<number>(openSignal);
 
@@ -76,6 +85,12 @@ export default function BottomPanel({
       setActiveTab("logs");
     }
   }, [activeTab, mode]);
+
+  useEffect(() => {
+    if (suppressTerminal && activeTab === "terminal") {
+      setActiveTab("logs");
+    }
+  }, [activeTab, suppressTerminal]);
 
   useEffect(() => {
     if (openSignal === handledOpenSignalRef.current) return;
@@ -107,11 +122,47 @@ export default function BottomPanel({
 
   const safeFitTerminal = () => {
     if (terminalDisposedRef.current || !term.current || !fitAddon.current || !terminalRef.current) return;
+    if (terminalRef.current.clientWidth <= 0 || terminalRef.current.clientHeight <= 0) return;
     if (!open || activeTab !== "terminal") return;
     try {
       fitAddon.current.fit();
     } catch {
       // ignore transient fit errors when terminal is mounting/unmounting
+    }
+  };
+
+  const openDetachedTerminalWindow = async () => {
+    if (!isTauriRuntime) return;
+    try {
+      if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined" && viewId) {
+        const channel = new BroadcastChannel(BOTTOM_PANEL_CHANNEL);
+        channel.postMessage({
+          type: "popout-open",
+          viewId,
+          timestamp: Date.now(),
+        });
+        channel.close();
+      }
+      await invoke("open_detached_terminal_window", {
+        cwd: projectDir ?? "",
+        viewId: viewId ?? null,
+      });
+    } catch (error) {
+      console.error("Failed to open detached terminal window:", error);
+    }
+  };
+
+  const persistMapperDragValue = (value: string) => {
+    if (typeof window === "undefined" || typeof BroadcastChannel === "undefined") return;
+    try {
+      const channel = new BroadcastChannel(BOTTOM_PANEL_CHANNEL);
+      channel.postMessage({
+        type: "mapper-drag",
+        value,
+      });
+      channel.close();
+    } catch {
+      // ignore broadcast errors
     }
   };
 
@@ -342,13 +393,15 @@ export default function BottomPanel({
 
 
   useEffect(() => {
-    if (onHeightChange) onHeightChange(open ? height : 25);
-  }, [height, open]);
+    if (!onHeightChange) return;
+    onHeightChange(open ? height : 25);
+  }, [height, onHeightChange, open]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || suppressTerminal) return;
     if (!terminalRef.current) return;
     terminalDisposedRef.current = false;
+    terminalReadyRef.current = false;
 
     term.current = new Terminal({
       cursorBlink: true,
@@ -365,6 +418,7 @@ export default function BottomPanel({
       if (terminalDisposedRef.current) return;
       scheduleSafeFitTerminal();
       term.current?.focus();
+      terminalReadyRef.current = true;
     }, 0);
 
     if (isTauriRuntime) {
@@ -373,18 +427,25 @@ export default function BottomPanel({
       });
     }
 
-    term.current.onData((data: string) => {
+    const currentWindowLabel = getCurrentWindow().label;
+    const onDataDisposable = term.current.onData((data: string) => {
       if (terminalDisposedRef.current) return;
       void invoke("write_to_pty", { input: data });
     });
 
-    const unlisten = listen<string>("pty-output", (event) => {
+    const unlisten = listen<{ window_label: string; output: string }>("pty-output", (event) => {
       if (terminalDisposedRef.current || !term.current) return;
+      if (!terminalReadyRef.current) return;
+      if (event.payload.window_label !== currentWindowLabel) return;
       try {
-        term.current.write(event.payload);
+        term.current.write(event.payload.output);
       } catch {
         // ignore writes after dispose boundaries
       }
+    }).catch(() => {
+      return () => {
+        // no-op if listener could not be created
+      };
     });
 
     const onWindowResize = () => scheduleSafeFitTerminal();
@@ -392,14 +453,16 @@ export default function BottomPanel({
 
     return () => {
       terminalDisposedRef.current = true;
+      terminalReadyRef.current = false;
       cancelScheduledFit();
-      unlisten.then((f) => f());
       window.removeEventListener('resize', onWindowResize);
       if (isTauriRuntime) {
         void invoke("close_terminal_session").catch(() => {
           // ignore close race conditions
         });
       }
+      onDataDisposable.dispose();
+      void unlisten.then((f) => f());
       try {
         term.current?.dispose();
       } catch {
@@ -408,7 +471,7 @@ export default function BottomPanel({
       term.current = null;
       fitAddon.current = null;
     };
-  }, [enabled, isTauriRuntime, projectDir]);
+  }, [enabled, isTauriRuntime, projectDir, suppressTerminal]);
 
   useEffect(() => {
     scheduleSafeFitTerminal();
@@ -516,14 +579,28 @@ export default function BottomPanel({
         </div>
 
         <div className="flex gap-1">
+          {showPopoutButton ? (
+            <button
+              type="button"
+              onClick={() => void openDetachedTerminalWindow()}
+              className="px-2 py-1 rounded text-xs border border-gray-300 text-gray-500 hover:text-gray-700 bg-white"
+              title="Open terminal in external window"
+            >
+              Popout
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setActiveTab("terminal")}
+            disabled={suppressTerminal}
             className={`px-2 py-1 rounded text-xs border ${
               activeTab === "terminal"
                 ? "border-blue-500 text-blue-600 bg-white"
-                : "border-gray-300 text-gray-500 hover:text-gray-700 bg-white"
+                : suppressTerminal
+                  ? "border-gray-200 text-gray-400 bg-gray-100 cursor-not-allowed"
+                  : "border-gray-300 text-gray-500 hover:text-gray-700 bg-white"
             }`}
+            title={suppressTerminal ? "Terminal is detached to external window" : undefined}
           >
             Terminal
           </button>
@@ -566,7 +643,13 @@ export default function BottomPanel({
           className="h-full w-full"
           style={{ display: activeTab === "terminal" ? "block" : "none" }}
         >
-          <div ref={terminalRef} className="h-full w-full" />
+          {suppressTerminal ? (
+            <div className="h-full w-full bg-gray-900 text-gray-200 flex items-center justify-center text-sm">
+              Terminal is detached to external window.
+            </div>
+          ) : (
+            <div ref={terminalRef} className="h-full w-full" />
+          )}
         </div>
 
         <div
@@ -794,6 +877,7 @@ export default function BottomPanel({
                                     className="rounded border border-blue-200 bg-blue-50 px-2 py-1 text-[10px] text-blue-800 break-all cursor-grab"
                                     draggable
                                     onDragStart={(event) => {
+                                      persistMapperDragValue(entry.sourceExpression);
                                       event.dataTransfer.setData(OBJECT_MAPPER_REF_MIME, entry.sourceExpression);
                                       event.dataTransfer.setData("text/plain", entry.sourceExpression);
                                       event.dataTransfer.effectAllowed = "copy";
@@ -835,6 +919,7 @@ export default function BottomPanel({
                                 className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] text-emerald-800 break-all cursor-grab"
                                 draggable
                                 onDragStart={(event) => {
+                                  persistMapperDragValue(item.sourceExpression);
                                   event.dataTransfer.setData(OBJECT_MAPPER_REF_MIME, item.sourceExpression);
                                   event.dataTransfer.setData("text/plain", item.sourceExpression);
                                   event.dataTransfer.effectAllowed = "copy";
@@ -891,6 +976,7 @@ export default function BottomPanel({
                                     className="flex-1 rounded border border-dashed border-blue-300 bg-blue-50 px-2 py-1 text-[10px] text-blue-800 break-all cursor-grab"
                                     draggable
                                     onDragStart={(event) => {
+                                      persistMapperDragValue(mapperValue);
                                       event.dataTransfer.setData(OBJECT_MAPPER_REF_MIME, mapperValue);
                                       event.dataTransfer.setData("text/plain", mapperValue);
                                       event.dataTransfer.effectAllowed = "copy";

@@ -37,6 +37,10 @@ import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 
+const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
+const POPOUT_HEARTBEAT_TTL_MS = 900;
+const POPOUT_HEARTBEAT_CHECK_MS = 250;
+
 type WorkspaceViewProps = {
   viewId: string;
   viewName?: string;
@@ -78,7 +82,90 @@ export default function WorkspaceView({
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [codeLogs, setCodeLogs] = useState<BottomPanelLogEntry[]>([]);
   const [codeBottomOpenSignal, setCodeBottomOpenSignal] = useState(0);
+  const [terminalPoppedOut, setTerminalPoppedOut] = useState(false);
   const hclPersistenceDisabledRef = useRef(false);
+  const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
+  const lastPopoutHeartbeatRef = useRef<number>(0);
+
+  const broadcastBottomPanelState = useCallback(() => {
+    if (!bottomPanelChannelRef.current) return;
+    bottomPanelChannelRef.current.postMessage({
+      type: "state-sync",
+      viewId,
+      payload: {
+        nodes,
+        edges,
+        resources: project.resources,
+        logs: codeLogs,
+        projectDir,
+        updatedAt: Date.now(),
+      },
+    });
+  }, [codeLogs, edges, nodes, project.resources, projectDir, viewId]);
+
+  useEffect(() => {
+    broadcastBottomPanelState();
+  }, [broadcastBottomPanelState]);
+
+  useEffect(() => {
+    if (terminalPoppedOut) {
+      setBottomHeight(0);
+      return;
+    }
+    setBottomHeight((current) => (current === 0 ? 288 : current));
+  }, [terminalPoppedOut]);
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+
+    const channel = new BroadcastChannel(BOTTOM_PANEL_CHANNEL);
+    bottomPanelChannelRef.current = channel;
+
+    const evaluatePopoutState = () => {
+      const isHeartbeatFresh =
+        lastPopoutHeartbeatRef.current > 0 &&
+        Date.now() - lastPopoutHeartbeatRef.current <= POPOUT_HEARTBEAT_TTL_MS;
+      setTerminalPoppedOut(isHeartbeatFresh);
+    };
+
+    channel.onmessage = (event: MessageEvent) => {
+      const message = event.data as
+        | {
+            type?: string;
+            viewId?: string;
+            timestamp?: number;
+          }
+        | undefined;
+
+      if (!message || message.viewId !== viewId) return;
+
+      if (message.type === "popout-open" || message.type === "heartbeat") {
+        lastPopoutHeartbeatRef.current = message.timestamp ?? Date.now();
+        evaluatePopoutState();
+        return;
+      }
+
+      if (message.type === "popout-close") {
+        lastPopoutHeartbeatRef.current = 0;
+        setTerminalPoppedOut(false);
+        return;
+      }
+
+      if (message.type === "state-request") {
+        broadcastBottomPanelState();
+      }
+    };
+
+    const interval = window.setInterval(evaluatePopoutState, POPOUT_HEARTBEAT_CHECK_MS);
+
+    broadcastBottomPanelState();
+
+    return () => {
+      window.clearInterval(interval);
+      channel.close();
+      bottomPanelChannelRef.current = null;
+    };
+  }, [broadcastBottomPanelState, viewId]);
 
   // Report state changes for project save / autosave
   useEffect(() => {
@@ -602,17 +689,21 @@ export default function WorkspaceView({
             />
           </div>
 
-          <BottomPanel
-            onHeightChange={setBottomHeight}
-            nodes={nodes}
-            edges={edges}
-            resources={project.resources}
-            schemas={TEST_NODE_SCHEMAS}
-            mode="canvas"
-            logs={codeLogs}
-            projectDir={projectDir}
-            enabled={isVisible && activeSection === "canvas"}
-          />
+          {!terminalPoppedOut ? (
+            <BottomPanel
+              onHeightChange={setBottomHeight}
+              nodes={nodes}
+              edges={edges}
+              resources={project.resources}
+              schemas={TEST_NODE_SCHEMAS}
+              mode="canvas"
+              logs={codeLogs}
+              projectDir={projectDir}
+              viewId={viewId}
+              suppressTerminal={terminalPoppedOut}
+              enabled={isVisible && activeSection === "canvas"}
+            />
+          ) : null}
         </div>
 
         <div
@@ -638,18 +729,22 @@ export default function WorkspaceView({
               />
             </div>
 
-            <BottomPanel
-              nodes={nodes}
-              edges={edges}
-              resources={project.resources}
-              schemas={TEST_NODE_SCHEMAS}
-              mode="code"
-              logs={codeLogs}
-              openSignal={codeBottomOpenSignal}
-              preferredTab="logs"
-              projectDir={projectDir}
-              enabled={isVisible && activeSection === "code"}
-            />
+            {!terminalPoppedOut ? (
+              <BottomPanel
+                nodes={nodes}
+                edges={edges}
+                resources={project.resources}
+                schemas={TEST_NODE_SCHEMAS}
+                mode="code"
+                logs={codeLogs}
+                openSignal={codeBottomOpenSignal}
+                preferredTab="logs"
+                projectDir={projectDir}
+                viewId={viewId}
+                suppressTerminal={terminalPoppedOut}
+                enabled={isVisible && activeSection === "code"}
+              />
+            ) : null}
           </main>
         </div>
       </div>

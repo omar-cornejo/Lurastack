@@ -3,6 +3,7 @@ import { useCallback, useRef, useState } from "react";
 import GlobalBar from "./components/GlobalBar";
 import WorkspaceView from "./components/WorkspaceView";
 import WelcomeScreen from "./components/WelcomeScreen";
+import DetachedTerminalWindow from "./components/DetachedTerminalWindow";
 import { ViewInfo } from "./types/views";
 import type { DdfProject, DdfViewSnapshot } from "./types/project";
 import {
@@ -32,6 +33,14 @@ function makeViewInfo(id?: string, name?: string): ViewInfo {
 }
 
 export default function App() {
+  const isDetachedTerminalWindow =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("detachedTerminal") === "1";
+
+  if (isDetachedTerminalWindow) {
+    return <DetachedTerminalWindow />;
+  }
+
   // ── Project state ─────────────────────────────────────────────────────────
   const [project, setProject] = useState<DdfProject | null>(null);
   const [projectFilePath, setProjectFilePath] = useState<string | null>(null);

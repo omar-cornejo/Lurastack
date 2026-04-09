@@ -1,10 +1,12 @@
 use std::{
+    collections::HashMap,
     io::{Read, Write},
     sync::Mutex,
 };
 
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
-use tauri::Emitter;
+use serde::Serialize;
+use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
 
 struct TerminalSession {
     writer: Box<dyn Write + Send>,
@@ -13,11 +15,17 @@ struct TerminalSession {
 
 #[derive(Default)]
 pub struct TerminalState {
-    session: Mutex<Option<TerminalSession>>,
+    sessions: Mutex<HashMap<String, TerminalSession>>,
 }
 
-fn shutdown_session(session: &mut Option<TerminalSession>) {
-    if let Some(mut active) = session.take() {
+#[derive(Clone, Serialize)]
+struct PtyOutputEvent {
+    window_label: String,
+    output: String,
+}
+
+fn shutdown_session_by_label(sessions: &mut HashMap<String, TerminalSession>, label: &str) {
+    if let Some(mut active) = sessions.remove(label) {
         let _ = active.writer.flush();
         let _ = active.child.kill();
         let _ = active.child.wait();
@@ -30,6 +38,8 @@ pub fn init_terminal_session(
     state: tauri::State<TerminalState>,
     cwd: String,
 ) -> Result<(), String> {
+    let window_label = window.label().to_string();
+    let thread_window_label = window_label.clone();
     let pty_system = native_pty_system();
     let pair = pty_system
         .openpty(PtySize {
@@ -67,7 +77,13 @@ pub fn init_terminal_session(
                 Ok(0) => break,
                 Ok(count) => {
                     let output = String::from_utf8_lossy(&buffer[..count]).to_string();
-                    let _ = window.emit("pty-output", output);
+                    let _ = window.emit(
+                        "pty-output",
+                        PtyOutputEvent {
+                            window_label: thread_window_label.clone(),
+                            output,
+                        },
+                    );
                 }
                 Err(_) => break,
             }
@@ -75,21 +91,26 @@ pub fn init_terminal_session(
     });
 
     let mut guard = state
-        .session
+        .sessions
         .lock()
         .map_err(|_| "No se pudo bloquear sesión de terminal".to_string())?;
-    shutdown_session(&mut guard);
-    *guard = Some(TerminalSession { writer, child });
+    shutdown_session_by_label(&mut guard, &window_label);
+    guard.insert(window_label, TerminalSession { writer, child });
     Ok(())
 }
 
 #[tauri::command]
-pub fn write_to_pty(state: tauri::State<TerminalState>, input: String) -> Result<(), String> {
+pub fn write_to_pty(
+    window: tauri::Window,
+    state: tauri::State<TerminalState>,
+    input: String,
+) -> Result<(), String> {
+    let window_label = window.label().to_string();
     let mut guard = state
-        .session
+        .sessions
         .lock()
         .map_err(|_| "No se pudo bloquear sesión de terminal".to_string())?;
-    let Some(session) = guard.as_mut() else {
+    let Some(session) = guard.get_mut(&window_label) else {
         return Err("Terminal no inicializada".to_string());
     };
 
@@ -105,11 +126,68 @@ pub fn write_to_pty(state: tauri::State<TerminalState>, input: String) -> Result
 }
 
 #[tauri::command]
-pub fn close_terminal_session(state: tauri::State<TerminalState>) -> Result<(), String> {
+pub fn close_terminal_session(
+    window: tauri::Window,
+    state: tauri::State<TerminalState>,
+) -> Result<(), String> {
+    let window_label = window.label().to_string();
     let mut guard = state
-        .session
+        .sessions
         .lock()
         .map_err(|_| "No se pudo bloquear sesión de terminal".to_string())?;
-    shutdown_session(&mut guard);
+    shutdown_session_by_label(&mut guard, &window_label);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn open_detached_terminal_window(
+    app: tauri::AppHandle,
+    cwd: String,
+    view_id: Option<String>,
+) -> Result<(), String> {
+    let view_key = view_id
+        .clone()
+        .unwrap_or_else(|| "default".to_string())
+        .replace(' ', "_");
+    let label = format!("terminal-detached-{view_key}");
+
+    if let Some(existing) = app.get_webview_window(&label) {
+        let _ = existing.set_focus();
+        return Ok(());
+    }
+
+    let encoded_cwd = cwd.replace(' ', "%20");
+    let encoded_view_id = view_id.unwrap_or_default().replace(' ', "%20");
+    let app_url = format!("/?detachedTerminal=1&cwd={encoded_cwd}&viewId={encoded_view_id}");
+
+    let window = WebviewWindowBuilder::new(&app, label, WebviewUrl::App(app_url.into()))
+        .title("DDF Terminal")
+        .inner_size(980.0, 360.0)
+        .resizable(true)
+        .build()
+        .map_err(|error| format!("No se pudo abrir ventana de terminal: {error}"))?;
+
+    let _ = window.set_focus();
+    Ok(())
+}
+
+#[tauri::command]
+pub fn close_detached_terminal_window(
+    app: tauri::AppHandle,
+    state: tauri::State<TerminalState>,
+    label: String,
+) -> Result<(), String> {
+    let mut guard = state
+        .sessions
+        .lock()
+        .map_err(|_| "No se pudo bloquear sesión de terminal".to_string())?;
+    shutdown_session_by_label(&mut guard, &label);
+    drop(guard);
+
+    let Some(window) = app.get_webview_window(&label) else {
+        return Ok(());
+    };
+
+    let _ = window.destroy();
     Ok(())
 }
