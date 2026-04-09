@@ -9,6 +9,257 @@ use std::{
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use tauri::Emitter;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AwsCredentials {
+    pub access_key_id: String,
+    pub secret_access_key: String,
+    pub session_token: Option<String>,
+    pub region: String,
+}
+
+#[derive(Clone, Serialize)]
+struct TerraformOutputEvent {
+    window_label: String,
+    output: String,
+}
+
+fn emit_output(window: &tauri::Window, output: &str) {
+    let _ = window.emit(
+        "terraform-output",
+        TerraformOutputEvent {
+            window_label: window.label().to_string(),
+            output: output.to_string(),
+        },
+    );
+}
+
+fn terraform_init_for_deploy(
+    window: &tauri::Window,
+    project_dir_path: &PathBuf,
+    aws_credentials: &AwsCredentials,
+) -> Result<(), String> {
+    emit_output(window, "\r\n\x1b[36m→ terraform init\x1b[0m\r\n");
+
+    let mut command = Command::new("terraform");
+    command
+        .arg("init")
+        .arg("-input=false")
+        .arg("-no-color")
+        .current_dir(project_dir_path)
+        .env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
+        .env("AWS_SECRET_ACCESS_KEY", &aws_credentials.secret_access_key)
+        .env("AWS_DEFAULT_REGION", &aws_credentials.region)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    if let Some(token) = aws_credentials.session_token.as_deref() {
+        if !token.trim().is_empty() {
+            command.env("AWS_SESSION_TOKEN", token);
+        }
+    }
+
+    let mut child = command
+        .spawn()
+        .map_err(|error| format!("No se pudo iniciar terraform init: {error}"))?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    let (tx_out, rx) = mpsc::channel::<String>();
+    let tx_err = tx_out.clone();
+
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines().map_while(Result::ok) {
+            let _ = tx_out.send(format!("{line}\r\n"));
+        }
+    });
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().map_while(Result::ok) {
+            let _ = tx_err.send(format!("\x1b[33m{line}\x1b[0m\r\n"));
+        }
+    });
+
+    loop {
+        match rx.recv_timeout(Duration::from_millis(50)) {
+            Ok(line) => emit_output(window, &line),
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                if child.try_wait().map(|s| s.is_some()).unwrap_or(false) {
+                    // drain remaining
+                    while let Ok(line) = rx.try_recv() {
+                        emit_output(window, &line);
+                    }
+                    break;
+                }
+            }
+            Err(_) => break,
+        }
+    }
+
+    let status = child.wait().map_err(|error| format!("Error esperando terraform init: {error}"))?;
+    if !status.success() {
+        emit_output(window, "\x1b[31m✗ terraform init falló\x1b[0m\r\n");
+        return Err("terraform init falló".to_string());
+    }
+    emit_output(window, "\x1b[32m✓ terraform init completado\x1b[0m\r\n");
+    Ok(())
+}
+
+fn run_terraform_streaming(
+    window: &tauri::Window,
+    args: &[&str],
+    project_dir_path: &PathBuf,
+    aws_credentials: &AwsCredentials,
+) -> Result<bool, String> {
+    let mut cmd = Command::new("terraform");
+    for arg in args {
+        cmd.arg(arg);
+    }
+    cmd.current_dir(project_dir_path)
+        .env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
+        .env("AWS_SECRET_ACCESS_KEY", &aws_credentials.secret_access_key)
+        .env("AWS_DEFAULT_REGION", &aws_credentials.region)
+        .env("TF_IN_AUTOMATION", "1")
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    if let Some(token) = aws_credentials.session_token.as_deref() {
+        if !token.trim().is_empty() {
+            cmd.env("AWS_SESSION_TOKEN", token);
+        }
+    }
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|error| format!("No se pudo iniciar terraform {}: {error}", args.first().unwrap_or(&"")))?;
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    let (tx_out, rx) = mpsc::channel::<String>();
+    let tx_err = tx_out.clone();
+
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines().map_while(Result::ok) {
+            let _ = tx_out.send(format!("{line}\r\n"));
+        }
+    });
+    std::thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().map_while(Result::ok) {
+            let _ = tx_err.send(format!("\x1b[33m{line}\x1b[0m\r\n"));
+        }
+    });
+
+    loop {
+        match rx.recv_timeout(Duration::from_millis(50)) {
+            Ok(line) => emit_output(window, &line),
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                if child.try_wait().map(|s| s.is_some()).unwrap_or(false) {
+                    while let Ok(line) = rx.try_recv() {
+                        emit_output(window, &line);
+                    }
+                    break;
+                }
+            }
+            Err(_) => break,
+        }
+    }
+
+    let status = child.wait().map_err(|error| format!("Error esperando terraform: {error}"))?;
+    Ok(status.success())
+}
+
+#[tauri::command]
+pub async fn terraform_plan(
+    window: tauri::Window,
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+    aws_credentials: AwsCredentials,
+) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if project_dir.trim().is_empty() {
+            return Err("No se recibió directorio de proyecto.".to_string());
+        }
+        let project_dir_path = PathBuf::from(project_dir.trim());
+        if !project_dir_path.exists() {
+            return Err("El directorio del proyecto no existe.".to_string());
+        }
+
+        if !files.is_empty() {
+            sync_project_tf_files(&project_dir_path, &files)?;
+        }
+
+        emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║     terraform plan           ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
+
+        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
+
+        emit_output(&window, "\r\n\x1b[36m→ terraform plan\x1b[0m\r\n");
+        let success = run_terraform_streaming(
+            &window,
+            &["plan", "-no-color", "-input=false"],
+            &project_dir_path,
+            &aws_credentials,
+        )?;
+
+        if success {
+            emit_output(&window, "\r\n\x1b[32m✓ Plan completado exitosamente\x1b[0m\r\n");
+        } else {
+            emit_output(&window, "\r\n\x1b[31m✗ Plan terminó con errores\x1b[0m\r\n");
+        }
+        Ok(success)
+    })
+    .await
+    .map_err(|error| format!("Error interno ejecutando plan: {error}"))?
+}
+
+#[tauri::command]
+pub async fn terraform_apply(
+    window: tauri::Window,
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+    aws_credentials: AwsCredentials,
+) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if project_dir.trim().is_empty() {
+            return Err("No se recibió directorio de proyecto.".to_string());
+        }
+        let project_dir_path = PathBuf::from(project_dir.trim());
+        if !project_dir_path.exists() {
+            return Err("El directorio del proyecto no existe.".to_string());
+        }
+
+        if !files.is_empty() {
+            sync_project_tf_files(&project_dir_path, &files)?;
+        }
+
+        emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║     terraform apply          ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
+
+        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
+
+        emit_output(&window, "\r\n\x1b[36m→ terraform apply\x1b[0m\r\n");
+        let success = run_terraform_streaming(
+            &window,
+            &["apply", "-auto-approve", "-no-color", "-input=false"],
+            &project_dir_path,
+            &aws_credentials,
+        )?;
+
+        if success {
+            emit_output(&window, "\r\n\x1b[32m✓ Apply completado. Recursos creados en AWS.\x1b[0m\r\n");
+        } else {
+            emit_output(&window, "\r\n\x1b[31m✗ Apply terminó con errores\x1b[0m\r\n");
+        }
+        Ok(success)
+    })
+    .await
+    .map_err(|error| format!("Error interno ejecutando apply: {error}"))?
+}
 
 #[derive(Debug, Deserialize)]
 struct TerraformValidateJson {

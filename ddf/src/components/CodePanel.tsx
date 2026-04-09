@@ -46,6 +46,11 @@ type TerraformSourceFile = {
   content: string;
 };
 
+type HclBlockNode = {
+  attributes: Record<string, unknown>;
+  blocks: Record<string, HclBlockNode>;
+};
+
 type ExplorerNode = {
   id: string;
   name: string;
@@ -1108,10 +1113,65 @@ const toHclLiteral = (value: unknown): string => {
     if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) {
       return trimmed;
     }
+    if (
+      trimmed === "true" ||
+      trimmed === "false" ||
+      /^-?\d+(\.\d+)?$/.test(trimmed) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+      (trimmed.startsWith("{") && trimmed.endsWith("}"))
+    ) {
+      return trimmed;
+    }
     return `"${trimmed.replace(/"/g, '\\"')}"`;
   }
   if (value === null || value === undefined) return '""';
   return `"${String(value).replace(/"/g, '\\"')}"`;
+};
+
+const buildHclBlockTree = (attributes: Record<string, unknown>): HclBlockNode => {
+  const root: HclBlockNode = { attributes: {}, blocks: {} };
+
+  Object.entries(attributes ?? {}).forEach(([rawKey, rawValue]) => {
+    if (rawValue === undefined || rawValue === null) return;
+    if (typeof rawValue === "string" && rawValue.trim() === "") return;
+
+    const pathParts = rawKey.split(".").filter(Boolean);
+    if (!pathParts.length) return;
+
+    if (pathParts.length === 1) {
+      root.attributes[pathParts[0]] = rawValue;
+      return;
+    }
+
+    let cursor = root;
+    for (const blockName of pathParts.slice(0, -1)) {
+      if (!cursor.blocks[blockName]) {
+        cursor.blocks[blockName] = { attributes: {}, blocks: {} };
+      }
+      cursor = cursor.blocks[blockName];
+    }
+
+    const attrName = pathParts[pathParts.length - 1];
+    cursor.attributes[attrName] = rawValue;
+  });
+
+  return root;
+};
+
+const renderHclBlockNode = (node: HclBlockNode, indent: string): string => {
+  let lines = "";
+
+  Object.entries(node.attributes).forEach(([key, value]) => {
+    lines += `${indent}${key} = ${toHclLiteral(value)}\n`;
+  });
+
+  Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
+    lines += `${indent}${blockName} {\n`;
+    lines += renderHclBlockNode(blockNode, `${indent}  `);
+    lines += `${indent}}\n`;
+  });
+
+  return lines;
 };
 
 const buildMainTerraformFile = (
@@ -1133,9 +1193,8 @@ const buildMainTerraformFile = (
 
   resources.forEach((resource) => {
     hcl += `${resource.kind ?? "resource"} \"${resource.type}\" \"${resource.name}\" {\n`;
-    Object.entries(resource.config.attributes ?? {}).forEach(([key, value]) => {
-      hcl += `  ${key} = ${toHclLiteral(value)}\n`;
-    });
+    const blockTree = buildHclBlockTree(resource.config.attributes ?? {});
+    hcl += renderHclBlockNode(blockTree, "  ");
     hcl += "}\n\n";
   });
 

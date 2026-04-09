@@ -5,9 +5,11 @@ import CenterPanel from "./CenterPanel";
 import { RightPanel } from "./RightPanel";
 import BottomPanel from "./BottomPanel";
 import CodePanel from "./CodePanel";
+import AwsCredentialsModal from "./AwsCredentialsModal";
 import { TerraformProject, TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/testNodes";
 import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import {
   addEdge,
   applyNodeChanges,
@@ -36,6 +38,7 @@ import { TEST_NODE_SCHEMAS } from "../models/testNodes";
 import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
+import { useAwsCredentials } from "../hooks/useAwsCredentials";
 
 const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
 const POPOUT_HEARTBEAT_TTL_MS = 900;
@@ -50,6 +53,11 @@ type WorkspaceViewProps = {
   onStateChange?: (viewId: string, snapshot: DdfViewSnapshot) => void;
 };
 
+type HclBlockNode = {
+  attributes: Record<string, unknown>;
+  blocks: Record<string, HclBlockNode>;
+};
+
 export default function WorkspaceView({
   viewId,
   viewName = "View",
@@ -61,7 +69,7 @@ export default function WorkspaceView({
   const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
   const [activeSection, setActiveSection] = useState<"canvas" | "code">("canvas");
   const [cloudProvider, setCloudProvider] = useState<"aws">("aws");
-  const [providerRegion] = useState("eu-west-1");
+  const [providerRegion] = useState("eu-south-2");
 
   const [bottomHeight, setBottomHeight] = useState(288);
   const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>(
@@ -82,10 +90,14 @@ export default function WorkspaceView({
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [codeLogs, setCodeLogs] = useState<BottomPanelLogEntry[]>([]);
   const [codeBottomOpenSignal, setCodeBottomOpenSignal] = useState(0);
+  const [canvasDeploySignal, setCanvasDeploySignal] = useState(0);
   const [terminalPoppedOut, setTerminalPoppedOut] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [showAwsConfig, setShowAwsConfig] = useState(false);
   const hclPersistenceDisabledRef = useRef(false);
   const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
   const lastPopoutHeartbeatRef = useRef<number>(0);
+  const { credentials: awsCredentials, save: saveAwsCredentials, isConfigured: awsConfigured } = useAwsCredentials();
 
   const broadcastBottomPanelState = useCallback(() => {
     if (!bottomPanelChannelRef.current) return;
@@ -360,16 +372,78 @@ export default function WorkspaceView({
   );
 
   const terraformResourceToHCL = (r: TerraformResource) => {
-    const blockKind = r.kind ?? "resource";
-    let attrs = "";
-    for (const [k, v] of Object.entries(r.config.attributes)) {
-      if (typeof v === "string" && TERRAFORM_REF_PATTERN.test(v.trim())) {
-        attrs += `  ${k} = ${v.trim()}\n`;
-      } else {
-        attrs += `  ${k} = "${v}"\n`;
+    const toHclLiteral = (value: unknown): string => {
+      if (typeof value === "boolean" || typeof value === "number") {
+        return String(value);
       }
-    }
-    return `${blockKind} "${r.type}" "${r.name}" {\n${attrs}}\n`;
+
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) return '""';
+
+        if (
+          TERRAFORM_REF_PATTERN.test(trimmed) ||
+          trimmed.startsWith("var.") ||
+          trimmed === "true" ||
+          trimmed === "false" ||
+          /^-?\d+(\.\d+)?$/.test(trimmed) ||
+          (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+          (trimmed.startsWith("{") && trimmed.endsWith("}"))
+        ) {
+          return trimmed;
+        }
+
+        return `"${trimmed.replace(/"/g, '\\"')}"`;
+      }
+
+      if (value === null || value === undefined) return '""';
+      return `"${String(value).replace(/"/g, '\\"')}"`;
+    };
+
+    const root: HclBlockNode = { attributes: {}, blocks: {} };
+    Object.entries(r.config.attributes ?? {}).forEach(([rawKey, rawValue]) => {
+      if (rawValue === undefined || rawValue === null) return;
+      if (typeof rawValue === "string" && rawValue.trim() === "") return;
+
+      const pathParts = rawKey.split(".").filter(Boolean);
+      if (!pathParts.length) return;
+
+      if (pathParts.length === 1) {
+        root.attributes[pathParts[0]] = rawValue;
+        return;
+      }
+
+      let cursor = root;
+      for (const blockName of pathParts.slice(0, -1)) {
+        if (!cursor.blocks[blockName]) {
+          cursor.blocks[blockName] = { attributes: {}, blocks: {} };
+        }
+        cursor = cursor.blocks[blockName];
+      }
+
+      const attrName = pathParts[pathParts.length - 1];
+      cursor.attributes[attrName] = rawValue;
+    });
+
+    const renderNode = (node: HclBlockNode, indent: string): string => {
+      let lines = "";
+
+      Object.entries(node.attributes).forEach(([key, value]) => {
+        lines += `${indent}${key} = ${toHclLiteral(value)}\n`;
+      });
+
+      Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
+        lines += `${indent}${blockName} {\n`;
+        lines += renderNode(blockNode, `${indent}  `);
+        lines += `${indent}}\n`;
+      });
+
+      return lines;
+    };
+
+    const blockKind = r.kind ?? "resource";
+    const body = renderNode(root, "  ");
+    return `${blockKind} "${r.type}" "${r.name}" {\n${body}}\n`;
   };
 
   const buildGlobalHcl = useCallback((proj: TerraformProject) => {
@@ -630,12 +704,53 @@ export default function WorkspaceView({
     setCodeBottomOpenSignal((current) => current + 1);
   }, []);
 
+  const isTauriRuntime =
+    typeof window !== "undefined" &&
+    !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+
+  const runTerraformAction = useCallback(
+    async (action: "terraform_plan" | "terraform_apply") => {
+      if (!projectDir || !isTauriRuntime) return;
+      setIsDeploying(true);
+      setCanvasDeploySignal((s) => s + 1);
+      try {
+        await invoke(action, {
+          projectDir,
+          files: [],
+          awsCredentials: {
+            accessKeyId: awsCredentials.accessKeyId,
+            secretAccessKey: awsCredentials.secretAccessKey,
+            sessionToken: awsCredentials.sessionToken,
+            region: awsCredentials.region,
+          },
+        });
+      } catch (error) {
+        console.error(`${action} error:`, error);
+      } finally {
+        setIsDeploying(false);
+      }
+    },
+    [projectDir, isTauriRuntime, awsCredentials],
+  );
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
+      {showAwsConfig && (
+        <AwsCredentialsModal
+          initial={awsCredentials}
+          onSave={saveAwsCredentials}
+          onClose={() => setShowAwsConfig(false)}
+        />
+      )}
       <Header
         onClearCanvas={clearCanvas}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
+        awsConfigured={awsConfigured}
+        onOpenAwsConfig={() => setShowAwsConfig(true)}
+        onPlan={() => void runTerraformAction("terraform_plan")}
+        onApply={() => void runTerraformAction("terraform_apply")}
+        isDeploying={isDeploying}
       />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
@@ -702,6 +817,8 @@ export default function WorkspaceView({
               viewId={viewId}
               suppressTerminal={terminalPoppedOut}
               enabled={isVisible && activeSection === "canvas"}
+              openSignal={canvasDeploySignal}
+              preferredTab="terminal"
             />
           ) : null}
         </div>

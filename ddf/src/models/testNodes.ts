@@ -173,6 +173,38 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
       "src/schemas/aws/templates/resources/aws_security_group.tf.tpl",
   },
   {
+    id: "network-interface",
+    label: "Network Interface",
+    schemaGroup: "resources",
+    terraformType: "aws_network_interface",
+    terraformKind: "resource",
+    icon: MOCK_ICON_PATH,
+    hclTemplate: `resource "aws_network_interface" "eni" {
+  subnet_id       = aws_subnet.public.id
+  private_ips     = ["10.0.1.10"]
+  security_groups = [aws_security_group.web.id]
+
+  tags = {
+    Name = "eni-main"
+  }
+}`,
+    properties: [
+      { name: "subnet_id", type: "string", required: true },
+      { name: "private_ips", type: "set(string)" },
+      { name: "private_ip", type: "string" },
+      { name: "security_groups", type: "set(string)" },
+      { name: "description", type: "string" },
+      { name: "source_dest_check", type: "bool" },
+      { name: "tags", type: "map(string)" },
+      { name: "id", type: "string", computed: true },
+    ],
+    searchTerms: ["eni", "network interface", "elastic network interface", "nic"],
+    sourceSchemaPath:
+      "src/schemas/aws/resources/aws_network_interface.json",
+    sourceTemplatePath:
+      "src/schemas/aws/templates/resources/aws_network_interface.tf.tpl",
+  },
+  {
     id: "region",
     label: "Region",
     schemaGroup: "data_sources",

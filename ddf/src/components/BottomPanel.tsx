@@ -478,6 +478,30 @@ export default function BottomPanel({
   }, [height, open, activeTab]);
 
   useEffect(() => {
+    if (!isTauriRuntime || suppressTerminal) return;
+    const currentWindowLabel = getCurrentWindow().label;
+
+    const unlisten = listen<{ window_label: string; output: string }>(
+      "terraform-output",
+      (event) => {
+        if (event.payload.window_label !== currentWindowLabel) return;
+        setOpen(true);
+        setActiveTab("terminal");
+        if (!terminalReadyRef.current || terminalDisposedRef.current || !term.current) return;
+        try {
+          term.current.write(event.payload.output);
+        } catch {
+          // ignore writes during boundary transitions
+        }
+      },
+    ).catch(() => () => {});
+
+    return () => {
+      void unlisten.then((f) => f());
+    };
+  }, [isTauriRuntime, suppressTerminal]);
+
+  useEffect(() => {
     if (activeTab === "terminal") {
       requestAnimationFrame(() => {
         scheduleSafeFitTerminal();

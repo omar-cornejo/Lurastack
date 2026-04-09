@@ -129,9 +129,6 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
         {/* Brand */}
         <div className="mb-8">
           <div className="text-4xl font-bold tracking-[0.3em] text-white">ddf</div>
-          <div className="text-[10px] text-gray-600 tracking-widest uppercase mt-1">
-            Declarative Design Framework
-          </div>
         </div>
 
         {/* Actions */}
@@ -159,10 +156,6 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
           </div>
         )}
 
-        <div className="mt-4 text-[9px] text-gray-700 leading-relaxed">
-          Projects saved in chosen location.
-          <br />Recent list stored locally.
-        </div>
       </div>
 
       {/* ── Main area ── */}
