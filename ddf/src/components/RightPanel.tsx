@@ -79,51 +79,90 @@ const normalizeMappedReference = (
 
 const parseHclValueToAttribute = (input: string): unknown => {
   const trimmed = input.trim();
-  if (!trimmed) return "";
+  if (!trimmed || trimmed === "null") return null;
   if (trimmed === "true") return true;
   if (trimmed === "false") return false;
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed.slice(1, -1);
-  }
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) return trimmed.slice(1, -1);
   return trimmed;
 };
 
 const toHclLiteral = (value: unknown): string => {
-  if (typeof value === "boolean" || typeof value === "number") {
-    return String(value);
+  if (value === null || value === undefined) return "null";
+  if (typeof value === "boolean" || typeof value === "number") return String(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    if (value.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))) {
+      const entries = (value as Array<Record<string, unknown>>).map((item) => {
+        const fields = Object.entries(item)
+          .filter(([, v]) => v !== undefined)
+          .map(([k, v]) => `      ${k} = ${toHclLiteral(v)}`)
+          .join("\n");
+        return `    {\n${fields}\n    }`;
+      });
+      return `[\n${entries.join(",\n")}\n  ]`;
+    }
+    return `[${value.map(toHclLiteral).join(", ")}]`;
   }
-  if (typeof value === "string" && terraformRefPattern.test(value.trim())) {
-    return value.trim();
-  }
-  if (value === null || value === undefined) {
-    return '""';
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (terraformRefPattern.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
+    if (
+      trimmed === "true" || trimmed === "false" ||
+      /^-?\d+(\.\d+)?$/.test(trimmed) ||
+      (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
+      (trimmed.startsWith("{") && trimmed.endsWith("}"))
+    ) return trimmed;
+    return `"${trimmed.replace(/"/g, '\\"')}"`;
   }
   return `"${String(value).replace(/"/g, '\\"')}"`;
 };
 
-const buildHclFromResource = (
-  resource: TerraformResource,
-  inspectorProperties: InspectorProperty[],
-) => {
+// Returns true for set(object({...})) and list(object({...})) types —
+// these are rendered as attribute-as-blocks lists, not simple scalars.
+const isObjectCollection = (rawType: unknown): boolean => {
+  if (!Array.isArray(rawType) || rawType.length < 2) return false;
+  const [container, inner] = rawType as [unknown, unknown];
+  if (container !== "set" && container !== "list") return false;
+  return Array.isArray(inner) && inner[0] === "object";
+};
+
+// Returns the field-name → raw-type map for the object inside the collection.
+const getObjectFields = (rawType: unknown): Record<string, unknown> => {
+  if (!Array.isArray(rawType) || rawType.length < 2) return {};
+  const inner = rawType[1] as unknown[];
+  if (!Array.isArray(inner) || inner.length < 2 || inner[0] !== "object") return {};
+  return (inner[1] as Record<string, unknown>) ?? {};
+};
+
+const renderSubFieldType = (rawType: unknown): string => {
+  if (typeof rawType === "string") return rawType;
+  if (Array.isArray(rawType) && rawType.length >= 2) {
+    const [container, inner] = rawType as [unknown, unknown];
+    if (typeof inner === "string") return `${container}(${inner})`;
+    return String(container);
+  }
+  return "any";
+};
+
+const displaySubFieldValue = (value: unknown): string => {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) return JSON.stringify(value);
+  return String(value);
+};
+
+const buildHclFromResource = (resource: TerraformResource) => {
   const blockKind = resource.kind ?? "resource";
   const header = `${blockKind} "${resource.type}" "${resource.name}" {`;
   const attrs = resource.config.attributes ?? {};
   const lines = Object.entries(attrs)
-    .filter(([key, value]) => {
-      if (inspectorProperties.some((p) => p.name === key && p.required)) {
-        return true;
-      }
-      return value !== "" && value !== undefined && value !== null;
-    })
+    .filter(([, value]) =>
+      value !== "" && value !== undefined && value !== null &&
+      !(Array.isArray(value) && value.length === 0),
+    )
     .map(([key, value]) => `  ${key} = ${toHclLiteral(value)}`);
 
-  const requiredNotFilled = inspectorProperties
-    .filter((prop) => prop.required)
-    .filter((prop) => !(prop.name in attrs))
-    .map((prop) => `  ${prop.name} = ""`);
-
-  return [header, ...lines, ...requiredNotFilled, "}"].join("\n");
+  return [header, ...lines, "}"].join("\n");
 };
 
 const parseHclAttributes = (hcl: string): Record<string, unknown> => {
@@ -331,7 +370,7 @@ export const RightPanel = ({
       return;
     }
 
-    setHclDraft(buildHclFromResource(selectedResource, inspectorProperties));
+    setHclDraft(buildHclFromResource(selectedResource));
   }, [selectedResource, inspectorProperties]);
 
   useEffect(() => {
@@ -593,10 +632,95 @@ export const RightPanel = ({
                         <div className="space-y-2">
                           {section.properties.map((property) => {
                             const currentValue = selectedResource.config.attributes[property.name];
+                            const isEditable = !property.computed || !!property.optional;
+
+                            // ── Object collection: set(object{...}) / list(object{...}) ──
+                            if (isObjectCollection(property.rawType) && isEditable) {
+                              const entries = (Array.isArray(currentValue) ? currentValue : []) as Array<Record<string, unknown>>;
+                              const objectFields = getObjectFields(property.rawType);
+                              const fieldNames = Object.keys(objectFields);
+
+                              const updateEntries = (next: Array<Record<string, unknown>>) =>
+                                onUpdateSelectedResource((resource) => ({
+                                  ...resource,
+                                  config: {
+                                    ...resource.config,
+                                    attributes: { ...resource.config.attributes, [property.name]: next },
+                                  },
+                                }));
+
+                              return (
+                                <div key={property.name} className="rounded border border-gray-200 bg-gray-50 p-2">
+                                  <div className="mb-1 flex items-start justify-between gap-2">
+                                    <div className="min-w-0 flex-1">
+                                      <div className="text-xs font-semibold text-gray-800 break-all">{property.fieldName}</div>
+                                      <div className="text-[10px] text-gray-500">{property.type}</div>
+                                    </div>
+                                    <div className="flex shrink-0 gap-1">
+                                      <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-600">optional</span>
+                                      {property.computed && (
+                                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">computed</span>
+                                      )}
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-1.5">
+                                    {entries.map((entry, entryIndex) => (
+                                      <div key={entryIndex} className="rounded border border-gray-300 bg-white p-1.5">
+                                        <div className="mb-1 flex items-center justify-between">
+                                          <span className="text-[10px] font-semibold text-gray-500">Entry {entryIndex + 1}</span>
+                                          <button
+                                            type="button"
+                                            onClick={() => updateEntries(entries.filter((_, i) => i !== entryIndex))}
+                                            className="text-[10px] text-red-400 hover:text-red-600"
+                                          >
+                                            Remove
+                                          </button>
+                                        </div>
+                                        <div className="space-y-1">
+                                          {fieldNames.map((fieldName) => (
+                                            <div key={fieldName} className="flex items-center gap-1.5">
+                                              <span className="w-[42%] shrink-0 truncate text-[10px] text-gray-500" title={fieldName}>
+                                                {fieldName}
+                                              </span>
+                                              <input
+                                                value={displaySubFieldValue(entry[fieldName])}
+                                                placeholder={renderSubFieldType(objectFields[fieldName])}
+                                                onChange={(e) => {
+                                                  const parsed = parseHclValueToAttribute(e.target.value);
+                                                  updateEntries(
+                                                    entries.map((ent, i) =>
+                                                      i === entryIndex ? { ...ent, [fieldName]: parsed } : ent,
+                                                    ),
+                                                  );
+                                                }}
+                                                className="w-[58%] rounded border border-gray-300 bg-white px-1.5 py-0.5 text-[10px]"
+                                              />
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newEntry: Record<string, unknown> = {};
+                                      fieldNames.forEach((k) => { newEntry[k] = null; });
+                                      updateEntries([...entries, newEntry]);
+                                    }}
+                                    className="mt-1.5 w-full rounded border border-dashed border-gray-300 py-1 text-[10px] text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                                  >
+                                    + Add entry
+                                  </button>
+                                </div>
+                              );
+                            }
+
+                            // ── Default: scalar / map / simple types ──
                             const displayValue =
-                              currentValue === undefined || currentValue === null
-                                ? ""
-                                : String(currentValue);
+                              currentValue === undefined || currentValue === null ? "" : String(currentValue);
 
                             return (
                               <div key={property.name} className="rounded border border-gray-200 bg-gray-50 p-2">
@@ -629,48 +753,31 @@ export const RightPanel = ({
                                 </div>
 
                                 <input
-                                  disabled={property.computed && !property.optional}
+                                  disabled={!isEditable}
                                   value={displayValue}
-                                  onDragOver={(event) => {
-                                    event.preventDefault();
-                                  }}
+                                  onDragOver={(event) => event.preventDefault()}
                                   onDrop={(event) => {
                                     event.preventDefault();
                                     const droppedValue =
                                       event.dataTransfer.getData(OBJECT_MAPPER_REF_MIME) ||
                                       event.dataTransfer.getData("text/plain") ||
                                       latestMapperDragPayload;
-                                    const mapped = normalizeMappedReference(
-                                      droppedValue,
-                                      property.name,
-                                      resources,
-                                    );
-
+                                    const mapped = normalizeMappedReference(droppedValue, property.name, resources);
                                     onUpdateSelectedResource((resource) => ({
                                       ...resource,
                                       config: {
                                         ...resource.config,
-                                        attributes: {
-                                          ...resource.config.attributes,
-                                          [property.name]: mapped,
-                                        },
+                                        attributes: { ...resource.config.attributes, [property.name]: mapped },
                                       },
                                     }));
                                   }}
                                   onChange={(event) => {
-                                    const value = normalizeMappedReference(
-                                      event.target.value,
-                                      property.name,
-                                      resources,
-                                    );
+                                    const value = normalizeMappedReference(event.target.value, property.name, resources);
                                     onUpdateSelectedResource((resource) => ({
                                       ...resource,
                                       config: {
                                         ...resource.config,
-                                        attributes: {
-                                          ...resource.config.attributes,
-                                          [property.name]: value,
-                                        },
+                                        attributes: { ...resource.config.attributes, [property.name]: value },
                                       },
                                     }));
                                   }}

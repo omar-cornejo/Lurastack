@@ -7,6 +7,7 @@ export type InspectorProperty = {
   optional?: boolean;
   computed?: boolean;
   typeKinds: string[];
+  rawType?: unknown;
 };
 
 const schemaModules = import.meta.glob("../schemas/aws/**/*.json", { eager: true });
@@ -94,6 +95,7 @@ const collectAttributesFromBlock = (
       optional: !!typedMeta.optional,
       computed: !!typedMeta.computed,
       typeKinds: extractTypeKinds(typedMeta.type),
+      rawType: typedMeta.type,
     });
   });
 

@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { readDir, readTextFile, writeTextFile, remove, rename, mkdir } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
-import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 import type { DdfCodeFile } from "../types/project";
 import type { BottomPanelLogEntry, BottomPanelLogLevel } from "../types/logs";
 
@@ -254,8 +253,8 @@ export default function CodePanel({
   const lineCount = Math.max(1, auxiliaryContent.split("\n").length);
 
   const mainTfContent = useMemo(
-    () => buildMainTerraformFile(resources, schemas, cloudProvider, _region),
-    [resources, schemas, cloudProvider, _region],
+    () => buildMainTerraformFile(resources, cloudProvider, _region),
+    [resources, cloudProvider, _region],
   );
   const mainTfLineCount = Math.max(1, mainTfContent.split("\n").length);
 
@@ -513,7 +512,7 @@ export default function CodePanel({
       const files: TerraformSourceFile[] = [
         {
           name: "main.tf",
-          content: buildMainTerraformFile(resources, schemas, cloudProvider, _region),
+          content: buildMainTerraformFile(resources, cloudProvider, _region),
         },
         ...additionalFiles,
       ];
@@ -952,12 +951,25 @@ export default function CodePanel({
 }
 
 const toHclLiteral = (value: unknown): string => {
+  if (value === null || value === undefined) return "null";
   if (typeof value === "boolean" || typeof value === "number") return String(value);
+  if (Array.isArray(value)) {
+    if (value.length === 0) return "[]";
+    if (value.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))) {
+      const entries = (value as Array<Record<string, unknown>>).map((item) => {
+        const fields = Object.entries(item)
+          .filter(([, v]) => v !== undefined)
+          .map(([k, v]) => `      ${k} = ${toHclLiteral(v)}`)
+          .join("\n");
+        return `    {\n${fields}\n    }`;
+      });
+      return `[\n${entries.join(",\n")}\n  ]`;
+    }
+    return `[${value.map(toHclLiteral).join(", ")}]`;
+  }
   if (typeof value === "string") {
     const trimmed = value.trim();
-    if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) {
-      return trimmed;
-    }
+    if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
     if (
       trimmed === "true" ||
       trimmed === "false" ||
@@ -969,35 +981,24 @@ const toHclLiteral = (value: unknown): string => {
     }
     return `"${trimmed.replace(/"/g, '\\"')}"`;
   }
-  if (value === null || value === undefined) return '""';
   return `"${String(value).replace(/"/g, '\\"')}"`;
 };
 
 
-const buildResourceHcl = (
-  resource: TerraformResource,
-  schema: TerraformNodeSchema | undefined,
-): string => {
-  const inspectorProperties = getInspectorPropertiesForSchema(schema);
+const buildResourceHcl = (resource: TerraformResource): string => {
   const blockKind = resource.kind ?? "resource";
   const attrs = resource.config.attributes ?? {};
 
-  const configuredLines = Object.entries(attrs)
-    .filter(([, v]) => v !== "" && v !== undefined && v !== null)
+  const lines = Object.entries(attrs)
+    .filter(([, v]) => v !== "" && v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0))
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `  ${key} = ${toHclLiteral(value)}`);
 
-  const requiredEmptyLines = inspectorProperties
-    .filter((p) => p.required)
-    .filter((p) => !(p.name in attrs) || attrs[p.name] === "" || attrs[p.name] === undefined || attrs[p.name] === null)
-    .map((p) => `  ${p.name} = ""`);
-
-  return [`${blockKind} "${resource.type}" "${resource.name}" {`, ...configuredLines, ...requiredEmptyLines, "}"].join("\n");
+  return [`${blockKind} "${resource.type}" "${resource.name}" {`, ...lines, "}"].join("\n");
 };
 
 const buildMainTerraformFile = (
   resources: TerraformResource[],
-  schemas: TerraformNodeSchema[],
   cloudProvider: "aws",
   region: string,
 ) => {
@@ -1014,8 +1015,7 @@ const buildMainTerraformFile = (
   hcl += "}\n\n";
 
   resources.forEach((resource) => {
-    const schema = schemas.find((s) => s.id === resource.schemaId);
-    hcl += buildResourceHcl(resource, schema);
+    hcl += buildResourceHcl(resource);
     hcl += "\n\n";
   });
 
