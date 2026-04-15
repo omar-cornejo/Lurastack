@@ -2,9 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import type { Node } from "reactflow";
 import type { CanvasTerraformNodeData } from "../canvas/types";
+
 import type { TerraformResource } from "../models/terraform";
-import type { TerraformNodeSchema } from "../models/testNodes";
-import { TEST_NODE_SCHEMAS } from "../models/testNodes";
+import { NODE_SCHEMAS, type TerraformNodeSchema } from "../models/nodeRegistry";
 import {
   getInspectorPropertiesForSchema,
   type InspectorProperty,
@@ -56,7 +56,7 @@ const normalizeMappedReference = (
   if (!match) return value;
 
   const [, schemaOrType, resourceName, explicitAttr] = match;
-  const schema = TEST_NODE_SCHEMAS.find(
+  const schema = NODE_SCHEMAS.find(
     (candidate) =>
       candidate.id.toLowerCase() === schemaOrType.toLowerCase() ||
       candidate.terraformType.toLowerCase() === schemaOrType.toLowerCase(),

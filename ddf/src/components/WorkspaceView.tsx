@@ -7,7 +7,7 @@ import BottomPanel from "./BottomPanel";
 import CodePanel from "./CodePanel";
 import AwsCredentialsModal from "./AwsCredentialsModal";
 import { TerraformProject, TerraformResource } from "../models/terraform";
-import type { TerraformNodeSchema } from "../models/testNodes";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
 import {
@@ -34,7 +34,7 @@ import {
 } from "../commands/placeCanvasNode";
 import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
 import { warn } from "../commands/warn";
-import { TEST_NODE_SCHEMAS } from "../models/testNodes";
+import { NODE_SCHEMAS } from "../models/nodeRegistry";
 import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
@@ -617,7 +617,7 @@ export default function WorkspaceView({
     : undefined;
 
   const selectedSchema = selectedNode
-    ? TEST_NODE_SCHEMAS.find((schema) => schema.id === selectedNode.data.schemaId)
+    ? NODE_SCHEMAS.find((schema) => schema.id === selectedNode.data.schemaId)
     : undefined;
 
   const selectedResource = selectedNode
@@ -747,7 +747,7 @@ export default function WorkspaceView({
                 nodes={nodes}
                 edges={edges}
                 resources={project.resources}
-                schemas={TEST_NODE_SCHEMAS}
+                schemas={NODE_SCHEMAS}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 onConnect={onConnect}
@@ -783,7 +783,7 @@ export default function WorkspaceView({
               nodes={nodes}
               edges={edges}
               resources={project.resources}
-              schemas={TEST_NODE_SCHEMAS}
+              schemas={NODE_SCHEMAS}
               mode="canvas"
               logs={codeLogs}
               projectDir={projectDir}
@@ -807,7 +807,7 @@ export default function WorkspaceView({
             <div className="min-h-0 flex-1">
               <CodePanel
                 resources={project.resources}
-                schemas={TEST_NODE_SCHEMAS}
+                schemas={NODE_SCHEMAS}
                 cloudProvider={cloudProvider}
                 region={providerRegion}
                 projectDir={projectDir}
@@ -823,7 +823,7 @@ export default function WorkspaceView({
                 nodes={nodes}
                 edges={edges}
                 resources={project.resources}
-                schemas={TEST_NODE_SCHEMAS}
+                schemas={NODE_SCHEMAS}
                 mode="code"
                 logs={codeLogs}
                 openSignal={codeBottomOpenSignal}

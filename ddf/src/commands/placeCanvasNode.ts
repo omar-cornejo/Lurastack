@@ -1,5 +1,5 @@
 import type { Node, XYPosition } from "reactflow";
-import type { TerraformNodeSchema } from "../models/testNodes";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 import {
   createCanvasNodeFromUserAction,

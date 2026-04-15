@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import BottomPanel from "./BottomPanel";
 import type { CanvasEdgeData, CanvasTerraformNodeData } from "../canvas/types";
 import type { TerraformResource } from "../models/terraform";
-import { TEST_NODE_SCHEMAS } from "../models/testNodes";
+import { NODE_SCHEMAS } from "../models/nodeRegistry";
 import type { BottomPanelLogEntry } from "../types/logs";
 
 const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
@@ -113,7 +113,7 @@ export default function DetachedTerminalWindow() {
           edges={syncedEdges}
           resources={syncedResources}
           logs={syncedLogs}
-          schemas={TEST_NODE_SCHEMAS}
+          schemas={NODE_SCHEMAS}
           projectDir={cwd}
           viewId={viewId}
           showPopoutButton={false}

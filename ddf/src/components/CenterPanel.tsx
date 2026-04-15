@@ -26,7 +26,7 @@ import type {
 } from "../canvas/types";
 import { canvasNodeTypes } from "../canvas/nodeTypes";
 import { canvasEdgeTypes } from "../canvas/edgeTypes";
-import type { TerraformNodeSchema } from "../models/testNodes";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import type { TerraformResource } from "../models/terraform";
 import { NODE_DRAG_MIME, parseDraggedNode } from "../commands/nodeDragPayload";
 import { clearActiveLeftPanelDrag, getActiveLeftPanelDrag } from "../commands/leftPanelDragState";

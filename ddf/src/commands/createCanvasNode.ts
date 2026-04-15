@@ -1,5 +1,5 @@
 import type { Node, XYPosition } from "reactflow";
-import type { TerraformNodeSchema } from "../models/testNodes";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 
 export const CONTAINER_SCHEMA_IDS = new Set([

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo, type DragEvent } from "react";
 import { Icon } from '@iconify/react';
-import { TEST_NODE_SCHEMAS, type TerraformNodeSchema } from "../models/testNodes";
+import { NODE_SCHEMAS, type TerraformNodeSchema } from "../models/nodeRegistry";
 import { NODE_DRAG_MIME, serializeDraggedNode } from "../commands/nodeDragPayload";
 import {
   clearActiveLeftPanelDrag,
@@ -127,7 +127,7 @@ export const LeftPanel = ({
   };
 
   const filteredNodes = useMemo(() => {
-    const providerFiltered = TEST_NODE_SCHEMAS.filter((node) => {
+    const providerFiltered = NODE_SCHEMAS.filter((node) => {
       if (cloudProvider === "aws") {
         return node.terraformType.startsWith("aws_");
       }

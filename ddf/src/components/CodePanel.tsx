@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { readDir, readTextFile, writeTextFile, remove, rename, mkdir } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
-import type { TerraformNodeSchema } from "../models/testNodes";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 import type { DdfCodeFile } from "../types/project";
 import type { BottomPanelLogEntry, BottomPanelLogLevel } from "../types/logs";

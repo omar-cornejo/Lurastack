@@ -1,4 +1,4 @@
-import type { TerraformNodeSchema } from "../models/testNodes";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 
 export const NODE_DRAG_MIME = "application/x-ddfib-node-schema";
 

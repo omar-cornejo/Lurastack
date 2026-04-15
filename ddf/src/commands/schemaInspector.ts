@@ -1,4 +1,4 @@
-import type { TerraformNodeSchema } from "../models/testNodes";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 
 export type InspectorProperty = {
   name: string;

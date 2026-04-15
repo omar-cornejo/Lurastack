@@ -9,7 +9,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Edge, Node } from "reactflow";
 import type { CanvasEdgeData, CanvasTerraformNodeData } from "../canvas/types";
 import type { TerraformResource } from "../models/terraform";
-import type { TerraformNodeSchema } from "../models/testNodes";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 import type { BottomPanelLogEntry } from "../types/logs";
 

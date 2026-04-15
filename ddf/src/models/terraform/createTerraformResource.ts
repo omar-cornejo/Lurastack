@@ -1,5 +1,5 @@
 import type { TerraformResource } from "../terraform";
-import type { TerraformNodeSchema } from "../testNodes";
+import type { TerraformNodeSchema } from "../nodeRegistry";
 
 export const createTerraformResourceFromSchema = (
   schema: TerraformNodeSchema,
