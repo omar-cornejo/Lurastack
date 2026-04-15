@@ -1,5 +1,5 @@
 # ┌──────────────────────────────────────────────────────────────┐
-# │  resource: aws_subnet                                                │
+# │  resource: aws_subnet                                          │
 # └──────────────────────────────────────────────────────────────┘
 resource "aws_subnet" "this" {
 
@@ -20,13 +20,14 @@ resource "aws_subnet" "this" {
   map_public_ip_on_launch                        = false  # bool | optional
   outpost_arn                                    = ""     # string | optional
   private_dns_hostname_type_on_launch            = ""     # string | optional+computed
-  tags                                           = {}     # map of string | optional
-  tags_all                                       = {}     # map of string | optional+computed
-  # arn                                            = ... # string | computed
-  # ipv6_cidr_block_association_id                 = ... # string | computed
-  # owner_id                                       = ... # string | computed
+  tags                                           = {}     # map(string) | optional
+  tags_all                                       = {}     # map(string) | optional+computed
 
-  timeouts {
+  # arn                                            = ""     # string | computed
+  # ipv6_cidr_block_association_id                 = ""     # string | computed
+  # owner_id                                       = ""     # string | computed
+
+  timeouts { # single
     create = ""     # string | optional
     delete = ""     # string | optional
 

@@ -671,33 +671,6 @@ export default function WorkspaceView({
     [selectedResource, setNodes],
   );
 
-  const updateResourceAttributeById = useCallback(
-    (resourceId: string, attribute: string, value: unknown) => {
-      setProject((currentProject) => {
-        const updatedProject = {
-          ...currentProject,
-          resources: currentProject.resources.map((resource) =>
-            resource.id === resourceId
-              ? {
-                  ...resource,
-                  config: {
-                    ...resource.config,
-                    attributes: {
-                      ...resource.config.attributes,
-                      [attribute]: value,
-                    },
-                  },
-                }
-              : resource,
-          ),
-        };
-        void saveProjectToHCL(updatedProject);
-        return updatedProject;
-      });
-    },
-    [],
-  );
-
   const appendCodeValidationLogs = useCallback((entries: BottomPanelLogEntry[]) => {
     if (!entries.length) return;
     setCodeLogs((current) => [...entries, ...current].slice(0, 200));
@@ -840,7 +813,6 @@ export default function WorkspaceView({
                 projectDir={projectDir}
                 initialCustomFiles={codeFiles}
                 onCustomFilesChange={setCodeFiles}
-                onUpdateAttribute={updateResourceAttributeById}
                 onValidationLogs={appendCodeValidationLogs}
                 onOpenLogsPanel={() => setCodeBottomOpenSignal((current) => current + 1)}
               />

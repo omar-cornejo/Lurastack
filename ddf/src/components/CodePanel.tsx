@@ -15,7 +15,6 @@ type CodePanelProps = {
   projectDir?: string;
   initialCustomFiles?: DdfCodeFile[];
   onCustomFilesChange?: (files: DdfCodeFile[]) => void;
-  onUpdateAttribute: (resourceId: string, attribute: string, value: unknown) => void;
   onValidationLogs: (entries: BottomPanelLogEntry[]) => void;
   onOpenLogsPanel: () => void;
 };
@@ -46,10 +45,6 @@ type TerraformSourceFile = {
   content: string;
 };
 
-type HclBlockNode = {
-  attributes: Record<string, unknown>;
-  blocks: Record<string, HclBlockNode>;
-};
 
 type ExplorerNode = {
   id: string;
@@ -67,42 +62,6 @@ type PendingDeleteTarget = {
 
 const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 
-const parseHclInputToAttribute = (input: string): unknown => {
-  const trimmed = input.trim();
-  if (!trimmed) return "";
-  if (trimmed === "true") return true;
-  if (trimmed === "false") return false;
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed.slice(1, -1);
-  }
-  return trimmed;
-};
-
-const toEditableLiteral = (value: unknown): string => {
-  if (typeof value === "boolean" || typeof value === "number") {
-    return String(value);
-  }
-
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) {
-      return trimmed;
-    }
-    return `"${trimmed.replace(/"/g, '\\"')}"`;
-  }
-
-  if (value === null || value === undefined) {
-    return '""';
-  }
-
-  return `"${String(value).replace(/"/g, '\\"')}"`;
-};
-
-const tokenKeyword = "text-[#c586c0]";
-const tokenProperty = "text-[#9cdcfe]";
-const tokenString = "text-[#ce9178]";
-const tokenPunctuation = "text-[#d4d4d4]";
 
 const basename = (input?: string) => {
   if (!input) return undefined;
@@ -118,7 +77,6 @@ export default function CodePanel({
   region: _region,
   projectDir,
   onCustomFilesChange,
-  onUpdateAttribute,
   onValidationLogs,
   onOpenLogsPanel,
 }: CodePanelProps) {
@@ -293,8 +251,13 @@ export default function CodePanel({
   );
 
   const auxiliaryContent = openFileContents[activeFilePath] ?? "";
-
   const lineCount = Math.max(1, auxiliaryContent.split("\n").length);
+
+  const mainTfContent = useMemo(
+    () => buildMainTerraformFile(resources, schemas, cloudProvider, _region),
+    [resources, schemas, cloudProvider, _region],
+  );
+  const mainTfLineCount = Math.max(1, mainTfContent.split("\n").length);
 
   const loadFileIntoEditor = async (relativePath: string) => {
     if (!projectDir || relativePath === "main.tf") {
@@ -550,7 +513,7 @@ export default function CodePanel({
       const files: TerraformSourceFile[] = [
         {
           name: "main.tf",
-          content: buildMainTerraformFile(resources, cloudProvider, _region),
+          content: buildMainTerraformFile(resources, schemas, cloudProvider, _region),
         },
         ...additionalFiles,
       ];
@@ -707,13 +670,6 @@ export default function CodePanel({
   const handleEditorScroll = () => {
     if (!codeEditorRef.current || !lineGutterRef.current) return;
     lineGutterRef.current.scrollTop = codeEditorRef.current.scrollTop;
-  };
-
-  let lineNumber = 1;
-  const nextLine = () => {
-    const current = lineNumber;
-    lineNumber += 1;
-    return current;
   };
 
   const renderExplorerNode = (node: ExplorerNode, depth = 0) => {
@@ -899,7 +855,7 @@ export default function CodePanel({
                 </h2>
                 <p className="text-xs text-slate-400">
                   {activeFilePath === "main.tf"
-                    ? "Only attribute values are editable in this file."
+                    ? "Generated from templates. Edit attributes in the inspector."
                     : "Editable HCL draft file."}
                 </p>
               </div>
@@ -915,141 +871,30 @@ export default function CodePanel({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto p-2 font-mono text-xs text-slate-200">
+          <div className="min-h-0 flex-1 overflow-hidden p-2 font-mono text-xs text-slate-200">
             {activeFilePath === "main.tf" ? (
               resourcesWithSchemas.length === 0 ? (
                 <div className="rounded border border-dashed border-slate-600 bg-[#252526] p-4 text-center text-slate-400">
                   No resources in canvas yet.
                 </div>
               ) : (
-                <div className="space-y-0 bg-[#1e1e1e]">
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 text-slate-300">
-                      <span className={tokenKeyword}>terraform</span> <span className={tokenPunctuation}>{"{"}</span>
-                    </div>
+                <div className="grid h-full min-h-0 grid-cols-[48px_1fr] overflow-hidden rounded bg-[#1e1e1e]">
+                  <div
+                    ref={lineGutterRef}
+                    className="overflow-hidden border-r border-slate-800 bg-[#252526] px-2 py-2 text-right text-[11px] leading-5 text-slate-500"
+                  >
+                    {Array.from({ length: mainTfLineCount }, (_, index) => (
+                      <div key={index}>{index + 1}</div>
+                    ))}
                   </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-6 text-slate-300">
-                      <span className={tokenKeyword}>required_providers</span> <span className={tokenPunctuation}>{"{"}</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-10 text-slate-300">
-                      <span className={tokenProperty}>{cloudProvider}</span> <span className={tokenPunctuation}>=</span> <span className={tokenPunctuation}>{"{"}</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-14 text-slate-300">
-                      <span className={tokenProperty}>source</span> <span className={tokenPunctuation}>=</span> <span className={tokenString}>"hashicorp/{cloudProvider}"</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-14 text-slate-300">
-                      <span className={tokenProperty}>version</span> <span className={tokenPunctuation}>=</span> <span className={tokenString}>"~&gt; 5.0"</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-10 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-6 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1"></div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 text-slate-300">
-                      <span className={tokenKeyword}>provider</span> <span className={tokenString}>"{cloudProvider}"</span> <span className={tokenPunctuation}>{"{"}</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 pl-6 text-slate-300">
-                      <span className={tokenProperty}>region</span> <span className={tokenPunctuation}>=</span> <span className={tokenString}>"{_region}"</span>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-[48px_1fr]">
-                    <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                    <div className="px-2 py-1 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
-                  </div>
-
-                  {resourcesWithSchemas.map(({ resource, schema }) => {
-                    const inspectorProperties = getInspectorPropertiesForSchema(schema);
-                    const requiredAttributes = inspectorProperties
-                      .filter((property) => property.required)
-                      .map((property) => property.name);
-
-                    const currentKeys = Object.keys(resource.config.attributes ?? {});
-                    const mergedAttributeKeys = Array.from(
-                      new Set([...currentKeys, ...requiredAttributes]),
-                    ).sort((left, right) => left.localeCompare(right));
-
-                    return (
-                      <div key={resource.id} className="contents">
-                        <div className="grid grid-cols-[48px_1fr]">
-                          <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                          <div className="px-2 py-1"></div>
-                        </div>
-                        <div className="grid grid-cols-[48px_1fr]">
-                          <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                          <div className="px-2 py-1 text-slate-300">
-                            <span className={tokenKeyword}>{resource.kind ?? "resource"}</span>{" "}
-                            <span className={tokenString}>"{resource.type}"</span>{" "}
-                            <span className={tokenString}>"{resource.name}"</span>{" "}
-                            <span className={tokenPunctuation}>{"{"}</span>
-                          </div>
-                        </div>
-
-                        {mergedAttributeKeys.map((attributeKey) => {
-                          const currentValue = resource.config.attributes?.[attributeKey] ?? "";
-                          const displayValue = toEditableLiteral(currentValue);
-                          const isRequired = requiredAttributes.includes(attributeKey);
-
-                          return (
-                            <div key={`${resource.id}-${attributeKey}`} className="grid grid-cols-[48px_1fr]">
-                              <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                              <label className="flex items-center gap-2 px-2 py-1 pl-6">
-                                <span className={`min-w-[220px] break-all ${tokenProperty}`}>
-                                  {attributeKey}
-                                  {isRequired ? <span className="ml-1 text-red-400">*</span> : null}
-                                </span>
-                                <span className={tokenPunctuation}>=</span>
-                                <input
-                                  value={displayValue}
-                                  onChange={(event) =>
-                                    onUpdateAttribute(
-                                      resource.id,
-                                      attributeKey,
-                                      parseHclInputToAttribute(event.target.value),
-                                    )
-                                  }
-                                  className={`w-full rounded border border-slate-600 bg-[#252526] px-2 py-1 text-xs ${tokenString} outline-none focus:border-slate-400`}
-                                />
-                              </label>
-                            </div>
-                          );
-                        })}
-
-                        <div className="grid grid-cols-[48px_1fr]">
-                          <div className="px-2 py-1 text-right text-[11px] text-slate-500">{nextLine()}</div>
-                          <div className="px-2 py-1 text-slate-300"><span className={tokenPunctuation}>{"}"}</span></div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                  <textarea
+                    ref={codeEditorRef}
+                    value={mainTfContent}
+                    readOnly
+                    onScroll={handleEditorScroll}
+                    spellCheck={false}
+                    className="h-full min-h-0 w-full resize-none bg-[#1e1e1e] px-3 py-2 font-mono text-xs leading-5 text-slate-200 outline-none"
+                  />
                 </div>
               )
             ) : (
@@ -1128,54 +973,31 @@ const toHclLiteral = (value: unknown): string => {
   return `"${String(value).replace(/"/g, '\\"')}"`;
 };
 
-const buildHclBlockTree = (attributes: Record<string, unknown>): HclBlockNode => {
-  const root: HclBlockNode = { attributes: {}, blocks: {} };
 
-  Object.entries(attributes ?? {}).forEach(([rawKey, rawValue]) => {
-    if (rawValue === undefined || rawValue === null) return;
-    if (typeof rawValue === "string" && rawValue.trim() === "") return;
+const buildResourceHcl = (
+  resource: TerraformResource,
+  schema: TerraformNodeSchema | undefined,
+): string => {
+  const inspectorProperties = getInspectorPropertiesForSchema(schema);
+  const blockKind = resource.kind ?? "resource";
+  const attrs = resource.config.attributes ?? {};
 
-    const pathParts = rawKey.split(".").filter(Boolean);
-    if (!pathParts.length) return;
+  const configuredLines = Object.entries(attrs)
+    .filter(([, v]) => v !== "" && v !== undefined && v !== null)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, value]) => `  ${key} = ${toHclLiteral(value)}`);
 
-    if (pathParts.length === 1) {
-      root.attributes[pathParts[0]] = rawValue;
-      return;
-    }
+  const requiredEmptyLines = inspectorProperties
+    .filter((p) => p.required)
+    .filter((p) => !(p.name in attrs) || attrs[p.name] === "" || attrs[p.name] === undefined || attrs[p.name] === null)
+    .map((p) => `  ${p.name} = ""`);
 
-    let cursor = root;
-    for (const blockName of pathParts.slice(0, -1)) {
-      if (!cursor.blocks[blockName]) {
-        cursor.blocks[blockName] = { attributes: {}, blocks: {} };
-      }
-      cursor = cursor.blocks[blockName];
-    }
-
-    const attrName = pathParts[pathParts.length - 1];
-    cursor.attributes[attrName] = rawValue;
-  });
-
-  return root;
-};
-
-const renderHclBlockNode = (node: HclBlockNode, indent: string): string => {
-  let lines = "";
-
-  Object.entries(node.attributes).forEach(([key, value]) => {
-    lines += `${indent}${key} = ${toHclLiteral(value)}\n`;
-  });
-
-  Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
-    lines += `${indent}${blockName} {\n`;
-    lines += renderHclBlockNode(blockNode, `${indent}  `);
-    lines += `${indent}}\n`;
-  });
-
-  return lines;
+  return [`${blockKind} "${resource.type}" "${resource.name}" {`, ...configuredLines, ...requiredEmptyLines, "}"].join("\n");
 };
 
 const buildMainTerraformFile = (
   resources: TerraformResource[],
+  schemas: TerraformNodeSchema[],
   cloudProvider: "aws",
   region: string,
 ) => {
@@ -1192,11 +1014,10 @@ const buildMainTerraformFile = (
   hcl += "}\n\n";
 
   resources.forEach((resource) => {
-    hcl += `${resource.kind ?? "resource"} \"${resource.type}\" \"${resource.name}\" {\n`;
-    const blockTree = buildHclBlockTree(resource.config.attributes ?? {});
-    hcl += renderHclBlockNode(blockTree, "  ");
-    hcl += "}\n\n";
+    const schema = schemas.find((s) => s.id === resource.schemaId);
+    hcl += buildResourceHcl(resource, schema);
+    hcl += "\n\n";
   });
 
-  return hcl;
+  return hcl.trimEnd() + "\n";
 };

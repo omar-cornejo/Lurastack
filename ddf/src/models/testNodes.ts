@@ -1,3 +1,12 @@
+import awsInstanceTpl from "../schemas/aws/templates/resources/aws_instance.tf.tpl?raw";
+import awsInternetGatewayTpl from "../schemas/aws/templates/resources/aws_internet_gateway.tf.tpl?raw";
+import awsNetworkInterfaceTpl from "../schemas/aws/templates/resources/aws_network_interface.tf.tpl?raw";
+import awsSecurityGroupTpl from "../schemas/aws/templates/resources/aws_security_group.tf.tpl?raw";
+import awsSubnetTpl from "../schemas/aws/templates/resources/aws_subnet.tf.tpl?raw";
+import awsVpcTpl from "../schemas/aws/templates/resources/aws_vpc.tf.tpl?raw";
+import awsAvailabilityZoneTpl from "../schemas/aws/templates/data_sources/aws_availability_zone.tf.tpl?raw";
+import awsRegionTpl from "../schemas/aws/templates/data_sources/aws_region.tf.tpl?raw";
+
 export type TerraformNodeProperty = {
   name: string;
   type: string;
@@ -29,16 +38,7 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
     terraformType: "aws_instance",
     terraformKind: "resource",
     icon: MOCK_ICON_PATH,
-    hclTemplate: `resource "aws_instance" "web" {
-  ami                    = "ami-xxxxxxxx"
-  instance_type          = "t3.micro"
-  subnet_id              = aws_subnet.public.id
-  vpc_security_group_ids = [aws_security_group.web.id]
-
-  tags = {
-    Name = "ec2-web"
-  }
-}`,
+    hclTemplate: awsInstanceTpl,
     properties: [
       { name: "ami", type: "string", required: true },
       { name: "instance_type", type: "string", required: true },
@@ -59,13 +59,7 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
     terraformType: "aws_internet_gateway",
     terraformKind: "resource",
     icon: MOCK_ICON_PATH,
-    hclTemplate: `resource "aws_internet_gateway" "igw" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "main-igw"
-  }
-}`,
+    hclTemplate: awsInternetGatewayTpl,
     properties: [
       { name: "vpc_id", type: "string" },
       { name: "tags", type: "map(string)" },
@@ -84,15 +78,7 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
     terraformType: "aws_subnet",
     terraformKind: "resource",
     icon: MOCK_ICON_PATH,
-    hclTemplate: `resource "aws_subnet" "public" {
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = "10.0.1.0/24"
-  availability_zone = data.aws_availability_zone.selected.name
-
-  tags = {
-    Name = "public-subnet"
-  }
-}`,
+    hclTemplate: awsSubnetTpl,
     properties: [
       { name: "vpc_id", type: "string", required: true },
       { name: "cidr_block", type: "string" },
@@ -112,15 +98,7 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
     terraformType: "aws_vpc",
     terraformKind: "resource",
     icon: MOCK_ICON_PATH,
-    hclTemplate: `resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "main-vpc"
-  }
-}`,
+    hclTemplate: awsVpcTpl,
     properties: [
       { name: "cidr_block", type: "string" },
       { name: "enable_dns_support", type: "bool" },
@@ -140,25 +118,7 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
     terraformType: "aws_security_group",
     terraformKind: "resource",
     icon: MOCK_ICON_PATH,
-    hclTemplate: `resource "aws_security_group" "web" {
-  name        = "web-sg"
-  description = "Security group for web instance"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}`,
+    hclTemplate: awsSecurityGroupTpl,
     properties: [
       { name: "name", type: "string" },
       { name: "description", type: "string" },
@@ -179,15 +139,7 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
     terraformType: "aws_network_interface",
     terraformKind: "resource",
     icon: MOCK_ICON_PATH,
-    hclTemplate: `resource "aws_network_interface" "eni" {
-  subnet_id       = aws_subnet.public.id
-  private_ips     = ["10.0.1.10"]
-  security_groups = [aws_security_group.web.id]
-
-  tags = {
-    Name = "eni-main"
-  }
-}`,
+    hclTemplate: awsNetworkInterfaceTpl,
     properties: [
       { name: "subnet_id", type: "string", required: true },
       { name: "private_ips", type: "set(string)" },
@@ -211,7 +163,7 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
     terraformType: "aws_region",
     terraformKind: "data",
     icon: MOCK_ICON_PATH,
-    hclTemplate: `data "aws_region" "current" {}`,
+    hclTemplate: awsRegionTpl,
     properties: [
       { name: "name", type: "string", computed: true },
       { name: "endpoint", type: "string", computed: true },
@@ -230,9 +182,7 @@ export const TEST_NODE_SCHEMAS: TerraformNodeSchema[] = [
     terraformType: "aws_availability_zone",
     terraformKind: "data",
     icon: MOCK_ICON_PATH,
-    hclTemplate: `data "aws_availability_zone" "selected" {
-  name = "us-east-1a"
-}`,
+    hclTemplate: awsAvailabilityZoneTpl,
     properties: [
       { name: "name", type: "string" },
       { name: "state", type: "string", computed: true },
