@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { HclCodeArea } from "./HclCodeArea";
 import { Icon } from "@iconify/react";
 import type { Node } from "reactflow";
 import type { CanvasTerraformNodeData } from "../canvas/types";
@@ -890,37 +891,44 @@ export const RightPanel = ({
           {activeTab === "hcl" && (
             <div className="h-full flex flex-col">
               <p className="mb-2 text-sm font-medium text-gray-800">Selected node HCL</p>
-              <textarea
-                value={hclDraft}
-                onChange={(event) => {
-                  const next = event.target.value;
-                  if (!selectedResource) return;
+              {(!selectedNode || !selectedResource || !selectedSchema) ? (
+                <textarea
+                  disabled
+                  value=""
+                  className="h-[65vh] w-full rounded border border-gray-200 bg-slate-100 p-2 font-mono text-xs text-slate-500"
+                />
+              ) : (
+                <HclCodeArea
+                  value={hclDraft}
+                  onChange={(next) => {
+                    if (!selectedResource) return;
 
-                  const currentAttributes = selectedResource.config.attributes ?? {};
-                  const allowedKeys = new Set(Object.keys(currentAttributes));
-                  const parsedAllowedAttributes = parseHclAttributesForAllowedKeys(next, allowedKeys);
+                    const currentAttributes = selectedResource.config.attributes ?? {};
+                    const allowedKeys = new Set(Object.keys(currentAttributes));
+                    const parsedAllowedAttributes = parseHclAttributesForAllowedKeys(next, allowedKeys);
 
-                  const nextAttributes: Record<string, unknown> = { ...currentAttributes };
-                  Object.keys(currentAttributes).forEach((key) => {
-                    if (Object.prototype.hasOwnProperty.call(parsedAllowedAttributes, key)) {
-                      nextAttributes[key] = parsedAllowedAttributes[key];
-                    }
-                  });
+                    const nextAttributes: Record<string, unknown> = { ...currentAttributes };
+                    Object.keys(currentAttributes).forEach((key) => {
+                      if (Object.prototype.hasOwnProperty.call(parsedAllowedAttributes, key)) {
+                        nextAttributes[key] = parsedAllowedAttributes[key];
+                      }
+                    });
 
-                  const nextResource: TerraformResource = {
-                    ...selectedResource,
-                    config: {
-                      ...selectedResource.config,
-                      attributes: nextAttributes,
-                    },
-                  };
+                    const nextResource: TerraformResource = {
+                      ...selectedResource,
+                      config: {
+                        ...selectedResource.config,
+                        attributes: nextAttributes,
+                      },
+                    };
 
-                  setHclDraft(buildHclFromResource(nextResource));
-                  onUpdateSelectedResource(() => nextResource);
-                }}
-                disabled={!selectedNode || !selectedResource || !selectedSchema}
-                className="h-[65vh] w-full rounded border border-gray-200 bg-[#0b1120] p-2 font-mono text-xs text-[#e5e7eb] disabled:bg-slate-100 disabled:text-slate-500"
-              />
+                    setHclDraft(buildHclFromResource(nextResource));
+                    onUpdateSelectedResource(() => nextResource);
+                  }}
+                  containerClassName="h-[65vh] rounded border border-gray-200 bg-[#0b1120]"
+                  innerClassName="p-2 font-mono text-xs"
+                />
+              )}
             </div>
           )}
         </div>

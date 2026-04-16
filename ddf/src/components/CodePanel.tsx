@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { HclCodeArea } from "./HclCodeArea";
 import { invoke } from "@tauri-apps/api/core";
 import { readDir, readTextFile, writeTextFile, remove, rename, mkdir } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
@@ -1094,13 +1095,13 @@ export default function CodePanel({
                       <div key={index}>{index + 1}</div>
                     ))}
                   </div>
-                  <textarea
-                    ref={codeEditorRef}
+                  <HclCodeArea
                     value={mainTfDraft}
-                    onChange={(event) => handleMainTfContentChange(event.target.value)}
+                    onChange={handleMainTfContentChange}
                     onScroll={handleEditorScroll}
-                    spellCheck={false}
-                    className="h-full min-h-0 w-full resize-none bg-[#1e1e1e] px-3 py-2 font-mono text-xs leading-5 text-slate-200 outline-none"
+                    textareaRef={codeEditorRef}
+                    containerClassName="h-full min-h-0"
+                    innerClassName="px-3 py-2 font-mono text-xs leading-5"
                   />
                 </div>
               )
@@ -1114,13 +1115,13 @@ export default function CodePanel({
                     <div key={index}>{index + 1}</div>
                   ))}
                 </div>
-                <textarea
-                  ref={codeEditorRef}
+                <HclCodeArea
                   value={auxiliaryContent}
-                  onChange={(event) => handleAuxiliaryContentChange(event.target.value)}
+                  onChange={handleAuxiliaryContentChange}
                   onScroll={handleEditorScroll}
-                  spellCheck={false}
-                  className="h-full min-h-0 w-full resize-none bg-[#1e1e1e] px-3 py-2 font-mono text-xs leading-5 text-slate-200 outline-none"
+                  textareaRef={codeEditorRef}
+                  containerClassName="h-full min-h-0"
+                  innerClassName="px-3 py-2 font-mono text-xs leading-5"
                 />
               </div>
             )}
