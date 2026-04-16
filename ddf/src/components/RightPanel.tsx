@@ -40,6 +40,7 @@ const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
 let latestMapperDragPayload = "";
 
 const terraformRefPattern = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+const INVALID_HCL_VALUE = Symbol("invalid-hcl-value");
 
 const sanitizeLooseQuotedString = (raw: string): string => {
   let value = raw.trim();
@@ -89,13 +90,16 @@ const normalizeMappedReference = (
   return `${prefix}${schema.terraformType}.${resource.name}.${attr}`;
 };
 
-const parseHclValueToAttribute = (input: string): unknown => {
+const parseHclValueToAttribute = (input: string): unknown | typeof INVALID_HCL_VALUE => {
   const trimmed = input.trim();
   if (!trimmed) return "";
   if (trimmed === "null") return null;
   if (trimmed === "true") return true;
   if (trimmed === "false") return false;
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (trimmed.includes('"') && !(trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+    return INVALID_HCL_VALUE;
+  }
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
     try {
       const parsed = JSON.parse(trimmed);
@@ -133,7 +137,9 @@ const parseHclAttributesForAllowedKeys = (
 
     const [, key, rawValue] = simpleAssignment;
     if (!allowedKeys.has(key)) return;
-    attributes[key] = parseHclValueToAttribute(rawValue);
+    const parsed = parseHclValueToAttribute(rawValue);
+    if (parsed === INVALID_HCL_VALUE) return;
+    attributes[key] = parsed;
   });
 
   return attributes;
