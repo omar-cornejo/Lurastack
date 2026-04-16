@@ -41,6 +41,7 @@ export function HclCodeArea({
         ref={preRef}
         aria-hidden
         className={`pointer-events-none absolute inset-0 m-0 overflow-hidden whitespace-pre-wrap break-words select-none ${innerClassName}`}
+        style={{ color: "#d4d4d4" }}
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: highlighted + "\n\u200B" }}
       />
