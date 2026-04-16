@@ -671,6 +671,100 @@ export default function WorkspaceView({
     [selectedResource, setNodes],
   );
 
+  const syncResourcesFromMainTfBlocks = useCallback(
+    (blocks: Array<{
+      kind: "resource" | "data";
+      type: string;
+      name: string;
+      attributes: Record<string, unknown>;
+    }>) => {
+      if (!blocks.length) return;
+
+      const renamedResourceLabels: Array<{ resourceId: string; name: string }> = [];
+
+      setProject((currentProject) => {
+        let changed = false;
+
+        const updatedResources = currentProject.resources.map((resource, index) => {
+          const block = blocks[index];
+          if (!block) return resource;
+
+          const nextAttributes = { ...resource.config.attributes };
+          Object.keys(nextAttributes).forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(block.attributes, key)) {
+              nextAttributes[key] = block.attributes[key];
+            }
+          });
+
+          const nextKind = block.kind;
+          const nextType = block.type || resource.type;
+          const nextName = block.name || resource.name;
+
+          const attributesChanged =
+            JSON.stringify(resource.config.attributes) !== JSON.stringify(nextAttributes);
+          const identityChanged =
+            resource.kind !== nextKind ||
+            resource.type !== nextType ||
+            resource.name !== nextName;
+
+          if (!attributesChanged && !identityChanged) {
+            return resource;
+          }
+
+          changed = true;
+
+          if (resource.name !== nextName) {
+            renamedResourceLabels.push({
+              resourceId: resource.id,
+              name: nextName,
+            });
+          }
+
+          return {
+            ...resource,
+            kind: nextKind,
+            type: nextType,
+            name: nextName,
+            config: {
+              ...resource.config,
+              attributes: nextAttributes,
+            },
+          };
+        });
+
+        if (!changed) return currentProject;
+
+        const updatedProject = {
+          ...currentProject,
+          resources: updatedResources,
+        };
+        void saveProjectToHCL(updatedProject);
+        return updatedProject;
+      });
+
+      if (renamedResourceLabels.length) {
+        const renamedByResourceId = new Map(
+          renamedResourceLabels.map((entry) => [entry.resourceId, entry.name]),
+        );
+
+        setNodes((currentNodes) =>
+          currentNodes.map((node) => {
+            const nextLabel = renamedByResourceId.get(node.data.resourceId);
+            if (!nextLabel || node.data.label === nextLabel) return node;
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                label: nextLabel,
+              },
+            };
+          }),
+        );
+      }
+    },
+    [setNodes],
+  );
+
   const appendCodeValidationLogs = useCallback((entries: BottomPanelLogEntry[]) => {
     if (!entries.length) return;
     setCodeLogs((current) => [...entries, ...current].slice(0, 200));
@@ -813,6 +907,7 @@ export default function WorkspaceView({
                 projectDir={projectDir}
                 initialCustomFiles={codeFiles}
                 onCustomFilesChange={setCodeFiles}
+                onMainTfBlocksChange={syncResourcesFromMainTfBlocks}
                 onValidationLogs={appendCodeValidationLogs}
                 onOpenLogsPanel={() => setCodeBottomOpenSignal((current) => current + 1)}
               />

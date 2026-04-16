@@ -14,8 +14,16 @@ type CodePanelProps = {
   projectDir?: string;
   initialCustomFiles?: DdfCodeFile[];
   onCustomFilesChange?: (files: DdfCodeFile[]) => void;
+  onMainTfBlocksChange?: (blocks: ParsedMainTfBlock[]) => void;
   onValidationLogs: (entries: BottomPanelLogEntry[]) => void;
   onOpenLogsPanel: () => void;
+};
+
+type ParsedMainTfBlock = {
+  kind: "resource" | "data";
+  type: string;
+  name: string;
+  attributes: Record<string, unknown>;
 };
 
 type TerraformValidationDiagnostic = {
@@ -61,6 +69,190 @@ type PendingDeleteTarget = {
 
 const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 
+const sanitizeLooseQuotedString = (raw: string): string => {
+  let value = raw.trim();
+  if (!value) return "";
+
+  value = value.replace(/^\\+"+/, "");
+  value = value.replace(/\\+"+$/, "");
+  value = value.replace(/^"+/, "");
+  value = value.replace(/"+$/, "");
+
+  return value;
+};
+
+const getQuotedContentRanges = (text: string): Array<{ start: number; end: number }> => {
+  const ranges: Array<{ start: number; end: number }> = [];
+  let quoteStart = -1;
+  let escaping = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+
+    if (escaping) {
+      escaping = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaping = true;
+      continue;
+    }
+
+    if (char !== '"') continue;
+
+    if (quoteStart === -1) {
+      quoteStart = index;
+    } else {
+      ranges.push({ start: quoteStart + 1, end: index });
+      quoteStart = -1;
+    }
+  }
+
+  return ranges;
+};
+
+const isPositionInsideQuotedContent = (text: string, position: number) =>
+  getQuotedContentRanges(text).some((range) => position >= range.start && position <= range.end);
+
+const isRangeInsideQuotedContent = (text: string, start: number, end: number) => {
+  if (end <= start) return true;
+  const ranges = getQuotedContentRanges(text);
+  return ranges.some((range) => start >= range.start && end <= range.end);
+};
+
+const canEditOnlyInsideQuotes = (previous: string, next: string) => {
+  if (previous === next) return true;
+
+  let prefix = 0;
+  while (
+    prefix < previous.length &&
+    prefix < next.length &&
+    previous[prefix] === next[prefix]
+  ) {
+    prefix += 1;
+  }
+
+  let prevSuffix = previous.length;
+  let nextSuffix = next.length;
+  while (
+    prevSuffix > prefix &&
+    nextSuffix > prefix &&
+    previous[prevSuffix - 1] === next[nextSuffix - 1]
+  ) {
+    prevSuffix -= 1;
+    nextSuffix -= 1;
+  }
+
+  const removedLen = prevSuffix - prefix;
+  const addedLen = nextSuffix - prefix;
+
+  if (removedLen > 0 && !isRangeInsideQuotedContent(previous, prefix, prevSuffix)) {
+    return false;
+  }
+
+  if (addedLen > 0 && !isPositionInsideQuotedContent(previous, prefix)) {
+    return false;
+  }
+
+  return true;
+};
+
+const pruneEmptyAttributeAssignments = (hcl: string): string => {
+  const lines = hcl.split("\n");
+  const nextLines: string[] = [];
+  let blockDepth = 0;
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    const opens = (line.match(/{/g) ?? []).length;
+    const closes = (line.match(/}/g) ?? []).length;
+    const isInsideBlock = blockDepth > 0;
+
+    const isEmptyAssignment =
+      /^([a-zA-Z0-9_.-]+)\s*=\s*""\s*$/.test(trimmed) ||
+      /^([a-zA-Z0-9_.-]+)\s*=\s*$/.test(trimmed);
+
+    if (!(isInsideBlock && isEmptyAssignment)) {
+      nextLines.push(line);
+    }
+
+    blockDepth += opens;
+    blockDepth -= closes;
+    if (blockDepth < 0) blockDepth = 0;
+  });
+
+  return nextLines.join("\n");
+};
+
+const parseHclValueToAttribute = (rawValue: string): unknown => {
+  const trimmed = rawValue.trim();
+  if (!trimmed) return "";
+  if (trimmed === "null") return null;
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return typeof parsed === "string" ? sanitizeLooseQuotedString(parsed) : parsed;
+    } catch {
+      return sanitizeLooseQuotedString(trimmed.slice(1, -1));
+    }
+  }
+  return sanitizeLooseQuotedString(trimmed);
+};
+
+const parseMainTfBlocks = (hcl: string): ParsedMainTfBlock[] => {
+  const lines = hcl.split("\n");
+  const blocks: ParsedMainTfBlock[] = [];
+
+  let index = 0;
+  while (index < lines.length) {
+    const header = lines[index]?.trim() ?? "";
+    const match = header.match(/^(resource|data)\s+"([^"]+)"\s+"([^"]+)"\s*\{\s*$/);
+    if (!match) {
+      index += 1;
+      continue;
+    }
+
+    const blockKind = match[1] as "resource" | "data";
+    const blockType = match[2] ?? "";
+    const blockName = match[3] ?? "";
+    const attributes: Record<string, unknown> = {};
+
+    let depth = 1;
+    index += 1;
+
+    while (index < lines.length && depth > 0) {
+      const line = lines[index] ?? "";
+      const trimmed = line.trim();
+
+      if (depth === 1) {
+        const assignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
+        if (assignment) {
+          const [, key, rawValue] = assignment;
+          attributes[key] = parseHclValueToAttribute(rawValue);
+        }
+      }
+
+      const opens = (line.match(/{/g) ?? []).length;
+      const closes = (line.match(/}/g) ?? []).length;
+      depth += opens - closes;
+      index += 1;
+    }
+
+    blocks.push({
+      kind: blockKind,
+      type: blockType,
+      name: blockName,
+      attributes,
+    });
+  }
+
+  return blocks;
+};
+
 
 const basename = (input?: string) => {
   if (!input) return undefined;
@@ -76,6 +268,7 @@ export default function CodePanel({
   region: _region,
   projectDir,
   onCustomFilesChange,
+  onMainTfBlocksChange,
   onValidationLogs,
   onOpenLogsPanel,
 }: CodePanelProps) {
@@ -92,6 +285,7 @@ export default function CodePanel({
   const [renameValue, setRenameValue] = useState("");
   const [pendingDelete, setPendingDelete] = useState<PendingDeleteTarget | null>(null);
   const [isValidatingTerraform, setIsValidatingTerraform] = useState(false);
+  const [mainTfDraft, setMainTfDraft] = useState("");
   const codeEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const lineGutterRef = useRef<HTMLDivElement | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
@@ -256,7 +450,11 @@ export default function CodePanel({
     () => buildMainTerraformFile(resources, cloudProvider, _region),
     [resources, cloudProvider, _region],
   );
-  const mainTfLineCount = Math.max(1, mainTfContent.split("\n").length);
+  const mainTfLineCount = Math.max(1, mainTfDraft.split("\n").length);
+
+  useEffect(() => {
+    setMainTfDraft(mainTfContent);
+  }, [mainTfContent]);
 
   const loadFileIntoEditor = async (relativePath: string) => {
     if (!projectDir || relativePath === "main.tf") {
@@ -512,7 +710,7 @@ export default function CodePanel({
       const files: TerraformSourceFile[] = [
         {
           name: "main.tf",
-          content: buildMainTerraformFile(resources, cloudProvider, _region),
+          content: mainTfDraft,
         },
         ...additionalFiles,
       ];
@@ -647,9 +845,13 @@ export default function CodePanel({
 
   const handleAuxiliaryContentChange = (next: string) => {
     if (activeFilePath === "main.tf" || !projectDir) return;
+    const currentValue = openFileContents[activeFilePath] ?? "";
+    if (!canEditOnlyInsideQuotes(currentValue, next)) return;
+    const normalizedNext = pruneEmptyAttributeAssignments(next);
+
     setOpenFileContents((current) => ({
       ...current,
-      [activeFilePath]: next,
+      [activeFilePath]: normalizedNext,
     }));
 
     if (saveTimeoutRef.current !== null) {
@@ -658,12 +860,18 @@ export default function CodePanel({
 
     const targetFile = activeFilePath;
     saveTimeoutRef.current = window.setTimeout(() => {
-      void writeTextFile(toAbsolute(targetFile), next)
+      void writeTextFile(toAbsolute(targetFile), normalizedNext)
         .then(() => syncTopLevelTfFilesToParent())
         .catch(() => {
           // ignore write errors
         });
     }, 180);
+  };
+
+  const handleMainTfContentChange = (next: string) => {
+    if (!canEditOnlyInsideQuotes(mainTfDraft, next)) return;
+    onMainTfBlocksChange?.(parseMainTfBlocks(next));
+    setMainTfDraft(pruneEmptyAttributeAssignments(next));
   };
 
   const handleEditorScroll = () => {
@@ -888,8 +1096,8 @@ export default function CodePanel({
                   </div>
                   <textarea
                     ref={codeEditorRef}
-                    value={mainTfContent}
-                    readOnly
+                    value={mainTfDraft}
+                    onChange={(event) => handleMainTfContentChange(event.target.value)}
                     onScroll={handleEditorScroll}
                     spellCheck={false}
                     className="h-full min-h-0 w-full resize-none bg-[#1e1e1e] px-3 py-2 font-mono text-xs leading-5 text-slate-200 outline-none"
@@ -968,7 +1176,7 @@ const toHclLiteral = (value: unknown): string => {
     return `[${value.map(toHclLiteral).join(", ")}]`;
   }
   if (typeof value === "string") {
-    const trimmed = value.trim();
+    const trimmed = sanitizeLooseQuotedString(value);
     if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
     if (
       trimmed === "true" ||
@@ -979,9 +1187,9 @@ const toHclLiteral = (value: unknown): string => {
     ) {
       return trimmed;
     }
-    return `"${trimmed.replace(/"/g, '\\"')}"`;
+    return JSON.stringify(trimmed);
   }
-  return `"${String(value).replace(/"/g, '\\"')}"`;
+  return JSON.stringify(String(value));
 };
 
 
@@ -991,7 +1199,6 @@ const buildResourceHcl = (resource: TerraformResource): string => {
 
   const lines = Object.entries(attrs)
     .filter(([, v]) => v !== "" && v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0))
-    .sort(([a], [b]) => a.localeCompare(b))
     .map(([key, value]) => `  ${key} = ${toHclLiteral(value)}`);
 
   return [`${blockKind} "${resource.type}" "${resource.name}" {`, ...lines, "}"].join("\n");
