@@ -287,6 +287,7 @@ export default function CodePanel({
   const [pendingDelete, setPendingDelete] = useState<PendingDeleteTarget | null>(null);
   const [isValidatingTerraform, setIsValidatingTerraform] = useState(false);
   const [mainTfDraft, setMainTfDraft] = useState("");
+  const [isFreeEditMode, setIsFreeEditMode] = useState(false);
   const codeEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const lineGutterRef = useRef<HTMLDivElement | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
@@ -847,8 +848,8 @@ export default function CodePanel({
   const handleAuxiliaryContentChange = (next: string) => {
     if (activeFilePath === "main.tf" || !projectDir) return;
     const currentValue = openFileContents[activeFilePath] ?? "";
-    if (!canEditOnlyInsideQuotes(currentValue, next)) return;
-    const normalizedNext = pruneEmptyAttributeAssignments(next);
+    if (!isFreeEditMode && !canEditOnlyInsideQuotes(currentValue, next)) return;
+    const normalizedNext = isFreeEditMode ? next : pruneEmptyAttributeAssignments(next);
 
     setOpenFileContents((current) => ({
       ...current,
@@ -870,9 +871,9 @@ export default function CodePanel({
   };
 
   const handleMainTfContentChange = (next: string) => {
-    if (!canEditOnlyInsideQuotes(mainTfDraft, next)) return;
+    if (!isFreeEditMode && !canEditOnlyInsideQuotes(mainTfDraft, next)) return;
     onMainTfBlocksChange?.(parseMainTfBlocks(next));
-    setMainTfDraft(pruneEmptyAttributeAssignments(next));
+    setMainTfDraft(isFreeEditMode ? next : pruneEmptyAttributeAssignments(next));
   };
 
   const handleEditorScroll = () => {
@@ -1075,6 +1076,19 @@ export default function CodePanel({
                 className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-200 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isValidatingTerraform ? "Validating..." : "Terraform validate"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsFreeEditMode((current) => !current)}
+                className={`rounded border px-2 py-1 text-xs ${
+                  isFreeEditMode
+                    ? "border-emerald-500 text-emerald-200 hover:bg-emerald-700/20"
+                    : "border-slate-600 text-slate-200 hover:bg-slate-700/50"
+                }`}
+                title={isFreeEditMode ? "Switch to attribute-safe mode" : "Switch to full free-text editor"}
+              >
+                {isFreeEditMode ? "Modo libre" : "Modo atributos"}
               </button>
             </div>
           </div>
