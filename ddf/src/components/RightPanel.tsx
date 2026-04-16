@@ -41,6 +41,18 @@ let latestMapperDragPayload = "";
 
 const terraformRefPattern = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 
+const sanitizeLooseQuotedString = (raw: string): string => {
+  let value = raw.trim();
+  if (!value) return "";
+
+  value = value.replace(/^\\+"+/, "");
+  value = value.replace(/\\+"+$/, "");
+  value = value.replace(/^"+/, "");
+  value = value.replace(/"+$/, "");
+
+  return value;
+};
+
 const normalizeMappedReference = (
   rawValue: string,
   targetPropertyName: string,
@@ -79,12 +91,80 @@ const normalizeMappedReference = (
 
 const parseHclValueToAttribute = (input: string): unknown => {
   const trimmed = input.trim();
-  if (!trimmed || trimmed === "null") return null;
+  if (!trimmed) return "";
+  if (trimmed === "null") return null;
   if (trimmed === "true") return true;
   if (trimmed === "false") return false;
   if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) return trimmed.slice(1, -1);
-  return trimmed;
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return typeof parsed === "string" ? sanitizeLooseQuotedString(parsed) : parsed;
+    } catch {
+      return sanitizeLooseQuotedString(trimmed.slice(1, -1));
+    }
+  }
+  return sanitizeLooseQuotedString(trimmed);
+};
+
+const parseHclAttributesForAllowedKeys = (
+  hcl: string,
+  allowedKeys: Set<string>,
+): Record<string, unknown> => {
+  const attributes: Record<string, unknown> = {};
+  const lines = hcl.split("\n");
+
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (
+      !trimmed ||
+      trimmed.startsWith("#") ||
+      trimmed.startsWith("//") ||
+      trimmed.startsWith("resource ") ||
+      trimmed.startsWith("data ") ||
+      trimmed === "{" ||
+      trimmed === "}"
+    ) {
+      return;
+    }
+
+    const simpleAssignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
+    if (!simpleAssignment) return;
+
+    const [, key, rawValue] = simpleAssignment;
+    if (!allowedKeys.has(key)) return;
+    attributes[key] = parseHclValueToAttribute(rawValue);
+  });
+
+  return attributes;
+};
+
+const parseInspectorInputValue = (input: string): unknown => {
+  const trimmed = input.trim();
+  if (trimmed === "") return "";
+  if (trimmed === "null") return null;
+  if (trimmed === "true") return true;
+  if (trimmed === "false") return false;
+  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      return typeof parsed === "string" ? sanitizeLooseQuotedString(parsed) : parsed;
+    } catch {
+      return sanitizeLooseQuotedString(trimmed.slice(1, -1));
+    }
+  }
+  return sanitizeLooseQuotedString(trimmed);
+};
+
+const formatInspectorInputValue = (value: unknown): string => {
+  if (value === undefined || value === null) return "";
+  if (typeof value === "string") {
+    return sanitizeLooseQuotedString(value);
+  }
+  if (Array.isArray(value)) return JSON.stringify(value);
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
 };
 
 const toHclLiteral = (value: unknown): string => {
@@ -105,7 +185,7 @@ const toHclLiteral = (value: unknown): string => {
     return `[${value.map(toHclLiteral).join(", ")}]`;
   }
   if (typeof value === "string") {
-    const trimmed = value.trim();
+    const trimmed = sanitizeLooseQuotedString(value);
     if (terraformRefPattern.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
     if (
       trimmed === "true" || trimmed === "false" ||
@@ -113,9 +193,9 @@ const toHclLiteral = (value: unknown): string => {
       (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
       (trimmed.startsWith("{") && trimmed.endsWith("}"))
     ) return trimmed;
-    return `"${trimmed.replace(/"/g, '\\"')}"`;
+    return JSON.stringify(trimmed);
   }
-  return `"${String(value).replace(/"/g, '\\"')}"`;
+  return JSON.stringify(String(value));
 };
 
 // Returns true for set(object({...})) and list(object({...})) types —
@@ -146,9 +226,7 @@ const renderSubFieldType = (rawType: unknown): string => {
 };
 
 const displaySubFieldValue = (value: unknown): string => {
-  if (value === null || value === undefined) return "";
-  if (Array.isArray(value)) return JSON.stringify(value);
-  return String(value);
+  return formatInspectorInputValue(value);
 };
 
 const buildHclFromResource = (resource: TerraformResource) => {
@@ -163,34 +241,6 @@ const buildHclFromResource = (resource: TerraformResource) => {
     .map(([key, value]) => `  ${key} = ${toHclLiteral(value)}`);
 
   return [header, ...lines, "}"].join("\n");
-};
-
-const parseHclAttributes = (hcl: string): Record<string, unknown> => {
-  const attributes: Record<string, unknown> = {};
-  const lines = hcl.split("\n");
-
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-    if (
-      !trimmed ||
-      trimmed.startsWith("#") ||
-      trimmed.startsWith("//") ||
-      trimmed.startsWith("resource ") ||
-      trimmed.startsWith("data ") ||
-      trimmed === "{" ||
-      trimmed === "}"
-    ) {
-      return;
-    }
-
-    const simpleAssignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.+)$/);
-    if (!simpleAssignment) return;
-
-    const [, key, rawValue] = simpleAssignment;
-    attributes[key] = parseHclValueToAttribute(rawValue);
-  });
-
-  return attributes;
 };
 
 export const RightPanel = ({
@@ -683,11 +733,12 @@ export const RightPanel = ({
                                               <span className="w-[42%] shrink-0 truncate text-[10px] text-gray-500" title={fieldName}>
                                                 {fieldName}
                                               </span>
+                                              <span className="shrink-0 text-[10px] font-mono text-gray-400">=</span>
                                               <input
                                                 value={displaySubFieldValue(entry[fieldName])}
                                                 placeholder={renderSubFieldType(objectFields[fieldName])}
                                                 onChange={(e) => {
-                                                  const parsed = parseHclValueToAttribute(e.target.value);
+                                                  const parsed = parseInspectorInputValue(e.target.value);
                                                   updateEntries(
                                                     entries.map((ent, i) =>
                                                       i === entryIndex ? { ...ent, [fieldName]: parsed } : ent,
@@ -719,8 +770,7 @@ export const RightPanel = ({
                             }
 
                             // ── Default: scalar / map / simple types ──
-                            const displayValue =
-                              currentValue === undefined || currentValue === null ? "" : String(currentValue);
+                            const displayValue = formatInspectorInputValue(currentValue);
 
                             return (
                               <div key={property.name} className="rounded border border-gray-200 bg-gray-50 p-2">
@@ -752,37 +802,45 @@ export const RightPanel = ({
                                   </div>
                                 </div>
 
-                                <input
-                                  disabled={!isEditable}
-                                  value={displayValue}
-                                  onDragOver={(event) => event.preventDefault()}
-                                  onDrop={(event) => {
-                                    event.preventDefault();
-                                    const droppedValue =
-                                      event.dataTransfer.getData(OBJECT_MAPPER_REF_MIME) ||
-                                      event.dataTransfer.getData("text/plain") ||
-                                      latestMapperDragPayload;
-                                    const mapped = normalizeMappedReference(droppedValue, property.name, resources);
-                                    onUpdateSelectedResource((resource) => ({
-                                      ...resource,
-                                      config: {
-                                        ...resource.config,
-                                        attributes: { ...resource.config.attributes, [property.name]: mapped },
-                                      },
-                                    }));
-                                  }}
-                                  onChange={(event) => {
-                                    const value = normalizeMappedReference(event.target.value, property.name, resources);
-                                    onUpdateSelectedResource((resource) => ({
-                                      ...resource,
-                                      config: {
-                                        ...resource.config,
-                                        attributes: { ...resource.config.attributes, [property.name]: value },
-                                      },
-                                    }));
-                                  }}
-                                  className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs disabled:bg-gray-100"
-                                />
+                                <div className="flex items-center gap-1.5">
+                                  <span className="shrink-0 text-xs font-mono text-gray-400">=</span>
+                                  <input
+                                    disabled={!isEditable}
+                                    value={displayValue}
+                                    onDragOver={(event) => event.preventDefault()}
+                                    onDrop={(event) => {
+                                      event.preventDefault();
+                                      const droppedValue =
+                                        event.dataTransfer.getData(OBJECT_MAPPER_REF_MIME) ||
+                                        event.dataTransfer.getData("text/plain") ||
+                                        latestMapperDragPayload;
+                                      const mapped = normalizeMappedReference(droppedValue, property.name, resources);
+                                      onUpdateSelectedResource((resource) => ({
+                                        ...resource,
+                                        config: {
+                                          ...resource.config,
+                                          attributes: { ...resource.config.attributes, [property.name]: mapped },
+                                        },
+                                      }));
+                                    }}
+                                    onChange={(event) => {
+                                      const parsed = parseInspectorInputValue(event.target.value);
+                                      const nextValue =
+                                        typeof parsed === "string"
+                                          ? normalizeMappedReference(parsed, property.name, resources)
+                                          : parsed;
+
+                                      onUpdateSelectedResource((resource) => ({
+                                        ...resource,
+                                        config: {
+                                          ...resource.config,
+                                          attributes: { ...resource.config.attributes, [property.name]: nextValue },
+                                        },
+                                      }));
+                                    }}
+                                    className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs disabled:bg-gray-100"
+                                  />
+                                </div>
                               </div>
                             );
                           })}
@@ -830,20 +888,29 @@ export const RightPanel = ({
                 value={hclDraft}
                 onChange={(event) => {
                   const next = event.target.value;
-                  setHclDraft(next);
                   if (!selectedResource) return;
 
-                  const parsedAttributes = parseHclAttributes(next);
-                  onUpdateSelectedResource((resource) => ({
-                    ...resource,
+                  const currentAttributes = selectedResource.config.attributes ?? {};
+                  const allowedKeys = new Set(Object.keys(currentAttributes));
+                  const parsedAllowedAttributes = parseHclAttributesForAllowedKeys(next, allowedKeys);
+
+                  const nextAttributes: Record<string, unknown> = { ...currentAttributes };
+                  Object.keys(currentAttributes).forEach((key) => {
+                    if (Object.prototype.hasOwnProperty.call(parsedAllowedAttributes, key)) {
+                      nextAttributes[key] = parsedAllowedAttributes[key];
+                    }
+                  });
+
+                  const nextResource: TerraformResource = {
+                    ...selectedResource,
                     config: {
-                      ...resource.config,
-                      attributes: {
-                        ...resource.config.attributes,
-                        ...parsedAttributes,
-                      },
+                      ...selectedResource.config,
+                      attributes: nextAttributes,
                     },
-                  }));
+                  };
+
+                  setHclDraft(buildHclFromResource(nextResource));
+                  onUpdateSelectedResource(() => nextResource);
                 }}
                 disabled={!selectedNode || !selectedResource || !selectedSchema}
                 className="h-[65vh] w-full rounded border border-gray-200 bg-[#0b1120] p-2 font-mono text-xs text-[#e5e7eb] disabled:bg-slate-100 disabled:text-slate-500"
