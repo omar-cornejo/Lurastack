@@ -35,6 +35,11 @@ import {
 import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
 import { warn } from "../commands/warn";
 import { NODE_SCHEMAS } from "../models/nodeRegistry";
+import {
+  isSubnetIconPath,
+  resolveTerraformIcon,
+  SUBNET_PRIVATE_ICON_PATH,
+} from "../models/iconRegistry";
 import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
@@ -624,6 +629,20 @@ export default function WorkspaceView({
     ? project.resources.find((resource) => resource.id === selectedNode.data.resourceId)
     : undefined;
 
+  const getResourceIcon = useCallback(
+    (resource: TerraformResource) => {
+      if (resource.type === "aws_subnet") {
+        if (isSubnetIconPath(resource.ui.icon)) {
+          return resource.ui.icon;
+        }
+        return SUBNET_PRIVATE_ICON_PATH;
+      }
+
+      return resolveTerraformIcon(resource.type, resource.config.attributes);
+    },
+    [],
+  );
+
   const selectNode = useCallback((nodeId?: string) => {
     setSelectedNodeId(nodeId);
     setNodes((currentNodes) =>
@@ -638,7 +657,14 @@ export default function WorkspaceView({
     (updater: (resource: TerraformResource) => TerraformResource) => {
       if (!selectedResource) return;
 
-      const updatedSelectedResource = updater(selectedResource);
+      const nextResource = updater(selectedResource);
+      const updatedSelectedResource: TerraformResource = {
+        ...nextResource,
+        ui: {
+          ...nextResource.ui,
+          icon: getResourceIcon(nextResource),
+        },
+      };
 
       setProject((currentProject) => {
         const updatedResources = currentProject.resources.map((resource) =>
@@ -652,23 +678,31 @@ export default function WorkspaceView({
         return updatedProject;
       });
 
-      if (updatedSelectedResource.name !== selectedResource.name) {
-        setNodes((currentNodes) =>
-          currentNodes.map((node) =>
-            node.data.resourceId === updatedSelectedResource.id
-              ? {
-                  ...node,
-                  data: {
-                    ...node.data,
-                    label: updatedSelectedResource.name,
-                  },
-                }
-              : node,
-          ),
-        );
-      }
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          if (node.data.resourceId !== updatedSelectedResource.id) {
+            return node;
+          }
+
+          const nextLabel = updatedSelectedResource.name;
+          const nextIcon = getResourceIcon(updatedSelectedResource);
+
+          if (node.data.label === nextLabel && node.data.icon === nextIcon) {
+            return node;
+          }
+
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              label: nextLabel,
+              icon: nextIcon,
+            },
+          };
+        }),
+      );
     },
-    [selectedResource, setNodes],
+    [getResourceIcon, selectedResource, setNodes],
   );
 
   const syncResourcesFromMainTfBlocks = useCallback(
@@ -680,7 +714,7 @@ export default function WorkspaceView({
     }>) => {
       if (!blocks.length) return;
 
-      const renamedResourceLabels: Array<{ resourceId: string; name: string }> = [];
+      const visualUpdates: Array<{ resourceId: string; label: string; icon: string }> = [];
 
       setProject((currentProject) => {
         let changed = false;
@@ -699,6 +733,12 @@ export default function WorkspaceView({
           const nextKind = block.kind;
           const nextType = block.type || resource.type;
           const nextName = block.name || resource.name;
+          const nextIcon =
+            nextType === "aws_subnet"
+              ? (isSubnetIconPath(resource.ui.icon)
+                  ? resource.ui.icon
+                  : SUBNET_PRIVATE_ICON_PATH)
+              : resolveTerraformIcon(nextType, nextAttributes);
 
           const attributesChanged =
             JSON.stringify(resource.config.attributes) !== JSON.stringify(nextAttributes);
@@ -706,25 +746,29 @@ export default function WorkspaceView({
             resource.kind !== nextKind ||
             resource.type !== nextType ||
             resource.name !== nextName;
+          const iconChanged = resource.ui.icon !== nextIcon;
 
-          if (!attributesChanged && !identityChanged) {
+          if (!attributesChanged && !identityChanged && !iconChanged) {
             return resource;
           }
 
           changed = true;
 
-          if (resource.name !== nextName) {
-            renamedResourceLabels.push({
-              resourceId: resource.id,
-              name: nextName,
-            });
-          }
+          visualUpdates.push({
+            resourceId: resource.id,
+            label: nextName,
+            icon: nextIcon,
+          });
 
           return {
             ...resource,
             kind: nextKind,
             type: nextType,
             name: nextName,
+            ui: {
+              ...resource.ui,
+              icon: nextIcon,
+            },
             config: {
               ...resource.config,
               attributes: nextAttributes,
@@ -742,20 +786,27 @@ export default function WorkspaceView({
         return updatedProject;
       });
 
-      if (renamedResourceLabels.length) {
-        const renamedByResourceId = new Map(
-          renamedResourceLabels.map((entry) => [entry.resourceId, entry.name]),
+      if (visualUpdates.length) {
+        const visualByResourceId = new Map(
+          visualUpdates.map((entry) => [entry.resourceId, entry]),
         );
 
         setNodes((currentNodes) =>
           currentNodes.map((node) => {
-            const nextLabel = renamedByResourceId.get(node.data.resourceId);
-            if (!nextLabel || node.data.label === nextLabel) return node;
+            const nextVisual = visualByResourceId.get(node.data.resourceId);
+            if (!nextVisual) return node;
+            if (
+              node.data.label === nextVisual.label &&
+              node.data.icon === nextVisual.icon
+            ) {
+              return node;
+            }
             return {
               ...node,
               data: {
                 ...node.data,
-                label: nextLabel,
+                label: nextVisual.label,
+                icon: nextVisual.icon,
               },
             };
           }),
@@ -764,6 +815,32 @@ export default function WorkspaceView({
     },
     [setNodes],
   );
+
+  useEffect(() => {
+    setNodes((currentNodes) => {
+      const resourcesById = new Map(project.resources.map((resource) => [resource.id, resource]));
+      let changed = false;
+
+      const nextNodes = currentNodes.map((node) => {
+        const resource = resourcesById.get(node.data.resourceId);
+        if (!resource) return node;
+
+        const expectedIcon = getResourceIcon(resource);
+        if (node.data.icon === expectedIcon) return node;
+
+        changed = true;
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            icon: expectedIcon,
+          },
+        };
+      });
+
+      return changed ? nextNodes : currentNodes;
+    });
+  }, [getResourceIcon, project.resources, setNodes]);
 
   const appendCodeValidationLogs = useCallback((entries: BottomPanelLogEntry[]) => {
     if (!entries.length) return;

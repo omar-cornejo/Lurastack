@@ -7,6 +7,10 @@ import type { CanvasTerraformNodeData } from "../canvas/types";
 import type { TerraformResource } from "../models/terraform";
 import { NODE_SCHEMAS, type TerraformNodeSchema } from "../models/nodeRegistry";
 import {
+  SUBNET_PRIVATE_ICON_PATH,
+  SUBNET_PUBLIC_ICON_PATH,
+} from "../models/iconRegistry";
+import {
   getInspectorPropertiesForSchema,
   type InspectorProperty,
 } from "../commands/schemaInspector";
@@ -559,6 +563,30 @@ export const RightPanel = ({
                       className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs"
                     />
                   </div>
+
+                  {selectedSchema.terraformType === "aws_subnet" ? (
+                    <div className="space-y-2">
+                      <label className="block text-xs font-medium text-gray-600">Subnet visual type</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const isPublic = selectedResource.ui.icon === SUBNET_PUBLIC_ICON_PATH;
+                          onUpdateSelectedResource((resource) => ({
+                            ...resource,
+                            ui: {
+                              ...resource.ui,
+                              icon: isPublic ? SUBNET_PRIVATE_ICON_PATH : SUBNET_PUBLIC_ICON_PATH,
+                            },
+                          }));
+                        }}
+                        className="w-full rounded border border-gray-300 bg-white px-2 py-1 text-xs text-left hover:bg-gray-50"
+                      >
+                        {selectedResource.ui.icon === SUBNET_PUBLIC_ICON_PATH
+                          ? "Public subnet"
+                          : "Private subnet"}
+                      </button>
+                    </div>
+                  ) : null}
 
                   <div className="space-y-3">
                     <div className="rounded border border-gray-300 bg-white p-2">

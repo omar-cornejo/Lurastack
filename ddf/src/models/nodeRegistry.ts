@@ -19,7 +19,7 @@ export type TerraformNodeSchema = {
   sourceTemplatePath: string;
 };
 
-const MOCK_ICON_PATH = "/mock-node.svg";
+import { resolveTerraformIcon } from "./iconRegistry";
 
 // Vite glob: auto-discover all JSON schemas and HCL templates at build time.
 // To add a new resource/data source, just drop the .json schema and .tf.tpl
@@ -96,7 +96,7 @@ function buildSchemas(
       schemaGroup: group,
       terraformType,
       terraformKind: kind,
-      icon: MOCK_ICON_PATH,
+      icon: resolveTerraformIcon(terraformType),
       hclTemplate,
       properties,
       sourceSchemaPath: `src/schemas/aws/${group}/${filename}`,
