@@ -64,7 +64,7 @@ export default function BottomPanel({
     Array<"required" | "optional" | "computed">
   >([]);
   const [attributeTypeFilters, setAttributeTypeFilters] = useState<string[]>([]);
-  const [mapperSourceFilter, setMapperSourceFilter] = useState<"properties" | "connections" | "container">("properties");
+  const [mapperSourceFilter, setMapperSourceFilter] = useState<"properties" | "connections" | "container" | "zones">("properties");
   const [showTypeMenu, setShowTypeMenu] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -389,6 +389,59 @@ export default function BottomPanel({
       attributeName,
       sourceExpression: `${baseRef}.${attributeName}`,
     }));
+  }, [activeMapperItem, nodes, resources, schemas]);
+
+  const mapperInheritedFromZones = useMemo(() => {
+    if (!activeMapperItem) {
+      return [] as Array<{
+        zoneId: string;
+        zoneLabel: string;
+        entries: Array<{
+          attributeName: string;
+          sourceExpression: string;
+        }>;
+      }>;
+    }
+
+    const zoneIds = activeMapperItem.node.data.zoneContainerIds ?? [];
+    if (!zoneIds.length) return [];
+
+    return zoneIds
+      .map((zoneId) => {
+        const zoneNode = nodes.find((node) => node.id === zoneId);
+        if (!zoneNode) return undefined;
+
+        const zoneResource = resources.find((resource) => resource.id === zoneNode.data.resourceId);
+        if (!zoneResource) return undefined;
+
+        const zoneSchema = schemas.find((schema) => schema.id === zoneResource.schemaId);
+        const zoneProps = getInspectorPropertiesForSchema(zoneSchema);
+        const configuredKeys = Object.keys(zoneResource.config.attributes ?? {});
+        const schemaKeys = zoneProps.map((prop) => prop.name);
+        const allKeys = Array.from(new Set([...schemaKeys, ...configuredKeys]))
+          .filter(Boolean)
+          .sort((left, right) => left.localeCompare(right));
+
+        const prefix = zoneResource.kind === "data" ? "data." : "";
+        const baseRef = `${prefix}${zoneResource.type}.${zoneResource.name}`;
+
+        return {
+          zoneId,
+          zoneLabel: zoneNode.data.label,
+          entries: allKeys.map((attributeName) => ({
+            attributeName,
+            sourceExpression: `${baseRef}.${attributeName}`,
+          })),
+        };
+      })
+      .filter((entry): entry is {
+        zoneId: string;
+        zoneLabel: string;
+        entries: Array<{
+          attributeName: string;
+          sourceExpression: string;
+        }>;
+      } => !!entry && entry.entries.length > 0);
   }, [activeMapperItem, nodes, resources, schemas]);
 
 
@@ -872,6 +925,17 @@ export default function BottomPanel({
                           >
                             Container
                           </button>
+                          <button
+                            type="button"
+                            onClick={() => setMapperSourceFilter("zones")}
+                            className={`rounded px-2 py-1 text-[11px] font-semibold border ${
+                              mapperSourceFilter === "zones"
+                                ? "border-blue-300 bg-blue-100 text-blue-700"
+                                : "border-gray-300 bg-white text-gray-600"
+                            }`}
+                          >
+                            Zones
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -953,6 +1017,49 @@ export default function BottomPanel({
                               </div>
                             ))}
                           </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {mapperSourceFilter === "zones" && (
+                    <div className="rounded border border-gray-200 bg-white p-2">
+                      <div className="mb-1 w-full border-b border-gray-200 pb-1 flex items-center justify-between text-left">
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-700 break-all">
+                          From zones
+                        </span>
+                      </div>
+
+                      {mapperInheritedFromZones.length === 0 ? (
+                        <div className="rounded border border-dashed border-gray-300 p-2 text-xs text-gray-500">
+                          This resource is not inside any zone or no zone attributes are available.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {mapperInheritedFromZones.map((zone) => (
+                            <div key={zone.zoneId} className="rounded border border-gray-200 bg-gray-50 p-2">
+                              <div className="mb-1 text-[11px] font-semibold text-gray-700">
+                                {zone.zoneLabel}
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {zone.entries.map((item) => (
+                                  <div
+                                    key={item.sourceExpression}
+                                    className="rounded border border-violet-200 bg-violet-50 px-2 py-1 text-[10px] text-violet-800 break-all cursor-grab"
+                                    draggable
+                                    onDragStart={(event) => {
+                                      persistMapperDragValue(item.sourceExpression);
+                                      event.dataTransfer.setData(OBJECT_MAPPER_REF_MIME, item.sourceExpression);
+                                      event.dataTransfer.setData("text/plain", item.sourceExpression);
+                                      event.dataTransfer.effectAllowed = "copy";
+                                    }}
+                                  >
+                                    {item.sourceExpression}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       )}
                     </div>

@@ -2,12 +2,20 @@ import type { Node, XYPosition } from "reactflow";
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 
-export const CONTAINER_SCHEMA_IDS = new Set([
+export const HIERARCHICAL_CONTAINER_SCHEMA_IDS = new Set([
   "aws_subnet",
   "aws_vpc",
   "aws_region",
+]);
+
+export const ZONE_CONTAINER_SCHEMA_IDS = new Set([
   "aws_availability_zone",
   "aws_security_group",
+]);
+
+export const CONTAINER_SCHEMA_IDS = new Set([
+  ...HIERARCHICAL_CONTAINER_SCHEMA_IDS,
+  ...ZONE_CONTAINER_SCHEMA_IDS,
 ]);
 
 export const DEFAULT_CONTAINER_SIZE = {
@@ -44,6 +52,7 @@ export const createCanvasNodeFromUserAction = (
   displayLabel?: string,
 ): Node<CanvasTerraformNodeData> => {
   const isContainer = CONTAINER_SCHEMA_IDS.has(schema.id);
+  const isZoneContainer = ZONE_CONTAINER_SCHEMA_IDS.has(schema.id);
 
   return {
     id: crypto.randomUUID(),
@@ -68,6 +77,8 @@ export const createCanvasNodeFromUserAction = (
       terraformType: schema.terraformType,
       terraformKind: schema.terraformKind,
       isContainer,
+      containerKind: isContainer ? (isZoneContainer ? "zone" : "hierarchical") : undefined,
+      zoneContainerIds: [],
     },
   };
 };

@@ -170,18 +170,26 @@ export default function CenterPanel({
           node.id === activeDropContainerId &&
           node.data.isContainer;
 
+        const isZoneContainer =
+          node.data.containerKind === "zone" ||
+          node.data.schemaId === "aws_availability_zone" ||
+          node.data.schemaId === "aws_security_group";
+
         const dragHandle = node.data.isContainer
           ? ".container-drag-handle"
           : node.dragHandle;
 
         const depth = nodeDepthMap.get(node.id) ?? 0;
         const zIndexBase = depth * 100;
-        const zIndex = zIndexBase + (node.data.isContainer ? 10 : 20);
+        const zIndex = isZoneContainer
+          ? zIndexBase + 2000
+          : zIndexBase + (node.data.isContainer ? 10 : 20);
 
         if (
           node.data.isDropTarget === shouldHighlight &&
           node.dragHandle === dragHandle &&
-          node.zIndex === zIndex
+          node.zIndex === zIndex &&
+          node.style?.pointerEvents === (isZoneContainer ? "none" : "auto")
         ) {
           return node;
         }
@@ -190,6 +198,10 @@ export default function CenterPanel({
           ...node,
           dragHandle,
           zIndex,
+          style: {
+            ...(node.style ?? {}),
+            pointerEvents: (isZoneContainer ? "none" : "auto") as "none" | "auto",
+          },
           data: {
             ...node.data,
             isDropTarget: shouldHighlight,

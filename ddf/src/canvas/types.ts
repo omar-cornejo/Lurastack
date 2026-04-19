@@ -25,6 +25,8 @@ export type CanvasTerraformNodeData = {
   terraformType: string;
   terraformKind: TerraformNodeSchema["terraformKind"];
   isContainer: boolean;
+  containerKind?: "hierarchical" | "zone";
+  zoneContainerIds?: string[];
   isDropTarget?: boolean;
   isLayerGhost?: boolean;
 };

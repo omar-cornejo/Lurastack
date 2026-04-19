@@ -6,6 +6,8 @@ import {
   CONTAINER_SCHEMA_IDS,
   DEFAULT_CONTAINER_SIZE,
   DEFAULT_RESOURCE_NODE_SIZE,
+  HIERARCHICAL_CONTAINER_SCHEMA_IDS,
+  ZONE_CONTAINER_SCHEMA_IDS,
 } from "./createCanvasNode";
 import { warn } from "./warn";
 
@@ -23,6 +25,22 @@ type NodeSize = { width: number; height: number };
 type NodeRect = { x: number; y: number; width: number; height: number };
 
 const MIN_OVERLAP_RATIO = 0.35;
+
+const isHierarchicalContainerNode = (node: CanvasNode) =>
+  node.data.isContainer && (
+    node.data.containerKind === "hierarchical" ||
+    (
+      !node.data.containerKind &&
+      HIERARCHICAL_CONTAINER_SCHEMA_IDS.has(node.data.schemaId) &&
+      !ZONE_CONTAINER_SCHEMA_IDS.has(node.data.schemaId)
+    )
+  );
+
+const isZoneContainerNode = (node: CanvasNode) =>
+  node.data.isContainer && (
+    node.data.containerKind === "zone" ||
+    (!node.data.containerKind && ZONE_CONTAINER_SCHEMA_IDS.has(node.data.schemaId))
+  );
 
 export const getNodeSize = (node: CanvasNode) => {
   const measuredWidth = typeof node.width === "number" ? node.width : undefined;
@@ -69,7 +87,7 @@ const isPointInsideContainer = (
   container: CanvasNode,
   nodeMap: Map<string, CanvasNode>,
 ) => {
-  if (!container.data.isContainer) return false;
+  if (!isHierarchicalContainerNode(container)) return false;
 
   const absolute = getAbsolutePosition(container, nodeMap);
   const size = getNodeSize(container);
@@ -119,7 +137,7 @@ export const findContainerAtPoint = (
 
   const candidates = nodes
     .filter((node) => !excludedNodeIds.has(node.id))
-    .filter((node) => node.data.isContainer)
+    .filter((node) => isHierarchicalContainerNode(node))
     .filter((node) => isPointInsideContainer(point, node, nodeMap));
 
   if (!candidates.length) return undefined;
@@ -150,7 +168,7 @@ export const findBestContainerForNodeBounds = (
 
   const candidates = nodes
     .filter((node) => !excludedNodeIds.has(node.id))
-    .filter((node) => node.data.isContainer)
+    .filter((node) => isHierarchicalContainerNode(node))
     .map((container) => {
       const containerRect = getAbsoluteNodeRect(container, nodeMap);
       const overlapArea = getRectIntersectionArea(draggedRect, containerRect);
@@ -282,7 +300,7 @@ const recomputeContainerSizeFromChildren = (
   containerId: string,
 ): NodeSize | undefined => {
   const container = nodes.find((node) => node.id === containerId);
-  if (!container || !container.data.isContainer) return undefined;
+  if (!container || !isHierarchicalContainerNode(container)) return undefined;
 
   const minSize = getContainerMinimumSize();
   const directChildren = nodes.filter((node) => node.parentNode === containerId);
@@ -319,7 +337,7 @@ export const shrinkAncestorContainers = (
   const nodeMap = new Map(nodes.map((node) => [node.id, node]));
   let currentContainer = nodeMap.get(startContainerId);
 
-  while (currentContainer?.data.isContainer) {
+  while (currentContainer && isHierarchicalContainerNode(currentContainer)) {
     const nextSize = recomputeContainerSizeFromChildren(nodes, currentContainer.id);
     if (nextSize) {
       const currentSize = getNodeSize(currentContainer);
@@ -376,7 +394,7 @@ export const applyManualContainerResizeEffects = (
   }));
 
   const resizedContainers = workingNodes.filter(
-    (node) => resizedIdSet.has(node.id) && node.data.isContainer,
+    (node) => resizedIdSet.has(node.id) && isHierarchicalContainerNode(node),
   );
 
   if (!resizedContainers.length) return workingNodes;
@@ -406,7 +424,8 @@ export const applyManualContainerResizeEffects = (
     const siblings = nodes.filter(
       (candidate) =>
         candidate.id !== resizedNode.id &&
-        candidate.parentNode === resizedNode.parentNode,
+        candidate.parentNode === resizedNode.parentNode &&
+        !isZoneContainerNode(candidate),
     );
 
     return siblings.some((sibling) => {
@@ -812,6 +831,7 @@ const canExpandHierarchyForPlacement = (
       (candidate) =>
         candidate.parentNode === ancestorAfter.parentNode &&
         candidate.id !== ancestorAfter.id &&
+        !isZoneContainerNode(candidate) &&
         !excludedSiblingIds.has(candidate.id),
     );
 
@@ -930,7 +950,64 @@ const resolveNonOverlappingPositionInContainer = (
 };
 
 const findContainerById = (nodes: CanvasNode[], containerId: string) =>
-  nodes.find((node) => node.id === containerId && node.data.isContainer);
+  nodes.find((node) => node.id === containerId && isHierarchicalContainerNode(node));
+
+const isPointInsideRect = (point: XYPosition, rect: NodeRect) => {
+  return (
+    point.x >= rect.x &&
+    point.x <= rect.x + rect.width &&
+    point.y >= rect.y &&
+    point.y <= rect.y + rect.height
+  );
+};
+
+export const applyZoneContainerMemberships = (nodes: CanvasNode[]): CanvasNode[] => {
+  const nodeMap = new Map(nodes.map((node) => [node.id, node]));
+  const zoneContainers = nodes.filter((node) => isZoneContainerNode(node));
+
+  return nodes.map((node) => {
+    if (isZoneContainerNode(node)) {
+      if (!node.data.zoneContainerIds?.length) return node;
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          zoneContainerIds: [],
+        },
+      };
+    }
+
+    const nodeRect = getAbsoluteNodeRect(node, nodeMap);
+    const nodeCenter = {
+      x: nodeRect.x + nodeRect.width / 2,
+      y: nodeRect.y + nodeRect.height / 2,
+    };
+
+    const zoneContainerIds = zoneContainers
+      .filter((zoneContainer) => zoneContainer.id !== node.id)
+      .filter((zoneContainer) => {
+        const zoneRect = getAbsoluteNodeRect(zoneContainer, nodeMap);
+        return isPointInsideRect(nodeCenter, zoneRect);
+      })
+      .map((zoneContainer) => zoneContainer.id);
+
+    const previousIds = node.data.zoneContainerIds ?? [];
+    if (
+      previousIds.length === zoneContainerIds.length &&
+      previousIds.every((id, index) => id === zoneContainerIds[index])
+    ) {
+      return node;
+    }
+
+    return {
+      ...node,
+      data: {
+        ...node.data,
+        zoneContainerIds,
+      },
+    };
+  });
+};
 
 export const getSchemaDefaultSize = (schemaId: string): NodeSize => {
   if (CONTAINER_SCHEMA_IDS.has(schemaId)) {
@@ -1007,7 +1084,14 @@ export const placeCanvasNodeFromUserAction = (
   );
 
   if (!dropPosition) {
-    return [...workingNodes, createdNode];
+    return applyZoneContainerMemberships([...workingNodes, createdNode]);
+  }
+
+  if (createdNode.data.containerKind === "zone") {
+    createdNode.parentNode = undefined;
+    createdNode.extent = undefined;
+    createdNode.position = dropPosition;
+    return applyZoneContainerMemberships([...workingNodes, createdNode]);
   }
 
   const createdNodeSize = getNodeSize(createdNode);
@@ -1078,9 +1162,9 @@ export const placeCanvasNodeFromUserAction = (
   createdNode.position = finalPlacement.position;
 
   const nextNodes = [...workingNodes, createdNode];
-  if (!finalPlacement.parentNode) return nextNodes;
+  if (!finalPlacement.parentNode) return applyZoneContainerMemberships(nextNodes);
 
-  return expandAncestorContainers(nextNodes, createdNode.id);
+  return applyZoneContainerMemberships(expandAncestorContainers(nextNodes, createdNode.id));
 };
 
 export const reparentCanvasNodeAfterDrag = (
@@ -1103,6 +1187,16 @@ export const reparentCanvasNodeAfterDrag = (
   const draggedAbsolute = getAbsolutePosition(draggedNode, nodeMap);
   const draggedSize =
     getSubtreeFootprintSize(workingNodes, draggedNode.id) ?? getNodeSize(draggedNode);
+
+  if (isZoneContainerNode(draggedNode)) {
+    draggedNode.parentNode = undefined;
+    draggedNode.extent = undefined;
+    draggedNode.position = draggedAbsolute;
+    const nextNodes = previousParentId
+      ? shrinkAncestorContainers(workingNodes, previousParentId)
+      : workingNodes;
+    return applyZoneContainerMemberships(nextNodes);
+  }
 
   const excludedNodeIds = getDescendantNodeIds(workingNodes, draggedNode.id);
   excludedNodeIds.add(draggedNode.id);
@@ -1165,6 +1259,7 @@ export const reparentCanvasNodeAfterDrag = (
       draggedNode.position = draggedAbsolute;
       if (!previousParentId) return workingNodes;
       return shrinkAncestorContainers(workingNodes, previousParentId);
+      
     }
   }
 
@@ -1172,8 +1267,8 @@ export const reparentCanvasNodeAfterDrag = (
     draggedNode.parentNode = undefined;
     draggedNode.extent = undefined;
     draggedNode.position = finalPlacement.position;
-    if (!previousParentId) return workingNodes;
-    return shrinkAncestorContainers(workingNodes, previousParentId);
+    if (!previousParentId) return applyZoneContainerMemberships(workingNodes);
+    return applyZoneContainerMemberships(shrinkAncestorContainers(workingNodes, previousParentId));
   }
 
   draggedNode.parentNode = finalPlacement.parentNode;
@@ -1182,8 +1277,10 @@ export const reparentCanvasNodeAfterDrag = (
   const expandedNodes = expandAncestorContainers(workingNodes, draggedNode.id);
 
   if (!previousParentId || previousParentId === finalPlacement.parentNode) {
-    return expandedNodes;
+    return applyZoneContainerMemberships(expandedNodes);
   }
 
-  return shrinkAncestorContainers(expandedNodes, previousParentId);
+  return applyZoneContainerMemberships(
+    shrinkAncestorContainers(expandedNodes, previousParentId),
+  );
 };

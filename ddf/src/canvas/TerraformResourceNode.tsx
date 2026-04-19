@@ -5,6 +5,70 @@ import { DEFAULT_CONTAINER_SIZE } from "../commands/createCanvasNode";
 
 export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraformNodeData>) {
   if (data.isContainer) {
+    const isZoneContainer =
+      data.containerKind === "zone" ||
+      data.schemaId === "aws_availability_zone" ||
+      data.schemaId === "aws_security_group";
+
+    if (isZoneContainer) {
+      return (
+        <div
+          className={`pointer-events-none h-full w-full rounded-md border-2 border-dashed bg-transparent transition-colors ${
+            data.isDropTarget
+              ? "border-emerald-500 ring-2 ring-emerald-300"
+              : "border-violet-400"
+          } ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}
+        >
+          <NodeResizer
+            isVisible={selected}
+            minWidth={DEFAULT_CONTAINER_SIZE.width}
+            minHeight={DEFAULT_CONTAINER_SIZE.height}
+            lineClassName="!pointer-events-none !border-violet-400"
+            handleClassName="!pointer-events-auto !z-[13000] !h-2.5 !w-2.5 !rounded-sm !border !border-white !bg-violet-500"
+          />
+
+          <Handle
+            type="target"
+            id="top"
+            position={Position.Top}
+            className="!pointer-events-auto !bg-violet-500"
+          />
+          <Handle
+            type="source"
+            id="top"
+            position={Position.Top}
+            className="!pointer-events-auto !bg-violet-500"
+          />
+
+          <div className="container-drag-handle pointer-events-auto absolute left-2 top-2 flex items-center gap-2 rounded border border-violet-200 bg-white/90 px-2 py-1">
+            <img
+              src={data.icon}
+              alt={data.label}
+              className="h-5 w-5 rounded object-cover"
+              draggable={false}
+            />
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold text-violet-900">{data.label}</p>
+              <p className="truncate text-[10px] text-violet-700">zone marker · {data.terraformType}</p>
+            </div>
+          </div>
+
+          <Handle
+            type="source"
+            id="bottom"
+            position={Position.Bottom}
+            className="!pointer-events-auto !bg-violet-500"
+          />
+          <Handle
+            type="target"
+            id="bottom"
+            position={Position.Bottom}
+            className="!pointer-events-auto !bg-violet-500"
+          />
+        </div>
+      );
+    }
+
     return (
       <div
         className={`pointer-events-none h-full w-full rounded-md border-2 bg-blue-50/60 shadow-inner transition-colors ${

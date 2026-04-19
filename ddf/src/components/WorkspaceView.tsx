@@ -28,6 +28,7 @@ import type {
   CanvasTerraformNodeData,
 } from "../canvas/types";
 import {
+  applyZoneContainerMemberships,
   applyManualContainerResizeEffects,
   placeCanvasNodeFromUserAction,
   reparentCanvasNodeAfterDrag,
@@ -363,14 +364,14 @@ export default function WorkspaceView({
           .map((change) => change.id);
 
         if (!resizedNodeIds.length) {
-          return nextNodes;
+          return applyZoneContainerMemberships(nextNodes);
         }
 
-        return applyManualContainerResizeEffects(
+        return applyZoneContainerMemberships(applyManualContainerResizeEffects(
           currentNodes,
           nextNodes,
           resizedNodeIds,
-        );
+        ));
       });
     },
     [setNodes],

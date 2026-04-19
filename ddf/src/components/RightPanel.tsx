@@ -418,11 +418,22 @@ export const RightPanel = ({
   }, [attributeSearch, attributeStateFilters, attributeTypeFilters, inspectorSections]);
 
   const children = useMemo(
-    () =>
-      selectedNodeId
-        ? nodes.filter((node) => node.parentNode === selectedNodeId)
-        : [],
-    [nodes, selectedNodeId],
+    () => {
+      if (!selectedNodeId || !selectedNode) return [];
+      const isZoneContainer =
+        selectedNode.data.containerKind === "zone" ||
+        selectedNode.data.schemaId === "aws_availability_zone" ||
+        selectedNode.data.schemaId === "aws_security_group";
+
+      if (isZoneContainer) {
+        return nodes.filter((node) =>
+          (node.data.zoneContainerIds ?? []).includes(selectedNodeId),
+        );
+      }
+
+      return nodes.filter((node) => node.parentNode === selectedNodeId);
+    },
+    [nodes, selectedNode, selectedNodeId],
   );
 
   useEffect(() => {
@@ -892,10 +903,20 @@ export const RightPanel = ({
 
                   {selectedNode.data.isContainer && (
                     <div className="rounded border border-gray-200 bg-white p-2">
-                      <div className="mb-2 text-xs font-semibold text-gray-800">Children ({children.length})</div>
+                      <div className="mb-2 text-xs font-semibold text-gray-800">
+                        {(selectedNode.data.containerKind === "zone" ||
+                          selectedNode.data.schemaId === "aws_availability_zone")
+                          ? `Nodes in zone (${children.length})`
+                          : `Children (${children.length})`}
+                      </div>
                       <div className="space-y-1">
                         {children.length === 0 ? (
-                          <p className="text-xs text-gray-500">This container has no children.</p>
+                          <p className="text-xs text-gray-500">
+                            {(selectedNode.data.containerKind === "zone" ||
+                              selectedNode.data.schemaId === "aws_availability_zone")
+                              ? "No nodes currently inside this zone marker."
+                              : "This container has no children."}
+                          </p>
                         ) : (
                           children.map((child) => (
                             <button
