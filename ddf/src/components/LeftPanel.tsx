@@ -40,18 +40,6 @@ const normalize = (value: string) =>
 
 const compact = (value: string) => normalize(value).replace(/\s+/g, "");
 
-const isSubsequence = (needle: string, haystack: string) => {
-  if (!needle) return true;
-  let needleIndex = 0;
-  for (const character of haystack) {
-    if (character === needle[needleIndex]) {
-      needleIndex += 1;
-      if (needleIndex === needle.length) return true;
-    }
-  }
-  return false;
-};
-
 const rankNode = (node: TerraformNodeSchema, query: string) => {
   const normalizedQuery = normalize(query);
   if (!normalizedQuery) return 1;
@@ -59,42 +47,74 @@ const rankNode = (node: TerraformNodeSchema, query: string) => {
   const queryTokens = normalizedQuery.split(/\s+/).filter(Boolean);
   if (!queryTokens.length) return 1;
 
-  const haystacks = [
-    node.label,
-    node.id,
-    node.terraformType,
-    node.terraformKind,
-    ...node.properties.map((property) => property.name),
-    ...(node.searchTerms ?? []),
-  ];
+  const labelNormalized = normalize(node.label);
+  const idNormalized = normalize(node.id);
+  const typeNormalized = normalize(node.terraformType);
+  const searchTermsNormalized = (node.searchTerms ?? []).map((term) => normalize(term));
 
-  const normalizedHaystacks = haystacks.map((value) => normalize(value));
-  const compactHaystacks = haystacks.map((value) => compact(value));
+  const primaryFields = [labelNormalized, idNormalized, typeNormalized].filter(Boolean);
+  const secondaryFields = searchTermsNormalized.filter(Boolean);
+
+  const labelCompact = compact(node.label);
+  const idCompact = compact(node.id);
+  const typeCompact = compact(node.terraformType);
+  const searchTermsCompact = (node.searchTerms ?? []).map((term) => compact(term));
+
+  const primaryCompactFields = [labelCompact, idCompact, typeCompact].filter(Boolean);
+  const secondaryCompactFields = searchTermsCompact.filter(Boolean);
 
   let score = 0;
 
   for (const token of queryTokens) {
-    const tokenCompact = token.replace(/\s+/g, "");
+    const tokenCompact = compact(token);
     let tokenBest = 0;
 
-    for (const value of normalizedHaystacks) {
+    for (const value of primaryFields) {
       if (!value) continue;
-      if (value === token) tokenBest = Math.max(tokenBest, 120);
-      else if (value.startsWith(token)) tokenBest = Math.max(tokenBest, 90);
-      else if (value.includes(token)) tokenBest = Math.max(tokenBest, 60);
+      if (value === token) tokenBest = Math.max(tokenBest, 200);
+      else if (value.startsWith(token)) tokenBest = Math.max(tokenBest, 140);
+      else if (value.includes(token)) tokenBest = Math.max(tokenBest, 95);
     }
 
     if (tokenBest === 0) {
-      for (const value of compactHaystacks) {
+      for (const value of primaryCompactFields) {
         if (!value || !tokenCompact) continue;
-        if (value === tokenCompact) tokenBest = Math.max(tokenBest, 85);
-        else if (value.startsWith(tokenCompact)) tokenBest = Math.max(tokenBest, 70);
-        else if (isSubsequence(tokenCompact, value)) tokenBest = Math.max(tokenBest, 40);
+        if (value === tokenCompact) tokenBest = Math.max(tokenBest, 125);
+        else if (value.startsWith(tokenCompact)) tokenBest = Math.max(tokenBest, 105);
+        else if (value.includes(tokenCompact)) tokenBest = Math.max(tokenBest, 80);
+      }
+    }
+
+    if (tokenBest === 0) {
+      for (const value of secondaryFields) {
+        if (!value) continue;
+        if (value === token) tokenBest = Math.max(tokenBest, 70);
+        else if (value.startsWith(token)) tokenBest = Math.max(tokenBest, 55);
+        else if (value.includes(token)) tokenBest = Math.max(tokenBest, 40);
+      }
+    }
+
+    if (tokenBest === 0) {
+      for (const value of secondaryCompactFields) {
+        if (!value || !tokenCompact) continue;
+        if (value === tokenCompact) tokenBest = Math.max(tokenBest, 50);
+        else if (value.startsWith(tokenCompact)) tokenBest = Math.max(tokenBest, 45);
+        else if (value.includes(tokenCompact)) tokenBest = Math.max(tokenBest, 35);
       }
     }
 
     if (tokenBest === 0) return 0;
     score += tokenBest;
+  }
+
+  if (labelNormalized === normalizedQuery || idNormalized === normalizedQuery || typeNormalized === normalizedQuery) {
+    score += 1000;
+  } else if (
+    labelNormalized.startsWith(normalizedQuery) ||
+    idNormalized.startsWith(normalizedQuery) ||
+    typeNormalized.startsWith(normalizedQuery)
+  ) {
+    score += 500;
   }
 
   return score;
@@ -142,7 +162,7 @@ export const LeftPanel = ({
         return left.node.label.localeCompare(right.node.label);
       })
       .map((entry) => entry.node);
-  }, [search]);
+  }, [cloudProvider, search]);
 
   const groupedNodes = useMemo(() => {
     const groups: Record<TerraformNodeSchema["schemaGroup"], TerraformNodeSchema[]> = {
