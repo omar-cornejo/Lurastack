@@ -3,10 +3,11 @@ import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 
 export const CONTAINER_SCHEMA_IDS = new Set([
-  "subnet",
-  "vpc",
-  "region",
-  "availability-zone",
+  "aws_subnet",
+  "aws_vpc",
+  "aws_region",
+  "aws_availability_zone",
+  "aws_security_group",
 ]);
 
 export const DEFAULT_CONTAINER_SIZE = {
