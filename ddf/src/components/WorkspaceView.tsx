@@ -77,7 +77,6 @@ export default function WorkspaceView({
   const [cloudProvider, setCloudProvider] = useState<"aws">("aws");
   const [providerRegion] = useState("eu-south-2");
 
-  const [bottomHeight, setBottomHeight] = useState(288);
   const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>(
     initialState ? restoreNodes(initialState.nodes) : [],
   );
@@ -100,6 +99,8 @@ export default function WorkspaceView({
   const [terminalPoppedOut, setTerminalPoppedOut] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [showAwsConfig, setShowAwsConfig] = useState(false);
+  const [rightPanelOverlayOffset, setRightPanelOverlayOffset] = useState(0);
+  const [isRightPanelOverlayResizing, setIsRightPanelOverlayResizing] = useState(false);
   const hclPersistenceDisabledRef = useRef(false);
   const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
   const lastPopoutHeartbeatRef = useRef<number>(0);
@@ -125,13 +126,6 @@ export default function WorkspaceView({
     broadcastBottomPanelState();
   }, [broadcastBottomPanelState]);
 
-  useEffect(() => {
-    if (terminalPoppedOut) {
-      setBottomHeight(0);
-      return;
-    }
-    setBottomHeight((current) => (current === 0 ? 288 : current));
-  }, [terminalPoppedOut]);
 
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
@@ -906,9 +900,8 @@ export default function WorkspaceView({
             pointerEvents: activeSection === "canvas" ? "auto" : "none",
           }}
         >
-          <div className="flex flex-1 min-h-0 overflow-hidden">
+          <div className="relative flex flex-1 min-h-0 overflow-hidden">
             <LeftPanel
-              bottomHeight={bottomHeight}
               addResource={addResource}
               cloudProvider={cloudProvider}
               onCloudProviderChange={setCloudProvider}
@@ -934,6 +927,8 @@ export default function WorkspaceView({
                   )
                 }
                 onApplyEdgeMapping={applyEdgeMapping}
+                rightOverlayOffset={rightPanelOverlayOffset}
+                isRightOverlayResizing={isRightPanelOverlayResizing}
               />
             </main>
 
@@ -946,12 +941,13 @@ export default function WorkspaceView({
               selectedResource={selectedResource}
               onSelectNode={selectNode}
               onUpdateSelectedResource={updateSelectedResource}
+              onOverlayWidthChange={setRightPanelOverlayOffset}
+              onOverlayResizingChange={setIsRightPanelOverlayResizing}
             />
           </div>
 
           {!terminalPoppedOut ? (
             <BottomPanel
-              onHeightChange={setBottomHeight}
               nodes={nodes}
               edges={edges}
               resources={project.resources}

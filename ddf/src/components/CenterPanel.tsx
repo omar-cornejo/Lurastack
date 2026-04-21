@@ -71,6 +71,8 @@ type CenterPanelProps = {
     sourceExpression: string;
     targetAttribute: string;
   }) => void;
+  rightOverlayOffset?: number;
+  isRightOverlayResizing?: boolean;
 };
 
 export default function CenterPanel({
@@ -88,6 +90,8 @@ export default function CenterPanel({
   onNodeSelected,
   onDeleteEdge,
   onApplyEdgeMapping,
+  rightOverlayOffset = 0,
+  isRightOverlayResizing = false,
 }: CenterPanelProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const [reactFlowInstance, setReactFlowInstance] =
@@ -719,10 +723,23 @@ export default function CenterPanel({
             pannable
             zoomable
             position="bottom-right"
+            style={{
+              right: `${Math.max(8, rightOverlayOffset + 8)}px`,
+              bottom: 8,
+              transition: isRightOverlayResizing ? "none" : "right 200ms ease",
+            }}
             className="!bg-white !border !border-slate-300 !shadow-md"
           />
 
-          <Controls position="top-right" showInteractive={false}>
+          <Controls
+            position="top-right"
+            showInteractive={false}
+            style={{
+              right: `${Math.max(8, rightOverlayOffset + 8)}px`,
+              top: 8,
+              transition: isRightOverlayResizing ? "none" : "right 200ms ease",
+            }}
+          >
             <ControlButton
               onClick={() =>
                 setActiveLayer((current) => (current >= maxLayer ? 0 : current + 1))
