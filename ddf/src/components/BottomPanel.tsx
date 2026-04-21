@@ -2,8 +2,8 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
-import { Icon } from '@iconify/react';
 import { invoke } from "@tauri-apps/api/core";
+import { PanelToggleTab } from "./PanelToggleTab";
 import { listen } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { Edge, Node } from "reactflow";
@@ -34,6 +34,11 @@ type BottomPanelTab = "terminal" | "mapper" | "logs";
 
 const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
 const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
+const BOTTOM_PANEL_MIN_HEIGHT = 100;
+const BOTTOM_PANEL_MAX_HEIGHT = 300;
+const BOTTOM_PANEL_HEADER_HEIGHT = 40;
+const BOTTOM_PANEL_TERMINAL_VIEWPORT_HEIGHT =
+  BOTTOM_PANEL_MAX_HEIGHT - BOTTOM_PANEL_HEADER_HEIGHT;
 
 
 export default function BottomPanel({
@@ -73,6 +78,8 @@ export default function BottomPanel({
   const terminalDisposedRef = useRef(false);
   const terminalReadyRef = useRef(false);
   const fitFrameRef = useRef<number | null>(null);
+  const heightNotifyFrameRef = useRef<number | null>(null);
+  const lastReportedPanelHeightRef = useRef<number | null>(null);
   const handledOpenSignalRef = useRef<number>(openSignal);
 
   const sortedLogs = useMemo(
@@ -126,6 +133,7 @@ export default function BottomPanel({
     if (!open || activeTab !== "terminal") return;
     try {
       fitAddon.current.fit();
+      term.current.scrollToBottom();
     } catch {
       // ignore transient fit errors when terminal is mounting/unmounting
     }
@@ -443,12 +451,41 @@ export default function BottomPanel({
         }>;
       } => !!entry && entry.entries.length > 0);
   }, [activeMapperItem, nodes, resources, schemas]);
-
-
   useEffect(() => {
-    if (!onHeightChange) return;
-    onHeightChange(open ? height : 25);
-  }, [height, onHeightChange, open]);
+    if (!onHeightChange || !panelRef.current) return;
+
+    const reportPanelHeight = () => {
+      if (!panelRef.current) return;
+      const measuredHeight = Math.round(panelRef.current.getBoundingClientRect().height);
+      if (lastReportedPanelHeightRef.current === measuredHeight) return;
+      lastReportedPanelHeightRef.current = measuredHeight;
+      onHeightChange(measuredHeight);
+    };
+
+    const scheduleReportPanelHeight = () => {
+      if (heightNotifyFrameRef.current !== null) return;
+      heightNotifyFrameRef.current = requestAnimationFrame(() => {
+        heightNotifyFrameRef.current = null;
+        reportPanelHeight();
+      });
+    };
+
+    scheduleReportPanelHeight();
+
+    const observer = new ResizeObserver(() => {
+      scheduleReportPanelHeight();
+    });
+
+    observer.observe(panelRef.current);
+
+    return () => {
+      observer.disconnect();
+      if (heightNotifyFrameRef.current !== null) {
+        cancelAnimationFrame(heightNotifyFrameRef.current);
+        heightNotifyFrameRef.current = null;
+      }
+    };
+  }, [onHeightChange]);
 
   useEffect(() => {
     if (!enabled || suppressTerminal) return;
@@ -527,8 +564,9 @@ export default function BottomPanel({
   }, [enabled, isTauriRuntime, projectDir, suppressTerminal]);
 
   useEffect(() => {
+    if (isResizing) return;
     scheduleSafeFitTerminal();
-  }, [height, open, activeTab]);
+  }, [height, open, activeTab, isResizing]);
 
   useEffect(() => {
     if (!isTauriRuntime || suppressTerminal) return;
@@ -558,25 +596,27 @@ export default function BottomPanel({
     if (activeTab === "terminal") {
       requestAnimationFrame(() => {
         scheduleSafeFitTerminal();
+        term.current?.scrollToBottom();
         term.current?.focus();
       });
     }
   }, [activeTab]);
 
   useEffect(() => {
-    if (!panelRef.current) return;
+    if (!terminalRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
+      if (isResizing) return;
       scheduleSafeFitTerminal();
     });
 
-    resizeObserver.observe(panelRef.current);
+    resizeObserver.observe(terminalRef.current);
 
     return () => {
       resizeObserver.disconnect();
       cancelScheduledFit();
     };
-  }, []);
+  }, [isResizing]);
 
 
 
@@ -587,11 +627,11 @@ export default function BottomPanel({
       const rect = panelRef.current.getBoundingClientRect();
       const newHeight = rect.bottom - e.clientY;
 
-      const minHeight = 100;
-      const maxHeight = 300;
-
-      if (newHeight >= minHeight && newHeight <= maxHeight) {
+      if (newHeight >= BOTTOM_PANEL_MIN_HEIGHT && newHeight <= BOTTOM_PANEL_MAX_HEIGHT) {
         setHeight(newHeight);
+        if (activeTab === "terminal") {
+          term.current?.scrollToBottom();
+        }
       }
     };
 
@@ -599,6 +639,10 @@ export default function BottomPanel({
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
       setIsResizing(false);
+      requestAnimationFrame(() => {
+        scheduleSafeFitTerminal();
+        term.current?.scrollToBottom();
+      });
     };
 
     if (isResizing) {
@@ -615,47 +659,38 @@ export default function BottomPanel({
   return (
     <aside
       ref={panelRef}
-      style={{ height: open ? height : 35 }}
-      className={`relative bg-gray-100 border-l flex-none overflow-hidden
-    ${isResizing ? "" : "transition-[height] duration-200"}`}
+      style={{ height: open ? height : 0 }}
+      className={`relative bg-gray-100 border-t border-slate-200 flex-none ${isResizing ? "" : "transition-[height] duration-200 ease-out"}`}
+      onTransitionEnd={(event) => {
+        if (event.propertyName !== "height") return;
+        scheduleSafeFitTerminal();
+        term.current?.scrollToBottom();
+      }}
     >
-      {open && (
-        <div
-          onMouseDown={(e) => {
-            e.preventDefault();
-            document.body.style.userSelect = "none";
-            document.body.style.cursor = "row-resize";
-            setIsResizing(true);
-          }}
-          className="absolute top-0 left-0 w-full h-1 cursor-row-resize bg-transparent hover:bg-gray-300"
-        />
-      )}
+      <PanelToggleTab
+        open={open}
+        onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
+        edge="top"
+        ariaControls="bottom-panel-content"
+        ariaLabel={open ? "Close bottom panel" : "Show bottom panel"}
+      />
 
-      <header className="h-10 border-b border-gray-200 bg-gray-50 px-2 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={(e) => {
+      <div className="overflow-hidden flex flex-col h-full w-full">
+        {open && (
+          <div
+            onMouseDown={(e) => {
+              e.preventDefault();
               e.stopPropagation();
-              setOpen((o) => !o);
+              document.body.style.userSelect = "none";
+              document.body.style.cursor = "row-resize";
+              setIsResizing(true);
             }}
-            className="px-2 py-1 bg-gray-200 rounded flex items-center justify-center"
-            aria-expanded={open}
-            aria-controls="bottom-panel-content"
-            aria-label={open ? 'Close bottom panel' : 'Show bottom panel'}
-            type="button"
-          >
-            <Icon
-              icon="weui:more-filled"
-              className={`transition-transform ${open ? 'rotate-180' : ''}`}
-              width={14}
-              height={14}
-              aria-hidden="true"
-            />
-          </button>
-          <strong className="text-sm text-gray-700">Bottom</strong>
-        </div>
+            className="absolute top-0 left-0 w-full h-1 cursor-row-resize bg-transparent hover:bg-gray-300"
+          />
+        )}
 
-        <div className="flex gap-1">
+        <header className="h-10 border-b border-gray-200 bg-white px-3 flex items-center justify-end">
+          <div className="flex gap-1">
           {showPopoutButton ? (
             <button
               type="button"
@@ -710,23 +745,24 @@ export default function BottomPanel({
 
       <div
         id="bottom-panel-content"
-        className="h-[calc(100%-2.5rem)] w-full transition-opacity duration-200"
-        style={{
-          opacity: open ? 1 : 0,
-          pointerEvents: open ? "auto" : "none",
-        }}
+        className="relative h-[calc(100%-2.5rem)] w-full overflow-hidden"
       >
         <div
-          className="h-full w-full"
+          className="absolute inset-0 overflow-hidden"
           style={{ display: activeTab === "terminal" ? "block" : "none" }}
         >
-          {suppressTerminal ? (
-            <div className="h-full w-full bg-gray-900 text-gray-200 flex items-center justify-center text-sm">
-              Terminal is detached to external window.
-            </div>
-          ) : (
-            <div ref={terminalRef} className="h-full w-full" />
-          )}
+          <div
+            className="absolute top-0 left-0 right-0"
+            style={{ height: `${BOTTOM_PANEL_TERMINAL_VIEWPORT_HEIGHT}px` }}
+          >
+            {suppressTerminal ? (
+              <div className="h-full w-full bg-gray-900 text-gray-200 flex items-center justify-center text-sm">
+                Terminal is detached to external window.
+              </div>
+            ) : (
+              <div ref={terminalRef} className="h-full w-full" />
+            )}
+          </div>
         </div>
 
         <div
@@ -1201,6 +1237,7 @@ export default function BottomPanel({
             </div>
           )}
         </div>
+      </div>
       </div>
     </aside>
   );
