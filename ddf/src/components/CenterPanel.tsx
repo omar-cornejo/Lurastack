@@ -133,6 +133,7 @@ export default function CenterPanel({
     y: number;
   } | null>(null);
   const [activeLayer, setActiveLayer] = useState(0);
+  const lastSelectionRef = useRef<string | undefined>(undefined);
 
   const getEdgeMappings = useCallback(
     (edge: Edge<CanvasEdgeData>): CanvasEdgeMapping[] =>
@@ -588,14 +589,19 @@ export default function CenterPanel({
 
   const handleSelectionChange = useCallback(
     ({ nodes: selectedNodes }: OnSelectionChangeParams) => {
+      let nextSelection: string | undefined;
+
       if (selectedNodes.length === 1) {
-        onNodeSelected?.(selectedNodes[0]?.id);
+        nextSelection = selectedNodes[0]?.id;
+      } else if (selectedNodes.length === 0) {
+        nextSelection = undefined;
+      } else {
         return;
       }
 
-      if (selectedNodes.length === 0) {
-        onNodeSelected?.(undefined);
-      }
+      if (lastSelectionRef.current === nextSelection) return;
+      lastSelectionRef.current = nextSelection;
+      onNodeSelected?.(nextSelection);
     },
     [onNodeSelected],
   );

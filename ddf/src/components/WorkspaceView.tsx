@@ -684,13 +684,27 @@ export default function WorkspaceView({
   );
 
   const selectNode = useCallback((nodeId?: string) => {
-    setSelectedNodeId(nodeId);
-    setNodes((currentNodes) =>
-      currentNodes.map((node) => ({
-        ...node,
-        selected: nodeId ? node.id === nodeId : false,
-      })),
-    );
+    setSelectedNodeId((current) => (current === nodeId ? current : nodeId));
+    setNodes((currentNodes) => {
+      let changed = false;
+
+      const nextNodes = currentNodes.map((node) => {
+        const shouldBeSelected = !!nodeId && node.id === nodeId;
+        const isSelected = node.selected === true;
+
+        if (isSelected === shouldBeSelected) {
+          return node;
+        }
+
+        changed = true;
+        return {
+          ...node,
+          selected: shouldBeSelected,
+        };
+      });
+
+      return changed ? nextNodes : currentNodes;
+    });
   }, [setNodes]);
 
   const updateSelectedResource = useCallback(
