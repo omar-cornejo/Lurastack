@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import type { MouseEvent } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 
 type Props = {
   open: boolean;
@@ -7,6 +7,7 @@ type Props = {
   edge: "right" | "left" | "top";
   ariaLabel?: string;
   ariaControls?: string;
+  style?: CSSProperties;
 };
 
 const EDGE_CLASSES: Record<Props["edge"], string> = {
@@ -21,7 +22,7 @@ const iconClass = (edge: Props["edge"], open: boolean) => {
   return open ? "rotate-90" : "-rotate-90";
 };
 
-export function PanelToggleTab({ open, onClick, edge, ariaLabel, ariaControls }: Props) {
+export function PanelToggleTab({ open, onClick, edge, ariaLabel, ariaControls, style }: Props) {
   return (
     <button
       type="button"
@@ -30,6 +31,7 @@ export function PanelToggleTab({ open, onClick, edge, ariaLabel, ariaControls }:
       aria-controls={ariaControls}
       aria-label={ariaLabel ?? (open ? "Collapse panel" : "Expand panel")}
       className={`${EDGE_CLASSES[edge]} border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50`}
+      style={style}
     >
       <Icon
         icon="weui:arrow-filled"

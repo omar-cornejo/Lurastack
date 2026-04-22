@@ -19,6 +19,7 @@ type LeftPanelProps = {
   addResource: (node: TerraformNodeSchema) => void;
   cloudProvider: "aws";
   onCloudProviderChange: (provider: "aws") => void;
+  onWidthChange?: (width: number) => void;
 };
 
 const GROUP_ORDER: Array<TerraformNodeSchema["schemaGroup"]> = [
@@ -135,6 +136,7 @@ const rankNode = (node: TerraformNodeSchema, query: string) => {
 export const LeftPanel = ({
   addResource,
   cloudProvider,
+  onWidthChange,
 }: LeftPanelProps) => {
   const [visible, setVisible] = useState(false);
   const [width, setWidth] = useState(288);
@@ -193,6 +195,10 @@ export const LeftPanel = ({
   const tileMin = Math.max(78, Math.min(132, Math.floor(width / 3.2)));
   const hasSearch = search.trim().length > 0;
   const hasResults = filteredNodes.length > 0;
+
+  useEffect(() => {
+    onWidthChange?.(visible ? width : 0);
+  }, [visible, width, onWidthChange]);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

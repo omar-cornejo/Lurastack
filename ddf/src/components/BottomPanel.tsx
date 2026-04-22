@@ -28,6 +28,7 @@ type BottomPanelProps = {
   viewId?: string;
   showPopoutButton?: boolean;
   suppressTerminal?: boolean;
+  leftOffset?: number;
 };
 
 type BottomPanelTab = "terminal" | "mapper" | "logs";
@@ -56,6 +57,7 @@ export default function BottomPanel({
   viewId,
   showPopoutButton = true,
   suppressTerminal = false,
+  leftOffset = 0,
 }: BottomPanelProps) {
   const showMapperTab = mode === "canvas";
   const [open, setOpen] = useState(true);
@@ -673,6 +675,7 @@ export default function BottomPanel({
         edge="top"
         ariaControls="bottom-panel-content"
         ariaLabel={open ? "Close bottom panel" : "Show bottom panel"}
+        style={{ left: leftOffset + 16, transition: "left 0.2s ease-out" }}
       />
 
       <div className="overflow-hidden flex flex-col h-full w-full">

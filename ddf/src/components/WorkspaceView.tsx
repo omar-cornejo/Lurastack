@@ -101,6 +101,7 @@ export default function WorkspaceView({
   const [showAwsConfig, setShowAwsConfig] = useState(false);
   const [rightPanelOverlayOffset, setRightPanelOverlayOffset] = useState(0);
   const [isRightPanelOverlayResizing, setIsRightPanelOverlayResizing] = useState(false);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(0);
   const hclPersistenceDisabledRef = useRef(false);
   const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
   const lastPopoutHeartbeatRef = useRef<number>(0);
@@ -905,6 +906,7 @@ export default function WorkspaceView({
               addResource={addResource}
               cloudProvider={cloudProvider}
               onCloudProviderChange={setCloudProvider}
+              onWidthChange={setLeftPanelWidth}
             />
 
             <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
@@ -960,6 +962,7 @@ export default function WorkspaceView({
               enabled={isVisible && activeSection === "canvas"}
               openSignal={canvasDeploySignal}
               preferredTab="terminal"
+              leftOffset={leftPanelWidth}
             />
           ) : null}
         </div>
