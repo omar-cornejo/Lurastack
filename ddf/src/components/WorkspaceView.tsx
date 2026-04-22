@@ -961,7 +961,7 @@ export default function WorkspaceView({
     !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
   const runTerraformAction = useCallback(
-    async (action: "terraform_plan" | "terraform_apply") => {
+    async (action: "terraform_plan" | "terraform_apply" | "terraform_destroy") => {
       if (!projectDir || !isTauriRuntime) return;
       setIsDeploying(true);
       setBottomPreferredTab("terminal");
@@ -1003,6 +1003,7 @@ export default function WorkspaceView({
         onOpenAwsConfig={() => setShowAwsConfig(true)}
         onPlan={() => void runTerraformAction("terraform_plan")}
         onApply={() => void runTerraformAction("terraform_apply")}
+        onDestroy={() => void runTerraformAction("terraform_destroy")}
         isDeploying={isDeploying}
       />
 

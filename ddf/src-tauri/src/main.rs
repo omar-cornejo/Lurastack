@@ -13,7 +13,8 @@ fn main() {
             terraform_actions::terraform_lsp_diagnostics,
             terraform_actions::terraform_validate,
             terraform_actions::terraform_plan,
-            terraform_actions::terraform_apply
+            terraform_actions::terraform_apply,
+            terraform_actions::terraform_destroy
         ])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())

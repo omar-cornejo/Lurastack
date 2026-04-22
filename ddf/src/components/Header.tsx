@@ -9,6 +9,7 @@ type HeaderProps = {
   onOpenAwsConfig?: () => void;
   onPlan?: () => void;
   onApply?: () => void;
+  onDestroy?: () => void;
   isDeploying?: boolean;
 };
 
@@ -20,6 +21,7 @@ export default function Header({
   onOpenAwsConfig,
   onPlan,
   onApply,
+  onDestroy,
   isDeploying = false,
 }: HeaderProps) {
   return (
@@ -101,6 +103,16 @@ export default function Header({
           className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isDeploying ? "Ejecutando..." : "Apply"}
+        </button>
+
+        <button
+          type="button"
+          onClick={onDestroy}
+          disabled={isDeploying || !awsConfigured}
+          title={!awsConfigured ? "Configura las credenciales AWS primero" : "Ejecutar terraform destroy"}
+          className="rounded px-3 py-1 text-sm font-medium border border-red-500 text-red-200 hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isDeploying ? "Ejecutando..." : "Destroy"}
         </button>
 
         <button

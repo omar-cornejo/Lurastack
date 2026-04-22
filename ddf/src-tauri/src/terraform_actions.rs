@@ -261,6 +261,49 @@ pub async fn terraform_apply(
     .map_err(|error| format!("Error interno ejecutando apply: {error}"))?
 }
 
+#[tauri::command]
+pub async fn terraform_destroy(
+    window: tauri::Window,
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+    aws_credentials: AwsCredentials,
+) -> Result<bool, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if project_dir.trim().is_empty() {
+            return Err("No se recibió directorio de proyecto.".to_string());
+        }
+        let project_dir_path = PathBuf::from(project_dir.trim());
+        if !project_dir_path.exists() {
+            return Err("El directorio del proyecto no existe.".to_string());
+        }
+
+        if !files.is_empty() {
+            sync_project_tf_files(&project_dir_path, &files)?;
+        }
+
+        emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║    terraform destroy         ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
+
+        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
+
+        emit_output(&window, "\r\n\x1b[36m→ terraform destroy\x1b[0m\r\n");
+        let success = run_terraform_streaming(
+            &window,
+            &["destroy", "-auto-approve", "-no-color", "-input=false"],
+            &project_dir_path,
+            &aws_credentials,
+        )?;
+
+        if success {
+            emit_output(&window, "\r\n\x1b[32m✓ Destroy completado. Recursos eliminados de AWS.\x1b[0m\r\n");
+        } else {
+            emit_output(&window, "\r\n\x1b[31m✗ Destroy terminó con errores\x1b[0m\r\n");
+        }
+        Ok(success)
+    })
+    .await
+    .map_err(|error| format!("Error interno ejecutando destroy: {error}"))?
+}
+
 #[derive(Debug, Deserialize)]
 struct TerraformValidateJson {
     valid: Option<bool>,
