@@ -610,11 +610,11 @@ export const RightPanel = ({
             <div className="flex items-center gap-3 px-4 pt-3.5 pb-3">
               {selectedNode ? (
                 <>
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
+                  <div className="flex h-9 w-9 shrink-0 overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
                     <img
                       src={selectedNode.data.icon}
                       alt={selectedNode.data.label}
-                      className="h-6 w-6 object-contain"
+                      className="h-full w-full object-cover"
                       draggable={false}
                     />
                   </div>
@@ -1021,8 +1021,8 @@ export const RightPanel = ({
                             onClick={() => onSelectNode(child.id)}
                             className="flex w-full items-center gap-2.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-left transition-colors hover:border-indigo-300/60 hover:bg-indigo-50/20"
                           >
-                            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100">
-                              <img src={child.data.icon} alt={child.data.label} className="h-4 w-4 object-contain" draggable={false} />
+                            <div className="flex h-6 w-6 shrink-0 overflow-hidden rounded-md bg-slate-100">
+                              <img src={child.data.icon} alt={child.data.label} className="h-full w-full object-cover" draggable={false} />
                             </div>
                             <span className="text-[11px] font-medium text-slate-700">{child.data.label}</span>
                             <Icon icon="mdi:chevron-right" className="ml-auto text-slate-400" width={14} />

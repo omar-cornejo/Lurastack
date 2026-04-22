@@ -276,11 +276,11 @@ export const LeftPanel = ({
             aria-valuemin={LEFT_PANEL_MIN_WIDTH}
             aria-valuemax={LEFT_PANEL_MAX_WIDTH}
             aria-valuenow={Math.round(width)}
-            className={`group flex h-full w-full cursor-col-resize items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:outline-none ${isResizing ? "bg-orange-100" : "bg-slate-100/90 hover:bg-slate-200"}`}
+            className={`group flex h-full w-full cursor-col-resize items-center justify-center rounded-full transition-colors focus:outline-none focus-visible:outline-none ${isResizing ? "bg-slate-200" : "bg-slate-100/90 hover:bg-slate-200"}`}
           >
             <span
               aria-hidden="true"
-              className={`h-12 w-[2px] rounded-full transition-colors ${isResizing ? "bg-orange-500" : "bg-slate-400 group-hover:bg-slate-500"}`}
+              className={`h-12 w-[2px] rounded-full transition-colors ${isResizing ? "bg-slate-500" : "bg-slate-400 group-hover:bg-slate-500"}`}
             />
           </button>
         </div>
@@ -308,13 +308,14 @@ export const LeftPanel = ({
 
       <div className="overflow-hidden flex flex-col h-full w-full min-w-0">
           {/* Provider header */}
-          <div className="shrink-0 border-b border-slate-100 bg-gradient-to-br from-orange-500 to-orange-600 px-4 py-3.5">
+          <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3.5">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/20 ring-1 ring-white/30 backdrop-blur-sm">
-                <span className="text-[10px] font-black tracking-tight text-white">AWS</span>
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
+                <img src="/icons/AWS-Cloud-logo_32_Dark.svg" alt="AWS" className="h-full w-full object-cover" draggable={false} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[12px] font-semibold text-white">Amazon Web Services</p>
+                <p className="text-[12.5px] font-semibold text-slate-900">Amazon Web Services</p>
+                <p className="mt-0.5 text-[10px] text-slate-400">Resource library</p>
               </div>
             </div>
 
@@ -322,20 +323,20 @@ export const LeftPanel = ({
             <div className="relative mt-3">
               <Icon
                 icon="mdi:magnify"
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50"
-                width={14}
+                className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                width={13}
               />
               <input
                 type="text"
                 placeholder="Search resources…"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-white/20 bg-white/15 py-2 pl-8 pr-7 text-[12px] text-white placeholder-white/50 backdrop-blur-sm transition-all focus:border-white/40 focus:bg-white/20 focus:outline-none"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-7 text-[11px] text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
               />
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-white/50 transition-colors hover:text-white"
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
                   type="button"
                   aria-label="Clear search"
                 >
@@ -352,12 +353,16 @@ export const LeftPanel = ({
             style={{ scrollbarWidth: "thin", scrollbarColor: "#e2e8f0 transparent" }}
           >
             {hasSearch && !hasResults && (
-              <div className="mx-3 flex flex-col items-center gap-2 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center">
-                <Icon icon="mdi:magnify-remove-outline" className="text-slate-300" width={26} />
-                <p className="text-[11px] text-slate-400">
-                  No results for{" "}
-                  <span className="font-semibold text-slate-600">"{search}"</span>
-                </p>
+              <div className="mx-3 flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
+                  <Icon icon="mdi:magnify-remove-outline" className="text-slate-400" width={22} />
+                </div>
+                <div>
+                  <p className="text-[12px] font-medium text-slate-600">No results found</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    Nothing matches <span className="font-semibold">"{search}"</span>
+                  </p>
+                </div>
               </div>
             )}
 
@@ -403,7 +408,7 @@ export const LeftPanel = ({
                               src={node.icon}
                               alt={node.label}
                               draggable={false}
-                              className="pointer-events-none h-8 w-8 select-none object-contain transition-transform duration-150 group-hover:scale-110"
+                              className="pointer-events-none h-8 w-8 select-none object-cover transition-transform duration-150 group-hover:scale-110"
                             />
                             <span className="pointer-events-none line-clamp-2 select-none text-[10.5px] font-medium leading-tight text-slate-600 transition-colors group-hover:text-slate-900">
                               {node.label}

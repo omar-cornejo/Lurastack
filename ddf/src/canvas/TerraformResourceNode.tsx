@@ -32,8 +32,8 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
 
           {/* Header */}
           <div className="container-drag-handle pointer-events-auto flex shrink-0 items-start gap-3 border-b border-dashed border-violet-200 bg-white/90 px-3 py-2.5">
-            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-violet-50 to-violet-100/60 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
-              <img src={data.icon} alt={data.label} className="h-6 w-6 object-contain drop-shadow-sm" draggable={false} />
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-violet-50 to-violet-100/60 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
+              <img src={data.icon} alt={data.label} className="h-full w-full object-cover drop-shadow-sm" draggable={false} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[12.5px] font-semibold leading-snug text-slate-800">{data.label}</p>
@@ -75,8 +75,8 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
 
         {/* Header — same visual language as resource nodes */}
         <div className="container-drag-handle pointer-events-auto flex shrink-0 items-start gap-3 border-b border-indigo-100 bg-white px-3 py-2.5">
-          <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100/60 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
-            <img src={data.icon} alt={data.label} className="h-6 w-6 object-contain drop-shadow-sm" draggable={false} />
+          <div className="mt-0.5 flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100/60 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
+            <img src={data.icon} alt={data.label} className="h-full w-full object-cover drop-shadow-sm" draggable={false} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[12.5px] font-semibold leading-snug text-slate-800">{data.label}</p>
@@ -130,13 +130,13 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
 
       {/* Icon container */}
       <div
-        className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${iconBg}
+        className={`mt-0.5 flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br ${iconBg}
           shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]`}
       >
         <img
           src={data.icon}
           alt={data.label}
-          className="h-6 w-6 object-contain drop-shadow-sm"
+          className="h-full w-full object-cover drop-shadow-sm"
           draggable={false}
         />
       </div>
