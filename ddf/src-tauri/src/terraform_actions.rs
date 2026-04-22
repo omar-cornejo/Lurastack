@@ -2,14 +2,26 @@ use std::{
     fs,
     io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
-    process::{Command, Stdio},
-    sync::mpsc,
+    process::{ChildStdin, Command, Stdio},
+    sync::{mpsc, Arc, Mutex},
     time::{Duration, Instant},
 };
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tauri::Emitter;
+
+pub struct TerraformInteractiveState {
+    pub stdin: Arc<Mutex<Option<ChildStdin>>>,
+}
+
+impl Default for TerraformInteractiveState {
+    fn default() -> Self {
+        Self {
+            stdin: Arc::new(Mutex::new(None)),
+        }
+    }
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -175,6 +187,121 @@ fn run_terraform_streaming(
     Ok(status.success())
 }
 
+fn run_terraform_interactive_inner(
+    window: &tauri::Window,
+    args: &[&str],
+    project_dir_path: &PathBuf,
+    aws_credentials: &AwsCredentials,
+    stdin_arc: &Arc<Mutex<Option<ChildStdin>>>,
+) -> Result<bool, String> {
+    let mut cmd = Command::new("terraform");
+    for arg in args {
+        cmd.arg(arg);
+    }
+    cmd.current_dir(project_dir_path)
+        .env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
+        .env("AWS_SECRET_ACCESS_KEY", &aws_credentials.secret_access_key)
+        .env("AWS_DEFAULT_REGION", &aws_credentials.region)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+
+    if let Some(token) = aws_credentials.session_token.as_deref() {
+        if !token.trim().is_empty() {
+            cmd.env("AWS_SESSION_TOKEN", token);
+        }
+    }
+
+    let mut child = cmd
+        .spawn()
+        .map_err(|error| format!("No se pudo iniciar terraform {}: {error}", args.first().unwrap_or(&"")))?;
+
+    let child_stdin = child
+        .stdin
+        .take()
+        .ok_or_else(|| "No se pudo obtener stdin del proceso terraform".to_string())?;
+    *stdin_arc.lock().unwrap() = Some(child_stdin);
+
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    let (tx_out, rx) = mpsc::channel::<String>();
+    let tx_err = tx_out.clone();
+
+    std::thread::spawn(move || {
+        let mut reader = stdout;
+        let mut buf = [0u8; 1024];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let text = String::from_utf8_lossy(&buf[..n]).into_owned();
+                    let normalized = text.replace("\r\n", "\n").replace('\r', "\n").replace('\n', "\r\n");
+                    let _ = tx_out.send(normalized);
+                }
+                Err(_) => break,
+            }
+        }
+    });
+
+    std::thread::spawn(move || {
+        let mut reader = stderr;
+        let mut buf = [0u8; 1024];
+        loop {
+            match reader.read(&mut buf) {
+                Ok(0) => break,
+                Ok(n) => {
+                    let text = String::from_utf8_lossy(&buf[..n]).into_owned();
+                    let normalized = text.replace("\r\n", "\n").replace('\r', "\n").replace('\n', "\r\n");
+                    let colored = format!("\x1b[33m{normalized}\x1b[0m");
+                    let _ = tx_err.send(colored);
+                }
+                Err(_) => break,
+            }
+        }
+    });
+
+    loop {
+        match rx.recv_timeout(Duration::from_millis(50)) {
+            Ok(chunk) => emit_output(window, &chunk),
+            Err(mpsc::RecvTimeoutError::Timeout) => {
+                if child.try_wait().map(|s| s.is_some()).unwrap_or(false) {
+                    while let Ok(chunk) = rx.try_recv() {
+                        emit_output(window, &chunk);
+                    }
+                    break;
+                }
+            }
+            Err(_) => break,
+        }
+    }
+
+    let status = child.wait().map_err(|error| format!("Error esperando terraform: {error}"))?;
+    *stdin_arc.lock().unwrap() = None;
+    Ok(status.success())
+}
+
+#[tauri::command]
+pub fn terraform_confirm(
+    input: String,
+    state: tauri::State<'_, TerraformInteractiveState>,
+) -> Result<(), String> {
+    let mut guard = state
+        .stdin
+        .lock()
+        .map_err(|error| format!("Error de lock: {error}"))?;
+    if let Some(stdin) = guard.as_mut() {
+        writeln!(stdin, "{}", input.trim())
+            .map_err(|error| format!("Error enviando input a terraform: {error}"))?;
+        stdin
+            .flush()
+            .map_err(|error| format!("Error en flush de stdin: {error}"))?;
+        Ok(())
+    } else {
+        Err("No hay proceso terraform interactivo esperando input".to_string())
+    }
+}
+
 #[tauri::command]
 pub async fn terraform_plan(
     window: tauri::Window,
@@ -219,7 +346,7 @@ pub async fn terraform_plan(
 }
 
 #[tauri::command]
-pub async fn terraform_apply(
+pub async fn terraform_plan_destroy(
     window: tauri::Window,
     project_dir: String,
     files: Vec<TerraformSourceFile>,
@@ -238,16 +365,62 @@ pub async fn terraform_apply(
             sync_project_tf_files(&project_dir_path, &files)?;
         }
 
+        emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║   terraform plan -destroy    ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
+
+        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
+
+        emit_output(&window, "\r\n\x1b[36m→ terraform plan -destroy\x1b[0m\r\n");
+        let success = run_terraform_streaming(
+            &window,
+            &["plan", "-destroy", "-no-color", "-input=false"],
+            &project_dir_path,
+            &aws_credentials,
+        )?;
+
+        if success {
+            emit_output(&window, "\r\n\x1b[32m✓ Plan destroy completado exitosamente\x1b[0m\r\n");
+        } else {
+            emit_output(&window, "\r\n\x1b[31m✗ Plan destroy terminó con errores\x1b[0m\r\n");
+        }
+        Ok(success)
+    })
+    .await
+    .map_err(|error| format!("Error interno ejecutando plan destroy: {error}"))?
+}
+
+#[tauri::command]
+pub async fn terraform_apply(
+    window: tauri::Window,
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+    aws_credentials: AwsCredentials,
+    state: tauri::State<'_, TerraformInteractiveState>,
+) -> Result<bool, String> {
+    let stdin_arc = state.stdin.clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        if project_dir.trim().is_empty() {
+            return Err("No se recibió directorio de proyecto.".to_string());
+        }
+        let project_dir_path = PathBuf::from(project_dir.trim());
+        if !project_dir_path.exists() {
+            return Err("El directorio del proyecto no existe.".to_string());
+        }
+
+        if !files.is_empty() {
+            sync_project_tf_files(&project_dir_path, &files)?;
+        }
+
         emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║     terraform apply          ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
 
         terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
 
         emit_output(&window, "\r\n\x1b[36m→ terraform apply\x1b[0m\r\n");
-        let success = run_terraform_streaming(
+        let success = run_terraform_interactive_inner(
             &window,
-            &["apply", "-auto-approve", "-no-color", "-input=false"],
+            &["apply", "-no-color"],
             &project_dir_path,
             &aws_credentials,
+            &stdin_arc,
         )?;
 
         if success {
@@ -267,7 +440,9 @@ pub async fn terraform_destroy(
     project_dir: String,
     files: Vec<TerraformSourceFile>,
     aws_credentials: AwsCredentials,
+    state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
+    let stdin_arc = state.stdin.clone();
     tauri::async_runtime::spawn_blocking(move || {
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
@@ -286,11 +461,12 @@ pub async fn terraform_destroy(
         terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
 
         emit_output(&window, "\r\n\x1b[36m→ terraform destroy\x1b[0m\r\n");
-        let success = run_terraform_streaming(
+        let success = run_terraform_interactive_inner(
             &window,
-            &["destroy", "-auto-approve", "-no-color", "-input=false"],
+            &["destroy", "-no-color"],
             &project_dir_path,
             &aws_credentials,
+            &stdin_arc,
         )?;
 
         if success {

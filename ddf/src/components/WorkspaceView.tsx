@@ -121,6 +121,9 @@ export default function WorkspaceView({
   const [bottomPreferredTab, setBottomPreferredTab] = useState<"terminal" | "logs">("terminal");
   const [terminalPoppedOut, setTerminalPoppedOut] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [pendingDeployConfirmation, setPendingDeployConfirmation] = useState<
+    "terraform_apply" | "terraform_destroy" | null
+  >(null);
   const [showAwsConfig, setShowAwsConfig] = useState(false);
   const [rightPanelOverlayOffset, setRightPanelOverlayOffset] = useState(0);
   const [isRightPanelOverlayResizing, setIsRightPanelOverlayResizing] = useState(false);
@@ -961,9 +964,16 @@ export default function WorkspaceView({
     !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
   const runTerraformAction = useCallback(
-    async (action: "terraform_plan" | "terraform_apply" | "terraform_destroy") => {
+    async (
+      action: "terraform_plan" | "terraform_plan_destroy" | "terraform_apply" | "terraform_destroy",
+    ) => {
       if (!projectDir || !isTauriRuntime) return;
       setIsDeploying(true);
+      if (action === "terraform_apply") {
+        setPendingDeployConfirmation("terraform_apply");
+      } else if (action === "terraform_destroy") {
+        setPendingDeployConfirmation("terraform_destroy");
+      }
       setBottomPreferredTab("terminal");
       setBottomOpenSignal((s) => s + 1);
       try {
@@ -981,9 +991,30 @@ export default function WorkspaceView({
         console.error(`${action} error:`, error);
       } finally {
         setIsDeploying(false);
+        setPendingDeployConfirmation(null);
       }
     },
     [projectDir, isTauriRuntime, awsCredentials],
+  );
+
+  const confirmTerraformAction = useCallback(
+    async (confirmed: boolean) => {
+      if (!isTauriRuntime) return;
+      try {
+        await invoke("terraform_confirm", { input: confirmed ? "yes" : "no" });
+      } catch (error) {
+        console.error("terraform_confirm error:", error);
+      }
+    },
+    [isTauriRuntime],
+  );
+
+  const triggerDeployAction = useCallback(
+    (action: "terraform_apply" | "terraform_destroy") => {
+      setActiveSection("diff");
+      void runTerraformAction(action);
+    },
+    [runTerraformAction],
   );
 
   return (
@@ -1001,9 +1032,15 @@ export default function WorkspaceView({
         onSectionChange={setActiveSection}
         awsConfigured={awsConfigured}
         onOpenAwsConfig={() => setShowAwsConfig(true)}
-        onPlan={() => void runTerraformAction("terraform_plan")}
-        onApply={() => void runTerraformAction("terraform_apply")}
-        onDestroy={() => void runTerraformAction("terraform_destroy")}
+        onPlan={() => { setActiveSection("diff"); void runTerraformAction("terraform_plan"); }}
+        onApply={() => triggerDeployAction("terraform_apply")}
+        onDestroy={() => triggerDeployAction("terraform_destroy")}
+        isApplyConfirming={pendingDeployConfirmation === "terraform_apply"}
+        isDestroyConfirming={pendingDeployConfirmation === "terraform_destroy"}
+        onConfirmApply={() => void confirmTerraformAction(true)}
+        onCancelApply={() => void confirmTerraformAction(false)}
+        onConfirmDestroy={() => void confirmTerraformAction(true)}
+        onCancelDestroy={() => void confirmTerraformAction(false)}
         isDeploying={isDeploying}
       />
 

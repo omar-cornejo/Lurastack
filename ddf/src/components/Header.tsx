@@ -10,6 +10,12 @@ type HeaderProps = {
   onPlan?: () => void;
   onApply?: () => void;
   onDestroy?: () => void;
+  isApplyConfirming?: boolean;
+  isDestroyConfirming?: boolean;
+  onConfirmApply?: () => void;
+  onCancelApply?: () => void;
+  onConfirmDestroy?: () => void;
+  onCancelDestroy?: () => void;
   isDeploying?: boolean;
 };
 
@@ -22,6 +28,12 @@ export default function Header({
   onPlan,
   onApply,
   onDestroy,
+  isApplyConfirming = false,
+  isDestroyConfirming = false,
+  onConfirmApply,
+  onCancelApply,
+  onConfirmDestroy,
+  onCancelDestroy,
   isDeploying = false,
 }: HeaderProps) {
   return (
@@ -97,23 +109,64 @@ export default function Header({
         {/* Apply button */}
         <button
           type="button"
-          onClick={onApply}
-          disabled={isDeploying || !awsConfigured}
-          title={!awsConfigured ? "Configura las credenciales AWS primero" : "Ejecutar terraform apply"}
-          className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={isApplyConfirming ? onConfirmApply : onApply}
+          disabled={!isApplyConfirming && (isDeploying || !awsConfigured)}
+          title={
+            isApplyConfirming
+              ? "Confirmar: enviar 'yes' a terraform apply"
+              : !awsConfigured
+              ? "Configura las credenciales AWS primero"
+              : "Ejecutar terraform apply"
+          }
+          className={`rounded px-3 py-1 text-sm font-medium border transition-colors ${
+            isApplyConfirming
+              ? "border-green-500 text-green-300 hover:bg-green-900/40"
+              : "border-gray-500 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          }`}
         >
-          {isDeploying ? "Ejecutando..." : "Apply"}
+          {isApplyConfirming ? "Yes" : isDeploying ? "Ejecutando..." : "Apply"}
         </button>
+        {isApplyConfirming && (
+          <button
+            type="button"
+            onClick={onCancelApply}
+            title="Cancelar: enviar 'no' a terraform apply"
+            className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-300 hover:bg-gray-700"
+          >
+            No
+          </button>
+        )}
 
+        {/* Destroy button */}
         <button
           type="button"
-          onClick={onDestroy}
-          disabled={isDeploying || !awsConfigured}
-          title={!awsConfigured ? "Configura las credenciales AWS primero" : "Ejecutar terraform destroy"}
-          className="rounded px-3 py-1 text-sm font-medium border border-red-500 text-red-200 hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+          onClick={isDestroyConfirming ? onConfirmDestroy : onDestroy}
+          disabled={!isDestroyConfirming && (isDeploying || !awsConfigured)}
+          title={
+            isDestroyConfirming
+              ? "Confirmar: enviar 'yes' a terraform destroy"
+              : !awsConfigured
+              ? "Configura las credenciales AWS primero"
+              : "Ejecutar terraform destroy"
+          }
+          className={`rounded px-3 py-1 text-sm font-medium border transition-colors ${
+            isDestroyConfirming
+              ? "border-green-500 text-green-300 hover:bg-green-900/40"
+              : "border-red-500 text-red-200 hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+          }`}
         >
-          {isDeploying ? "Ejecutando..." : "Destroy"}
+          {isDestroyConfirming ? "Yes" : isDeploying ? "Ejecutando..." : "Destroy"}
         </button>
+        {isDestroyConfirming && (
+          <button
+            type="button"
+            onClick={onCancelDestroy}
+            title="Cancelar: enviar 'no' a terraform destroy"
+            className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-300 hover:bg-gray-700"
+          >
+            No
+          </button>
+        )}
 
         <button
           type="button"

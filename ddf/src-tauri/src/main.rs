@@ -4,6 +4,7 @@ mod terraform_actions;
 fn main() {
     tauri::Builder::default()
         .manage(terminal_commands::TerminalState::default())
+        .manage(terraform_actions::TerraformInteractiveState::default())
         .invoke_handler(tauri::generate_handler![
             terminal_commands::init_terminal_session,
             terminal_commands::write_to_pty,
@@ -13,8 +14,10 @@ fn main() {
             terraform_actions::terraform_lsp_diagnostics,
             terraform_actions::terraform_validate,
             terraform_actions::terraform_plan,
+            terraform_actions::terraform_plan_destroy,
             terraform_actions::terraform_apply,
-            terraform_actions::terraform_destroy
+            terraform_actions::terraform_destroy,
+            terraform_actions::terraform_confirm
         ])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
