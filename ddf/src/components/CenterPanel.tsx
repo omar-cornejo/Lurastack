@@ -48,6 +48,7 @@ const STABLE_EDGE_TYPES = Object.freeze({ ...canvasEdgeTypes });
 
 type CenterPanelProps = {
   autoFitKey?: string;
+  leftOverlayOffset?: number;
   nodes: Node<CanvasTerraformNodeData>[];
   edges: Edge<CanvasEdgeData>[];
   resources: TerraformResource[];
@@ -72,12 +73,19 @@ type CenterPanelProps = {
     sourceExpression: string;
     targetAttribute: string;
   }) => void;
+  onViewportBoundsChange?: (bounds: {
+    minX: number;
+    maxX: number;
+    minY: number;
+    maxY: number;
+  }) => void;
   rightOverlayOffset?: number;
   isRightOverlayResizing?: boolean;
 };
 
 export default function CenterPanel({
   autoFitKey = "default",
+  leftOverlayOffset = 0,
   nodes,
   edges,
   resources,
@@ -92,6 +100,7 @@ export default function CenterPanel({
   onNodeSelected,
   onDeleteEdge,
   onApplyEdgeMapping,
+  onViewportBoundsChange,
   rightOverlayOffset = 0,
   isRightOverlayResizing = false,
 }: CenterPanelProps) {
@@ -360,6 +369,31 @@ export default function CenterPanel({
     setActiveLayer((current) => (current > maxLayer ? 0 : current));
   }, [maxLayer]);
 
+  const reportViewportBounds = useCallback(() => {
+    if (!reactFlowInstance || !rootRef.current || !onViewportBoundsChange) return;
+
+    const rect = rootRef.current.getBoundingClientRect();
+    const leftInset = Math.max(0, leftOverlayOffset);
+    const rightInset = Math.max(0, rightOverlayOffset);
+    const viewportWidth = Math.max(1, rect.width - leftInset - rightInset);
+
+    const topLeft = reactFlowInstance.screenToFlowPosition({
+      x: rect.left + leftInset,
+      y: rect.top,
+    });
+    const bottomRight = reactFlowInstance.screenToFlowPosition({
+      x: rect.left + leftInset + viewportWidth,
+      y: rect.bottom,
+    });
+
+    onViewportBoundsChange({
+      minX: Math.min(topLeft.x, bottomRight.x),
+      maxX: Math.max(topLeft.x, bottomRight.x),
+      minY: Math.min(topLeft.y, bottomRight.y),
+      maxY: Math.max(topLeft.y, bottomRight.y),
+    });
+  }, [leftOverlayOffset, onViewportBoundsChange, reactFlowInstance, rightOverlayOffset]);
+
   useEffect(() => {
     hasAutoFittedRef.current = false;
     setIsCanvasReady(false);
@@ -376,10 +410,24 @@ export default function CenterPanel({
       });
       hasAutoFittedRef.current = true;
       setIsCanvasReady(true);
+      reportViewportBounds();
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [reactFlowInstance, autoFitKey, layerScopedNodes, layerScopedEdges]);
+  }, [reactFlowInstance, autoFitKey, layerScopedNodes, layerScopedEdges, reportViewportBounds]);
+
+  useEffect(() => {
+    if (!reactFlowInstance) return;
+
+    reportViewportBounds();
+
+    const handleResize = () => reportViewportBounds();
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [leftOverlayOffset, reactFlowInstance, reportViewportBounds, rightOverlayOffset]);
 
   const applyPlacementIndicator = useCallback((targetContainerId?: string) => {
     setActiveDropContainerId((current) => {
@@ -727,6 +775,7 @@ export default function CenterPanel({
           onDragOver={handleDragOver}
           onDrop={handleDrop}
           onInit={setReactFlowInstance}
+          onMoveEnd={reportViewportBounds}
           nodeTypes={STABLE_NODE_TYPES}
           edgeTypes={STABLE_EDGE_TYPES}
           defaultEdgeOptions={DEFAULT_EDGE_OPTIONS}

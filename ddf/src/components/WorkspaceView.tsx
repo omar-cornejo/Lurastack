@@ -41,6 +41,11 @@ import {
   resolveTerraformIcon,
   SUBNET_PRIVATE_ICON_PATH,
 } from "../models/iconRegistry";
+import {
+  CONTAINER_SCHEMA_IDS,
+  DEFAULT_CONTAINER_SIZE,
+  DEFAULT_RESOURCE_NODE_SIZE,
+} from "../commands/createCanvasNode";
 import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
@@ -62,6 +67,13 @@ type WorkspaceViewProps = {
 type HclBlockNode = {
   attributes: Record<string, unknown>;
   blocks: Record<string, HclBlockNode>;
+};
+
+type CanvasViewportBounds = {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
 };
 
 export default function WorkspaceView({
@@ -102,6 +114,7 @@ export default function WorkspaceView({
   const [rightPanelOverlayOffset, setRightPanelOverlayOffset] = useState(0);
   const [isRightPanelOverlayResizing, setIsRightPanelOverlayResizing] = useState(false);
   const [leftPanelWidth, setLeftPanelWidth] = useState(0);
+  const [canvasViewportBounds, setCanvasViewportBounds] = useState<CanvasViewportBounds | null>(null);
   const hclPersistenceDisabledRef = useRef(false);
   const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
   const lastPopoutHeartbeatRef = useRef<number>(0);
@@ -572,6 +585,37 @@ export default function WorkspaceView({
     dropPosition?: XYPosition,
     options?: { targetContainerId?: string },
   ) => {
+    const resolveRandomPositionInViewport = () => {
+      if (!canvasViewportBounds) return undefined;
+
+      const isContainer = CONTAINER_SCHEMA_IDS.has(node.id);
+      const nodeSize = isContainer ? DEFAULT_CONTAINER_SIZE : DEFAULT_RESOURCE_NODE_SIZE;
+      const basePadding = 48;
+      const viewportWidth = Math.max(1, canvasViewportBounds.maxX - canvasViewportBounds.minX);
+      const viewportHeight = Math.max(1, canvasViewportBounds.maxY - canvasViewportBounds.minY);
+      const dynamicXPadding = Math.max(basePadding, viewportWidth * 0.2);
+      const dynamicYPadding = Math.max(basePadding, viewportHeight * 0.2);
+
+      const minX = canvasViewportBounds.minX + dynamicXPadding;
+      const maxX = canvasViewportBounds.maxX - nodeSize.width - dynamicXPadding;
+      const minY = canvasViewportBounds.minY + dynamicYPadding;
+      const maxY = canvasViewportBounds.maxY - nodeSize.height - dynamicYPadding;
+
+      const centerX = (canvasViewportBounds.minX + canvasViewportBounds.maxX - nodeSize.width) / 2;
+      const centerY = (canvasViewportBounds.minY + canvasViewportBounds.maxY - nodeSize.height) / 2;
+
+      const x = maxX > minX
+        ? minX + Math.random() * (maxX - minX)
+        : centerX;
+      const y = maxY > minY
+        ? minY + Math.random() * (maxY - minY)
+        : centerY;
+
+      return { x, y };
+    };
+
+    const resolvedDropPosition = dropPosition ?? resolveRandomPositionInViewport();
+
     const resourceName = generateNextResourceName(node);
     const newResource: TerraformResource = createTerraformResourceFromSchema(
       node,
@@ -588,7 +632,7 @@ export default function WorkspaceView({
         currentNodes,
         node,
         currentNodes.length,
-        dropPosition,
+        resolvedDropPosition,
         options?.targetContainerId,
         newResource.id,
         newResource.name,
@@ -915,6 +959,7 @@ export default function WorkspaceView({
             <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
               <CenterPanel
                 autoFitKey={`${projectDir ?? "no-project"}:${viewId}`}
+                leftOverlayOffset={leftPanelWidth}
                 nodes={nodes}
                 edges={edges}
                 resources={project.resources}
@@ -933,6 +978,7 @@ export default function WorkspaceView({
                   )
                 }
                 onApplyEdgeMapping={applyEdgeMapping}
+                onViewportBoundsChange={setCanvasViewportBounds}
                 rightOverlayOffset={rightPanelOverlayOffset}
                 isRightOverlayResizing={isRightPanelOverlayResizing}
               />
