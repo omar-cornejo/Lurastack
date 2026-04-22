@@ -94,8 +94,8 @@ export default function WorkspaceView({
   const [codeFiles, setCodeFiles] = useState<DdfCodeFile[]>(initialState?.codeFiles ?? []);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [codeLogs, setCodeLogs] = useState<BottomPanelLogEntry[]>([]);
-  const [codeBottomOpenSignal, setCodeBottomOpenSignal] = useState(0);
-  const [canvasDeploySignal, setCanvasDeploySignal] = useState(0);
+  const [bottomOpenSignal, setBottomOpenSignal] = useState(0);
+  const [bottomPreferredTab, setBottomPreferredTab] = useState<"terminal" | "logs">("terminal");
   const [terminalPoppedOut, setTerminalPoppedOut] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [showAwsConfig, setShowAwsConfig] = useState(false);
@@ -841,7 +841,8 @@ export default function WorkspaceView({
   const appendCodeValidationLogs = useCallback((entries: BottomPanelLogEntry[]) => {
     if (!entries.length) return;
     setCodeLogs((current) => [...entries, ...current].slice(0, 200));
-    setCodeBottomOpenSignal((current) => current + 1);
+    setBottomPreferredTab("logs");
+    setBottomOpenSignal((s) => s + 1);
   }, []);
 
   const isTauriRuntime =
@@ -852,7 +853,8 @@ export default function WorkspaceView({
     async (action: "terraform_plan" | "terraform_apply") => {
       if (!projectDir || !isTauriRuntime) return;
       setIsDeploying(true);
-      setCanvasDeploySignal((s) => s + 1);
+      setBottomPreferredTab("terminal");
+      setBottomOpenSignal((s) => s + 1);
       try {
         await invoke(action, {
           projectDir,
@@ -897,8 +899,9 @@ export default function WorkspaceView({
         <div
           className="absolute inset-0 flex flex-col min-h-0"
           style={{
-            visibility: activeSection === "canvas" ? "visible" : "hidden",
+            opacity: activeSection === "canvas" ? 1 : 0,
             pointerEvents: activeSection === "canvas" ? "auto" : "none",
+            transition: "opacity 0.18s ease",
           }}
         >
           <div className="relative flex flex-1 min-h-0 overflow-hidden">
@@ -948,31 +951,14 @@ export default function WorkspaceView({
               onOverlayResizingChange={setIsRightPanelOverlayResizing}
             />
           </div>
-
-          {!terminalPoppedOut ? (
-            <BottomPanel
-              nodes={nodes}
-              edges={edges}
-              resources={project.resources}
-              schemas={NODE_SCHEMAS}
-              mode="canvas"
-              logs={codeLogs}
-              projectDir={projectDir}
-              viewId={viewId}
-              suppressTerminal={terminalPoppedOut}
-              enabled={isVisible && activeSection === "canvas"}
-              openSignal={canvasDeploySignal}
-              preferredTab="terminal"
-              leftOffset={leftPanelWidth}
-            />
-          ) : null}
         </div>
 
         <div
           className="absolute inset-0 min-h-0"
           style={{
-            visibility: activeSection === "code" ? "visible" : "hidden",
+            opacity: activeSection === "code" ? 1 : 0,
             pointerEvents: activeSection === "code" ? "auto" : "none",
+            transition: "opacity 0.18s ease",
           }}
         >
           <main className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white">
@@ -987,29 +973,30 @@ export default function WorkspaceView({
                 onCustomFilesChange={setCodeFiles}
                 onMainTfBlocksChange={syncResourcesFromMainTfBlocks}
                 onValidationLogs={appendCodeValidationLogs}
-                onOpenLogsPanel={() => setCodeBottomOpenSignal((current) => current + 1)}
+                onOpenLogsPanel={() => { setBottomPreferredTab("logs"); setBottomOpenSignal((s) => s + 1); }}
               />
             </div>
-
-            {!terminalPoppedOut ? (
-              <BottomPanel
-                nodes={nodes}
-                edges={edges}
-                resources={project.resources}
-                schemas={NODE_SCHEMAS}
-                mode="code"
-                logs={codeLogs}
-                openSignal={codeBottomOpenSignal}
-                preferredTab="logs"
-                projectDir={projectDir}
-                viewId={viewId}
-                suppressTerminal={terminalPoppedOut}
-                enabled={isVisible && activeSection === "code"}
-              />
-            ) : null}
           </main>
         </div>
       </div>
+
+      {!terminalPoppedOut ? (
+        <BottomPanel
+          nodes={nodes}
+          edges={edges}
+          resources={project.resources}
+          schemas={NODE_SCHEMAS}
+          mode={activeSection === "canvas" ? "canvas" : "code"}
+          logs={codeLogs}
+          projectDir={projectDir}
+          viewId={viewId}
+          suppressTerminal={terminalPoppedOut}
+          enabled={isVisible}
+          openSignal={bottomOpenSignal}
+          preferredTab={bottomPreferredTab}
+          leftOffset={activeSection === "canvas" ? leftPanelWidth : 0}
+        />
+      ) : null}
     </div>
   );
 }
