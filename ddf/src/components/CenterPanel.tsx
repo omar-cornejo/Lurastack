@@ -43,11 +43,12 @@ const DEFAULT_EDGE_OPTIONS = {
   zIndex: 10000,
   interactionWidth: 32,
 };
-const STABLE_NODE_TYPES = Object.freeze({ ...canvasNodeTypes });
-const STABLE_EDGE_TYPES = Object.freeze({ ...canvasEdgeTypes });
+const STABLE_NODE_TYPES = canvasNodeTypes;
+const STABLE_EDGE_TYPES = canvasEdgeTypes;
 
 type CenterPanelProps = {
   autoFitKey?: string;
+  readOnly?: boolean;
   leftOverlayOffset?: number;
   nodes: Node<CanvasTerraformNodeData>[];
   edges: Edge<CanvasEdgeData>[];
@@ -85,6 +86,7 @@ type CenterPanelProps = {
 
 export default function CenterPanel({
   autoFitKey = "default",
+  readOnly = false,
   leftOverlayOffset = 0,
   nodes,
   edges,
@@ -298,7 +300,7 @@ export default function CenterPanel({
             ...node,
             hidden: false,
             selectable: true,
-            draggable: true,
+            draggable: !readOnly,
             data: {
               ...node.data,
               isLayerGhost: false,
@@ -348,7 +350,7 @@ export default function CenterPanel({
           },
         };
       }),
-    [ghostContainerNodeIds, nodesWithDropTarget, visibleLayerNodeIds],
+    [ghostContainerNodeIds, nodesWithDropTarget, readOnly, visibleLayerNodeIds],
   );
 
   const layerScopedEdges = useMemo(() => {
@@ -437,6 +439,7 @@ export default function CenterPanel({
   }, []);
 
   const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    if (readOnly) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = "copy";
 
@@ -455,10 +458,11 @@ export default function CenterPanel({
 
     const pointerTarget = findContainerAtPoint(nodes, flowPosition);
     applyPlacementIndicator(pointerTarget?.id);
-  }, [nodes, reactFlowInstance]);
+  }, [nodes, reactFlowInstance, readOnly]);
 
   const handleNodeDrag: NodeDragHandler = useCallback(
     (event, draggingNode) => {
+      if (readOnly) return;
       if (!reactFlowInstance) return;
 
       if (!nodeById.has(draggingNode.id)) return;
@@ -497,11 +501,12 @@ export default function CenterPanel({
 
       applyPlacementIndicator(pointerTarget?.id);
     },
-    [applyPlacementIndicator, nodeById, nodes, reactFlowInstance],
+    [applyPlacementIndicator, nodeById, nodes, reactFlowInstance, readOnly],
   );
 
   const handleNodeDragStop: NodeDragHandler = useCallback(
     (event, node, nodeList) => {
+      if (readOnly) return;
       let finalTargetId = activeDropContainerId ?? undefined;
 
       if (
@@ -540,7 +545,7 @@ export default function CenterPanel({
       onNodeDragFinalize?.(node.id, finalTargetId);
       onNodeDragStop(event, node, nodeList);
     },
-    [activeDropContainerId, nodes, onNodeDragFinalize, onNodeDragStop, reactFlowInstance],
+    [activeDropContainerId, nodes, onNodeDragFinalize, onNodeDragStop, reactFlowInstance, readOnly],
   );
 
   const handleDragLeave = useCallback((event: DragEvent<HTMLDivElement>) => {
@@ -551,6 +556,7 @@ export default function CenterPanel({
 
   const handleDrop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
+      if (readOnly) return;
       event.preventDefault();
       const dropTargetContainerId = activeDropContainerId ?? undefined;
       setActiveDropContainerId(null);
@@ -577,7 +583,7 @@ export default function CenterPanel({
       });
       clearActiveLeftPanelDrag();
     },
-    [activeDropContainerId, onDropNode, reactFlowInstance],
+    [activeDropContainerId, onDropNode, reactFlowInstance, readOnly],
   );
 
   const handleSelectionChange = useCallback(
@@ -676,6 +682,7 @@ export default function CenterPanel({
 
   const handleEdgeContextMenu: EdgeMouseHandler = useCallback(
     (event, edge) => {
+      if (readOnly) return;
       event.preventDefault();
       event.stopPropagation();
 
@@ -694,7 +701,7 @@ export default function CenterPanel({
       });
       setEdgeMapper(null);
     },
-    [],
+    [readOnly],
   );
 
   useEffect(() => {
@@ -759,21 +766,21 @@ export default function CenterPanel({
         <ReactFlow
           nodes={layerScopedNodes}
           edges={layerScopedEdges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeDragStart={onNodeDragStart}
-          onNodeDrag={handleNodeDrag}
-          onNodeDragStop={handleNodeDragStop}
+          onNodesChange={readOnly ? undefined : onNodesChange}
+          onEdgesChange={readOnly ? undefined : onEdgesChange}
+          onConnect={readOnly ? undefined : onConnect}
+          onNodeDragStart={readOnly ? undefined : onNodeDragStart}
+          onNodeDrag={readOnly ? undefined : handleNodeDrag}
+          onNodeDragStop={readOnly ? undefined : handleNodeDragStop}
           onNodeClick={(_event, node) => onNodeSelected?.(node.id)}
           onPaneClick={() => {
             setEdgeMapper(null);
             setEdgeContextMenu(null);
           }}
           onSelectionChange={handleSelectionChange}
-          onEdgeContextMenu={handleEdgeContextMenu}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
+          onEdgeContextMenu={readOnly ? undefined : handleEdgeContextMenu}
+          onDragOver={readOnly ? undefined : handleDragOver}
+          onDrop={readOnly ? undefined : handleDrop}
           onInit={setReactFlowInstance}
           onMoveEnd={reportViewportBounds}
           nodeTypes={STABLE_NODE_TYPES}
@@ -783,6 +790,9 @@ export default function CenterPanel({
           elevateNodesOnSelect={false}
           panOnDrag={MIDDLE_MOUSE_PAN_BUTTONS}
           selectionOnDrag={activeLayer === 0}
+          nodesConnectable={!readOnly}
+          nodesDraggable={!readOnly}
+          elementsSelectable
           selectionKeyCode="Shift"
           multiSelectionKeyCode="Shift"
           onlyRenderVisibleElements

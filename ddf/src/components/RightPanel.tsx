@@ -38,8 +38,17 @@ type RightPanelProps = {
   onUpdateSelectedResource: (
     updater: (resource: TerraformResource) => TerraformResource,
   ) => void;
+  diffMode?: boolean;
   onOverlayWidthChange?: (width: number) => void;
   onOverlayResizingChange?: (isResizing: boolean) => void;
+};
+
+type DiffAttributeStatus = "create" | "change" | "destroy";
+
+type DiffAttributeRow = {
+  name: string;
+  value: unknown;
+  status: DiffAttributeStatus;
 };
 
 const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
@@ -269,6 +278,7 @@ export const RightPanel = ({
   selectedResource,
   onSelectNode,
   onUpdateSelectedResource,
+  diffMode = false,
   onOverlayWidthChange,
   onOverlayResizingChange,
 }: RightPanelProps) => {
@@ -453,6 +463,23 @@ export const RightPanel = ({
     [nodes, selectedNode, selectedNodeId],
   );
 
+  const diffAttributeRows = useMemo<DiffAttributeRow[]>(() => {
+    if (!selectedResource) return [];
+
+    return Object.entries(selectedResource.config.attributes ?? {})
+      .filter(([, value]) => {
+        if (value === undefined || value === null) return false;
+        if (typeof value === "string" && value.trim() === "") return false;
+        if (Array.isArray(value) && value.length === 0) return false;
+        return true;
+      })
+      .map(([name, value]) => ({
+        name,
+        value,
+        status: "create" as const,
+      }));
+  }, [selectedResource]);
+
   useEffect(() => {
     if (!selectedResource) {
       setHclDraft("");
@@ -619,7 +646,7 @@ export const RightPanel = ({
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    {selectedResource && isEditingName ? (
+                    {selectedResource && isEditingName && !diffMode ? (
                       <input
                         ref={nameInputRef}
                         value={nameInputValue}
@@ -635,14 +662,14 @@ export const RightPanel = ({
                     ) : (
                       <button
                         type="button"
-                        onClick={selectedResource ? startEditingName : undefined}
-                        disabled={!selectedResource}
+                        onClick={selectedResource && !diffMode ? startEditingName : undefined}
+                        disabled={!selectedResource || diffMode}
                         className="group flex w-full items-center gap-1 text-left disabled:cursor-default"
                       >
                         <span className="truncate text-[12.5px] font-semibold text-slate-900">
                           {selectedResource?.name ?? selectedNode.data.label}
                         </span>
-                        {selectedResource && (
+                        {selectedResource && !diffMode && (
                           <Icon
                             icon="mdi:pencil-outline"
                             className="shrink-0 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100"
@@ -717,7 +744,7 @@ export const RightPanel = ({
             {activeTab === "info" && selectedNode && selectedResource && selectedSchema && (
               <div className="space-y-3 px-3">
                 {/* Subnet toggle */}
-                {selectedSchema.terraformType === "aws_subnet" && (
+                {!diffMode && selectedSchema.terraformType === "aws_subnet" && (
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400">Subnet type</label>
                     <button
@@ -737,6 +764,52 @@ export const RightPanel = ({
                 )}
 
                 {/* Attributes section */}
+                {diffMode ? (
+                  <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                    <div className="mb-2.5 flex items-center justify-between">
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Diff attributes</span>
+                      <span className="text-[9px] text-slate-400">{diffAttributeRows.length} activos</span>
+                    </div>
+
+                    {diffAttributeRows.length === 0 ? (
+                      <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
+                        No hay atributos activos para este recurso
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {diffAttributeRows.map((attribute) => {
+                          const statusClasses =
+                            attribute.status === "create"
+                              ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                              : attribute.status === "change"
+                                ? "bg-amber-50 text-amber-700 ring-amber-200"
+                                : "bg-red-50 text-red-700 ring-red-200";
+                          const statusLabel =
+                            attribute.status === "create"
+                              ? "create"
+                              : attribute.status === "change"
+                                ? "change"
+                                : "destroy";
+
+                          return (
+                            <div key={attribute.name} className="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5">
+                              <div className="mb-1.5 flex items-start justify-between gap-2">
+                                <p className="text-[11.5px] font-semibold text-slate-800 break-all">{attribute.name}</p>
+                                <span className={`shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${statusClasses}`}>
+                                  {statusLabel}
+                                </span>
+                              </div>
+
+                              <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] text-slate-700 break-all">
+                                {toHclLiteral(attribute.value)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : (
                 <div className="space-y-2">
                   {/* Filters bar */}
                   <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
@@ -992,9 +1065,10 @@ export const RightPanel = ({
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Children / zone nodes */}
-                {selectedNode.data.isContainer && (
+                {!diffMode && selectedNode.data.isContainer && (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
@@ -1044,6 +1118,35 @@ export const RightPanel = ({
                       <Icon icon="mdi:code-braces" className="text-slate-400" width={22} />
                     </div>
                     <p className="text-[11px] text-slate-400">Select a node to view its HCL</p>
+                  </div>
+                ) : diffMode ? (
+                  <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-100 px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Diff HCL</p>
+                    </div>
+                    <div className="space-y-1 p-3 font-mono text-[11px] text-slate-700">
+                      <div className="text-slate-600">
+                        {`${selectedResource.kind ?? "resource"} \"${selectedResource.type}\" \"${selectedResource.name}\" {`}
+                      </div>
+                      {diffAttributeRows.map((attribute) => {
+                        const statusClasses =
+                          attribute.status === "create"
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+                            : attribute.status === "change"
+                              ? "bg-amber-50 text-amber-700 ring-amber-200"
+                              : "bg-red-50 text-red-700 ring-red-200";
+
+                        return (
+                          <div key={attribute.name} className="flex items-start gap-2">
+                            <span className={`mt-[1px] shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${statusClasses}`}>
+                              {attribute.status}
+                            </span>
+                            <span className="break-all">{`  ${attribute.name} = ${toHclLiteral(attribute.value)}`}</span>
+                          </div>
+                        );
+                      })}
+                      <div className="text-slate-600">{"}"}</div>
+                    </div>
                   </div>
                 ) : (
                   <HclCodeArea

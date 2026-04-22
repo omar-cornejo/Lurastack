@@ -85,7 +85,7 @@ export default function WorkspaceView({
   onStateChange,
 }: WorkspaceViewProps) {
   const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
-  const [activeSection, setActiveSection] = useState<"canvas" | "code">("canvas");
+  const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff">("canvas");
   const [cloudProvider, setCloudProvider] = useState<"aws">("aws");
   const [providerRegion] = useState("eu-south-2");
 
@@ -940,14 +940,7 @@ export default function WorkspaceView({
       />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
-        <div
-          className="absolute inset-0 flex flex-col min-h-0"
-          style={{
-            opacity: activeSection === "canvas" ? 1 : 0,
-            pointerEvents: activeSection === "canvas" ? "auto" : "none",
-            transition: "opacity 0.18s ease",
-          }}
-        >
+        {activeSection !== "code" && (
           <div className="relative flex flex-1 min-h-0 overflow-hidden">
             <LeftPanel
               addResource={addResource}
@@ -959,6 +952,7 @@ export default function WorkspaceView({
             <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
               <CenterPanel
                 autoFitKey={`${projectDir ?? "no-project"}:${viewId}`}
+                readOnly={activeSection === "diff"}
                 leftOverlayOffset={leftPanelWidth}
                 nodes={nodes}
                 edges={edges}
@@ -978,7 +972,7 @@ export default function WorkspaceView({
                   )
                 }
                 onApplyEdgeMapping={applyEdgeMapping}
-                onViewportBoundsChange={setCanvasViewportBounds}
+                onViewportBoundsChange={activeSection === "canvas" ? setCanvasViewportBounds : undefined}
                 rightOverlayOffset={rightPanelOverlayOffset}
                 isRightOverlayResizing={isRightPanelOverlayResizing}
               />
@@ -995,18 +989,13 @@ export default function WorkspaceView({
               onUpdateSelectedResource={updateSelectedResource}
               onOverlayWidthChange={setRightPanelOverlayOffset}
               onOverlayResizingChange={setIsRightPanelOverlayResizing}
+              diffMode={activeSection === "diff"}
             />
           </div>
-        </div>
+        )}
 
-        <div
-          className="absolute inset-0 min-h-0"
-          style={{
-            opacity: activeSection === "code" ? 1 : 0,
-            pointerEvents: activeSection === "code" ? "auto" : "none",
-            transition: "opacity 0.18s ease",
-          }}
-        >
+        {activeSection === "code" && (
+          <div className="min-h-0 flex-1">
           <main className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white">
             <div className="min-h-0 flex-1">
               <CodePanel
@@ -1023,7 +1012,8 @@ export default function WorkspaceView({
               />
             </div>
           </main>
-        </div>
+          </div>
+        )}
       </div>
 
       {!terminalPoppedOut ? (
@@ -1032,7 +1022,7 @@ export default function WorkspaceView({
           edges={edges}
           resources={project.resources}
           schemas={NODE_SCHEMAS}
-          mode={activeSection === "canvas" ? "canvas" : "code"}
+          mode={activeSection === "code" ? "code" : "canvas"}
           logs={codeLogs}
           projectDir={projectDir}
           viewId={viewId}
@@ -1040,7 +1030,7 @@ export default function WorkspaceView({
           enabled={isVisible}
           openSignal={bottomOpenSignal}
           preferredTab={bottomPreferredTab}
-          leftOffset={activeSection === "canvas" ? leftPanelWidth : 0}
+          leftOffset={activeSection === "canvas" || activeSection === "diff" ? leftPanelWidth : 0}
         />
       ) : null}
     </div>

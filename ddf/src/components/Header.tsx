@@ -2,8 +2,8 @@ import type { AwsCredentials } from "../hooks/useAwsCredentials";
 
 type HeaderProps = {
   onClearCanvas: () => void;
-  activeSection: "canvas" | "code";
-  onSectionChange?: (section: "canvas" | "code") => void;
+  activeSection: "canvas" | "code" | "diff";
+  onSectionChange?: (section: "canvas" | "code" | "diff") => void;
   awsCredentials?: AwsCredentials;
   awsConfigured?: boolean;
   onOpenAwsConfig?: () => void;
@@ -48,6 +48,17 @@ export default function Header({
             }`}
           >
             Code
+          </button>
+          <button
+            type="button"
+            onClick={() => onSectionChange?.("diff")}
+            className={`rounded px-3 py-1 text-sm font-medium ${
+              activeSection === "diff"
+                ? "bg-white text-gray-800"
+                : "text-gray-200 hover:bg-gray-600"
+            }`}
+          >
+            Diff
           </button>
         </nav>
       </div>
