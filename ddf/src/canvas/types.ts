@@ -17,6 +17,13 @@ export type CanvasEdgeData = {
   };
 };
 
+export type PlanAction = "create" | "change" | "destroy";
+
+export type ResourcePlanChange = {
+  action: PlanAction;
+  attrActions: Map<string, PlanAction>;
+};
+
 export type CanvasTerraformNodeData = {
   resourceId: string;
   schemaId: string;
@@ -29,4 +36,5 @@ export type CanvasTerraformNodeData = {
   zoneContainerIds?: string[];
   isDropTarget?: boolean;
   isLayerGhost?: boolean;
+  planAction?: PlanAction;
 };

@@ -5,6 +5,7 @@ import type { Node } from "reactflow";
 import type { CanvasTerraformNodeData } from "../canvas/types";
 
 import type { TerraformResource } from "../models/terraform";
+import type { ResourcePlanChange } from "../canvas/types";
 import { NODE_SCHEMAS, type TerraformNodeSchema } from "../models/nodeRegistry";
 import {
   SUBNET_PRIVATE_ICON_PATH,
@@ -39,11 +40,12 @@ type RightPanelProps = {
     updater: (resource: TerraformResource) => TerraformResource,
   ) => void;
   diffMode?: boolean;
+  planChanges?: Map<string, ResourcePlanChange>;
   onOverlayWidthChange?: (width: number) => void;
   onOverlayResizingChange?: (isResizing: boolean) => void;
 };
 
-type DiffAttributeStatus = "create" | "change" | "destroy";
+type DiffAttributeStatus = "create" | "change" | "destroy" | "unchanged";
 
 type DiffAttributeRow = {
   name: string;
@@ -279,6 +281,7 @@ export const RightPanel = ({
   onSelectNode,
   onUpdateSelectedResource,
   diffMode = false,
+  planChanges,
   onOverlayWidthChange,
   onOverlayResizingChange,
 }: RightPanelProps) => {
@@ -466,6 +469,8 @@ export const RightPanel = ({
   const diffAttributeRows = useMemo<DiffAttributeRow[]>(() => {
     if (!selectedResource) return [];
 
+    const resourceChange = planChanges?.get(`${selectedResource.type}.${selectedResource.name}`);
+
     return Object.entries(selectedResource.config.attributes ?? {})
       .filter(([, value]) => {
         if (value === undefined || value === null) return false;
@@ -473,12 +478,20 @@ export const RightPanel = ({
         if (Array.isArray(value) && value.length === 0) return false;
         return true;
       })
-      .map(([name, value]) => ({
-        name,
-        value,
-        status: "create" as const,
-      }));
-  }, [selectedResource]);
+      .map(([name, value]) => {
+        let status: DiffAttributeStatus;
+        if (!resourceChange) {
+          status = "unchanged";
+        } else if (resourceChange.attrActions?.has(name)) {
+          status = resourceChange.attrActions.get(name)!;
+        } else if (resourceChange.action === "change") {
+          status = "unchanged";
+        } else {
+          status = resourceChange.action;
+        }
+        return { name, value, status };
+      });
+  }, [selectedResource, planChanges]);
 
   useEffect(() => {
     if (!selectedResource) {
@@ -779,25 +792,20 @@ export const RightPanel = ({
                       <div className="space-y-2">
                         {diffAttributeRows.map((attribute) => {
                           const statusClasses =
-                            attribute.status === "create"
-                              ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                              : attribute.status === "change"
-                                ? "bg-amber-50 text-amber-700 ring-amber-200"
-                                : "bg-red-50 text-red-700 ring-red-200";
-                          const statusLabel =
-                            attribute.status === "create"
-                              ? "create"
-                              : attribute.status === "change"
-                                ? "change"
-                                : "destroy";
+                            attribute.status === "create"   ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
+                            attribute.status === "change"   ? "bg-amber-50 text-amber-700 ring-amber-200" :
+                            attribute.status === "destroy"  ? "bg-red-50 text-red-700 ring-red-200" :
+                            null;
 
                           return (
-                            <div key={attribute.name} className="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5">
+                            <div key={attribute.name} className={`rounded-lg border p-2.5 ${attribute.status === "unchanged" ? "border-slate-100 bg-white opacity-50" : "border-slate-200 bg-slate-50/80"}`}>
                               <div className="mb-1.5 flex items-start justify-between gap-2">
                                 <p className="text-[11.5px] font-semibold text-slate-800 break-all">{attribute.name}</p>
-                                <span className={`shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${statusClasses}`}>
-                                  {statusLabel}
-                                </span>
+                                {statusClasses && (
+                                  <span className={`shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${statusClasses}`}>
+                                    {attribute.status}
+                                  </span>
+                                )}
                               </div>
 
                               <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] text-slate-700 break-all">
@@ -1130,17 +1138,20 @@ export const RightPanel = ({
                       </div>
                       {diffAttributeRows.map((attribute) => {
                         const statusClasses =
-                          attribute.status === "create"
-                            ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-                            : attribute.status === "change"
-                              ? "bg-amber-50 text-amber-700 ring-amber-200"
-                              : "bg-red-50 text-red-700 ring-red-200";
+                          attribute.status === "create"   ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
+                          attribute.status === "change"   ? "bg-amber-50 text-amber-700 ring-amber-200" :
+                          attribute.status === "destroy"  ? "bg-red-50 text-red-700 ring-red-200" :
+                          null;
 
                         return (
-                          <div key={attribute.name} className="flex items-start gap-2">
-                            <span className={`mt-[1px] shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${statusClasses}`}>
-                              {attribute.status}
-                            </span>
+                          <div key={attribute.name} className={`flex items-start gap-2 ${attribute.status === "unchanged" ? "opacity-40" : ""}`}>
+                            {statusClasses ? (
+                              <span className={`mt-[1px] shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${statusClasses}`}>
+                                {attribute.status}
+                              </span>
+                            ) : (
+                              <span className="mt-[1px] shrink-0 w-[38px]" />
+                            )}
                             <span className="break-all">{`  ${attribute.name} = ${toHclLiteral(attribute.value)}`}</span>
                           </div>
                         );

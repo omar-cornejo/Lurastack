@@ -10,6 +10,8 @@ import { TerraformProject, TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import {
   addEdge,
   applyNodeChanges,
@@ -26,6 +28,8 @@ import type {
   CanvasEdgeData,
   CanvasEdgeMapping,
   CanvasTerraformNodeData,
+  PlanAction,
+  ResourcePlanChange,
 } from "../canvas/types";
 import {
   applyZoneContainerMemberships,
@@ -133,6 +137,9 @@ export default function WorkspaceView({
   const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
   const lastPopoutHeartbeatRef = useRef<number>(0);
   const { credentials: awsCredentials, save: saveAwsCredentials, isConfigured: awsConfigured } = useAwsCredentials();
+  const [planChanges, setPlanChanges] = useState<Map<string, ResourcePlanChange>>(new Map());
+  const planBufferRef = useRef("");
+  const planCurrentAddressRef = useRef<string | null>(null);
 
   const broadcastBottomPanelState = useCallback(() => {
     if (!bottomPanelChannelRef.current) return;
@@ -153,6 +160,87 @@ export default function WorkspaceView({
   useEffect(() => {
     broadcastBottomPanelState();
   }, [broadcastBottomPanelState]);
+
+  // Parse terraform plan output to extract per-resource and per-attribute actions
+  useEffect(() => {
+    const hasTauri = typeof window !== "undefined" &&
+      !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+    if (!hasTauri) return;
+    const headerRe = /^\s{2}#\s+(\S+)\s+(?:will be (created|destroyed|updated in-place)|must be replaced)/;
+    const attrRe   = /^      ([+~-])\s+(\w+)/;
+    const blockEndRe = /^\s{0,4}\}/;
+    const currentWindowLabel = getCurrentWindow().label;
+
+    const unlisten = listen<{ window_label: string; output: string }>(
+      "terraform-output",
+      (event) => {
+        if (event.payload.window_label !== currentWindowLabel) return;
+        planBufferRef.current += event.payload.output;
+        const lines = planBufferRef.current.split("\n");
+        planBufferRef.current = lines.pop() ?? "";
+
+        const resourceUpdates: Array<[string, PlanAction]> = [];
+        const attrUpdates: Array<[string, string, PlanAction]> = [];
+
+        for (const line of lines) {
+          const headerMatch = headerRe.exec(line);
+          if (headerMatch) {
+            planCurrentAddressRef.current = headerMatch[1];
+            const verb = headerMatch[2];
+            const action: PlanAction = verb === "created" ? "create" : verb === "destroyed" ? "destroy" : "change";
+            resourceUpdates.push([headerMatch[1], action]);
+            continue;
+          }
+          if (blockEndRe.test(line)) {
+            planCurrentAddressRef.current = null;
+            continue;
+          }
+          if (planCurrentAddressRef.current) {
+            const attrMatch = attrRe.exec(line);
+            if (attrMatch) {
+              const symbol = attrMatch[1];
+              const attrName = attrMatch[2];
+              const action: PlanAction = symbol === "+" ? "create" : symbol === "-" ? "destroy" : "change";
+              attrUpdates.push([planCurrentAddressRef.current, attrName, action]);
+            }
+          }
+        }
+
+        if (resourceUpdates.length > 0 || attrUpdates.length > 0) {
+          setPlanChanges((prev) => {
+            const next = new Map(prev);
+            for (const [addr, action] of resourceUpdates) {
+              next.set(addr, { action, attrActions: new Map() });
+            }
+            for (const [addr, attrName, action] of attrUpdates) {
+              const existing = next.get(addr);
+              if (existing) {
+                const attrActions = new Map(existing.attrActions ?? []);
+                attrActions.set(attrName, action);
+                next.set(addr, { ...existing, attrActions });
+              }
+            }
+            return next;
+          });
+        }
+      },
+    );
+    return () => { void unlisten.then((fn) => fn()); };
+  }, []);
+
+  // Sync planAction into node data when planChanges or activeSection changes
+  useEffect(() => {
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        const resource = project.resources.find((r) => r.id === node.data.resourceId);
+        const action = resource && activeSection === "diff"
+          ? planChanges.get(`${resource.type}.${resource.name}`)?.action
+          : undefined;
+        if (node.data.planAction === action) return node;
+        return { ...node, data: { ...node.data, planAction: action } };
+      }),
+    );
+  }, [planChanges, activeSection, project.resources, setNodes]);
 
 
   useEffect(() => {
@@ -968,6 +1056,7 @@ export default function WorkspaceView({
       action: "terraform_plan" | "terraform_plan_destroy" | "terraform_apply" | "terraform_destroy",
     ) => {
       if (!projectDir || !isTauriRuntime) return;
+      setPlanChanges(new Map());
       setIsDeploying(true);
       if (action === "terraform_apply") {
         setPendingDeployConfirmation("terraform_apply");
@@ -1095,6 +1184,7 @@ export default function WorkspaceView({
               onOverlayWidthChange={setRightPanelOverlayOffset}
               onOverlayResizingChange={setIsRightPanelOverlayResizing}
               diffMode={activeSection === "diff"}
+              planChanges={planChanges}
             />
           </div>
         )}
