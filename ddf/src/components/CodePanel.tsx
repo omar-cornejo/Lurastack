@@ -68,7 +68,13 @@ type PendingDeleteTarget = {
   isDirectory: boolean;
 };
 
+type HclBlockNode = {
+  attributes: Record<string, unknown>;
+  blocks: Record<string, HclBlockNode>;
+};
+
 const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+const INVALID_HCL_VALUE = Symbol("invalid-hcl-value");
 
 const sanitizeLooseQuotedString = (raw: string): string => {
   let value = raw.trim();
@@ -186,9 +192,15 @@ const pruneEmptyAttributeAssignments = (hcl: string): string => {
   return nextLines.join("\n");
 };
 
-const parseHclValueToAttribute = (rawValue: string): unknown => {
+const parseHclValueToAttribute = (rawValue: string): unknown | typeof INVALID_HCL_VALUE => {
   const trimmed = rawValue.trim();
   if (!trimmed) return "";
+  if (trimmed === "[" || trimmed === "]" || trimmed === "{" || trimmed === "}") {
+    return INVALID_HCL_VALUE;
+  }
+  if ((trimmed.startsWith("[") && !trimmed.endsWith("]")) || (trimmed.startsWith("{") && !trimmed.endsWith("}"))) {
+    return INVALID_HCL_VALUE;
+  }
   if (trimmed === "null") return null;
   if (trimmed === "true") return true;
   if (trimmed === "false") return false;
@@ -233,7 +245,10 @@ const parseMainTfBlocks = (hcl: string): ParsedMainTfBlock[] => {
         const assignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
         if (assignment) {
           const [, key, rawValue] = assignment;
-          attributes[key] = parseHclValueToAttribute(rawValue);
+          const parsed = parseHclValueToAttribute(rawValue);
+          if (parsed !== INVALID_HCL_VALUE) {
+            attributes[key] = parsed;
+          }
         }
       }
 
@@ -876,6 +891,14 @@ export default function CodePanel({
     setMainTfDraft(isFreeEditMode ? next : pruneEmptyAttributeAssignments(next));
   };
 
+  const regenerateMainTfFromCanvas = () => {
+    setMainTfDraft(mainTfContent);
+    onMainTfBlocksChange?.(parseMainTfBlocks(mainTfContent));
+    setActiveFilePath("main.tf");
+    setFocusedNodePath("main.tf");
+    setIsFreeEditMode(false);
+  };
+
   const handleEditorScroll = () => {
     if (!codeEditorRef.current || !lineGutterRef.current) return;
     lineGutterRef.current.scrollTop = codeEditorRef.current.scrollTop;
@@ -1069,27 +1092,38 @@ export default function CodePanel({
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={() => void runTerraformValidate()}
-                disabled={isValidatingTerraform}
-                className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-200 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isValidatingTerraform ? "Validating..." : "Terraform validate"}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={regenerateMainTfFromCanvas}
+                  className="rounded border border-sky-500/70 px-2 py-1 text-xs text-sky-200 hover:bg-sky-700/20"
+                  title="Regenerar main.tf desde los recursos actuales del canvas"
+                >
+                  Regenerar HCL
+                </button>
 
-              <button
-                type="button"
-                onClick={() => setIsFreeEditMode((current) => !current)}
-                className={`rounded border px-2 py-1 text-xs ${
-                  isFreeEditMode
-                    ? "border-emerald-500 text-emerald-200 hover:bg-emerald-700/20"
-                    : "border-slate-600 text-slate-200 hover:bg-slate-700/50"
-                }`}
-                title={isFreeEditMode ? "Switch to attribute-safe mode" : "Switch to full free-text editor"}
-              >
-                {isFreeEditMode ? "Modo libre" : "Modo atributos"}
-              </button>
+                <button
+                  type="button"
+                  onClick={() => void runTerraformValidate()}
+                  disabled={isValidatingTerraform}
+                  className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-200 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isValidatingTerraform ? "Validating..." : "Terraform validate"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setIsFreeEditMode((current) => !current)}
+                  className={`rounded border px-2 py-1 text-xs ${
+                    isFreeEditMode
+                      ? "border-emerald-500 text-emerald-200 hover:bg-emerald-700/20"
+                      : "border-slate-600 text-slate-200 hover:bg-slate-700/50"
+                  }`}
+                  title={isFreeEditMode ? "Switch to attribute-safe mode" : "Switch to full free-text editor"}
+                >
+                  {isFreeEditMode ? "Modo libre" : "Modo atributos"}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1207,16 +1241,108 @@ const toHclLiteral = (value: unknown): string => {
   return JSON.stringify(String(value));
 };
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
-const buildResourceHcl = (resource: TerraformResource): string => {
+const isMeaningfulValue = (value: unknown): boolean => {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return false;
+    if (trimmed === "[" || trimmed === "]" || trimmed === "{" || trimmed === "}") return false;
+    return true;
+  }
+  if (Array.isArray(value)) {
+    if (!value.length) return false;
+    if (value.every((item) => isPlainObject(item))) {
+      return value.some((item) => Object.values(item).some((nested) => isMeaningfulValue(nested)));
+    }
+    return value.some((item) => isMeaningfulValue(item));
+  }
+  if (isPlainObject(value)) {
+    return Object.values(value).some((nested) => isMeaningfulValue(nested));
+  }
+  return true;
+};
+
+
+const buildResourceHcl = (resource: TerraformResource): string | null => {
   const blockKind = resource.kind ?? "resource";
   const attrs = resource.config.attributes ?? {};
+  const root: HclBlockNode = { attributes: {}, blocks: {} };
 
-  const lines = Object.entries(attrs)
-    .filter(([, v]) => v !== "" && v !== undefined && v !== null && !(Array.isArray(v) && v.length === 0))
-    .map(([key, value]) => `  ${key} = ${toHclLiteral(value)}`);
+  Object.entries(attrs).forEach(([rawKey, rawValue]) => {
+    if (!isMeaningfulValue(rawValue)) return;
 
-  return [`${blockKind} "${resource.type}" "${resource.name}" {`, ...lines, "}"].join("\n");
+    const pathParts = rawKey.split(".").filter(Boolean);
+    if (!pathParts.length) return;
+
+    if (pathParts.length === 1) {
+      root.attributes[pathParts[0]] = rawValue;
+      return;
+    }
+
+    let cursor = root;
+    for (const blockName of pathParts.slice(0, -1)) {
+      if (!cursor.blocks[blockName]) {
+        cursor.blocks[blockName] = { attributes: {}, blocks: {} };
+      }
+      cursor = cursor.blocks[blockName];
+    }
+
+    cursor.attributes[pathParts[pathParts.length - 1]] = rawValue;
+  });
+
+  const renderAssignment = (key: string, value: unknown, indent: string): string => {
+    if (key === "protocol" && typeof value === "number" && value === -1) {
+      return `${indent}${key} = "-1"\n`;
+    }
+    return `${indent}${key} = ${toHclLiteral(value)}\n`;
+  };
+
+  const renderObjectBlock = (blockName: string, value: Record<string, unknown>, indent: string): string => {
+    const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
+    if (!entries.length) return "";
+
+    let lines = `${indent}${blockName} {\n`;
+    entries.forEach(([k, v]) => {
+      lines += renderAssignment(k, v, `${indent}  `);
+    });
+    lines += `${indent}}\n`;
+    return lines;
+  };
+
+  const renderNode = (node: HclBlockNode, indent: string): string => {
+    let lines = "";
+
+    Object.entries(node.attributes).forEach(([key, value]) => {
+      if (!isMeaningfulValue(value)) return;
+
+      if (Array.isArray(value) && value.every((item) => isPlainObject(item))) {
+        value.forEach((item) => {
+          const rendered = renderObjectBlock(key, item as Record<string, unknown>, indent);
+          if (rendered) lines += rendered;
+        });
+        return;
+      }
+
+      lines += renderAssignment(key, value, indent);
+    });
+
+    Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
+      const inner = renderNode(blockNode, `${indent}  `);
+      if (!inner.trim()) return;
+      lines += `${indent}${blockName} {\n`;
+      lines += inner;
+      lines += `${indent}}\n`;
+    });
+
+    return lines;
+  };
+
+  const body = renderNode(root, "  ");
+  if (!body.trim()) return null;
+  return `${blockKind} "${resource.type}" "${resource.name}" {\n${body}}`;
 };
 
 const buildMainTerraformFile = (
@@ -1237,7 +1363,9 @@ const buildMainTerraformFile = (
   hcl += "}\n\n";
 
   resources.forEach((resource) => {
-    hcl += buildResourceHcl(resource);
+    const block = buildResourceHcl(resource);
+    if (!block) return;
+    hcl += block;
     hcl += "\n\n";
   });
 

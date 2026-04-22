@@ -69,6 +69,17 @@ type HclBlockNode = {
   blocks: Record<string, HclBlockNode>;
 };
 
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isMeaningfulValue = (value: unknown): boolean => {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (isPlainObject(value)) return Object.keys(value).length > 0;
+  return true;
+};
+
 type CanvasViewportBounds = {
   minX: number;
   maxX: number;
@@ -385,8 +396,19 @@ export default function WorkspaceView({
     [setNodes],
   );
 
-  const terraformResourceToHCL = (r: TerraformResource) => {
+  const terraformResourceToHCL = (r: TerraformResource): string | null => {
     const toHclLiteral = (value: unknown): string => {
+      if (Array.isArray(value)) {
+        if (value.length === 0) return "[]";
+        return `[${value.map((item) => toHclLiteral(item)).join(", ")}]`;
+      }
+
+      if (isPlainObject(value)) {
+        const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
+        if (!entries.length) return "{}";
+        return `{ ${entries.map(([k, v]) => `${k} = ${toHclLiteral(v)}`).join(", ")} }`;
+      }
+
       if (typeof value === "boolean" || typeof value === "number") {
         return String(value);
       }
@@ -439,11 +461,39 @@ export default function WorkspaceView({
       cursor.attributes[attrName] = rawValue;
     });
 
+    const renderAssignment = (key: string, value: unknown, indent: string): string => {
+      if (key === "protocol" && typeof value === "number" && value === -1) {
+        return `${indent}${key} = "-1"\n`;
+      }
+      return `${indent}${key} = ${toHclLiteral(value)}\n`;
+    };
+
+    const renderObjectBlock = (blockName: string, value: Record<string, unknown>, indent: string): string => {
+      const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
+      if (!entries.length) return "";
+
+      let lines = `${indent}${blockName} {\n`;
+      entries.forEach(([key, item]) => {
+        lines += renderAssignment(key, item, `${indent}  `);
+      });
+      lines += `${indent}}\n`;
+      return lines;
+    };
+
     const renderNode = (node: HclBlockNode, indent: string): string => {
       let lines = "";
 
       Object.entries(node.attributes).forEach(([key, value]) => {
-        lines += `${indent}${key} = ${toHclLiteral(value)}\n`;
+        if (!isMeaningfulValue(value)) return;
+
+        if (Array.isArray(value) && value.every((item) => isPlainObject(item))) {
+          value.forEach((item) => {
+            lines += renderObjectBlock(key, item, indent);
+          });
+          return;
+        }
+
+        lines += renderAssignment(key, value, indent);
       });
 
       Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
@@ -457,6 +507,7 @@ export default function WorkspaceView({
 
     const blockKind = r.kind ?? "resource";
     const body = renderNode(root, "  ");
+    if (!body.trim()) return null;
     return `${blockKind} "${r.type}" "${r.name}" {\n${body}}\n`;
   };
 
@@ -474,7 +525,9 @@ export default function WorkspaceView({
     hcl += `}\n\n`;
 
     proj.resources.forEach((r) => {
-      hcl += terraformResourceToHCL(r) + "\n";
+      const block = terraformResourceToHCL(r);
+      if (!block) return;
+      hcl += block + "\n";
     });
 
     return hcl;
