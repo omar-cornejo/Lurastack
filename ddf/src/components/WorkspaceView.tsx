@@ -911,6 +911,7 @@ export default function WorkspaceView({
 
             <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
               <CenterPanel
+                autoFitKey={`${projectDir ?? "no-project"}:${viewId}`}
                 nodes={nodes}
                 edges={edges}
                 resources={project.resources}

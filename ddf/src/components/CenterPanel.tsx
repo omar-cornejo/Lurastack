@@ -47,6 +47,7 @@ const STABLE_NODE_TYPES = Object.freeze({ ...canvasNodeTypes });
 const STABLE_EDGE_TYPES = Object.freeze({ ...canvasEdgeTypes });
 
 type CenterPanelProps = {
+  autoFitKey?: string;
   nodes: Node<CanvasTerraformNodeData>[];
   edges: Edge<CanvasEdgeData>[];
   resources: TerraformResource[];
@@ -76,6 +77,7 @@ type CenterPanelProps = {
 };
 
 export default function CenterPanel({
+  autoFitKey = "default",
   nodes,
   edges,
   resources,
@@ -94,8 +96,10 @@ export default function CenterPanel({
   isRightOverlayResizing = false,
 }: CenterPanelProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const hasAutoFittedRef = useRef(false);
   const [reactFlowInstance, setReactFlowInstance] =
     useState<ReactFlowInstance<CanvasTerraformNodeData> | null>(null);
+  const [isCanvasReady, setIsCanvasReady] = useState(false);
   const [activeDropContainerId, setActiveDropContainerId] = useState<string | null>(null);
   const [edgeMapper, setEdgeMapper] = useState<{
     edgeId: string;
@@ -355,6 +359,27 @@ export default function CenterPanel({
   useEffect(() => {
     setActiveLayer((current) => (current > maxLayer ? 0 : current));
   }, [maxLayer]);
+
+  useEffect(() => {
+    hasAutoFittedRef.current = false;
+    setIsCanvasReady(false);
+  }, [autoFitKey]);
+
+  useEffect(() => {
+    if (!reactFlowInstance || hasAutoFittedRef.current) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      reactFlowInstance.fitView({
+        includeHiddenNodes: false,
+        padding: 0.2,
+        duration: 0,
+      });
+      hasAutoFittedRef.current = true;
+      setIsCanvasReady(true);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [reactFlowInstance, autoFitKey, layerScopedNodes, layerScopedEdges]);
 
   const applyPlacementIndicator = useCallback((targetContainerId?: string) => {
     setActiveDropContainerId((current) => {
@@ -680,6 +705,7 @@ export default function CenterPanel({
       <div
         ref={rootRef}
         className="relative h-full w-full min-h-0"
+        style={{ visibility: isCanvasReady ? "visible" : "hidden" }}
         onDragLeave={handleDragLeave}
       >
         <ReactFlow
