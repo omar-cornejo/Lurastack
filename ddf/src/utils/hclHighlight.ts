@@ -88,6 +88,26 @@ function scanString(src: string, start: number): { html: string; end: number } {
   return { html: parts.join(""), end: i };
 }
 
+// Attribute-mode highlight: dims structural lines and the key portion of attribute
+// lines, leaving only the value zone (right side of `=`) at full brightness with
+// a subtle background so users immediately see what is editable.
+export function highlightHclAttributeMode(source: string): string {
+  return source
+    .split("\n")
+    .map((line) => {
+      const m = line.match(/^(\s*[a-zA-Z_][a-zA-Z0-9_-]*\s*=\s*)(.*)/);
+      if (m) {
+        const keyHtml = `<span style="opacity:0.38">${highlightHcl(m[1] ?? "")}</span>`;
+        const valHtml =
+          `<span style="background:rgba(96,165,250,0.10);border-radius:2px;` +
+          `box-shadow:0 0 0 1px rgba(96,165,250,0.22)">${highlightHcl(m[2] ?? "")}</span>`;
+        return keyHtml + valHtml;
+      }
+      return `<span style="opacity:0.35">${highlightHcl(line)}</span>`;
+    })
+    .join("\n");
+}
+
 export function highlightHcl(source: string): string {
   const out: string[] = [];
   let i = 0;

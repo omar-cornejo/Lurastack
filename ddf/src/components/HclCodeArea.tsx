@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import type { RefObject } from "react";
-import { highlightHcl } from "../utils/hclHighlight";
+import { highlightHcl, highlightHclAttributeMode } from "../utils/hclHighlight";
 
 type HclCodeAreaProps = {
   value: string;
@@ -10,6 +10,8 @@ type HclCodeAreaProps = {
   containerClassName?: string;
   /** Classes applied to both the pre and textarea (font, padding, etc.) */
   innerClassName?: string;
+  /** When true, dims structural lines and highlights only editable attribute values */
+  attributeMode?: boolean;
 };
 
 export function HclCodeArea({
@@ -19,12 +21,13 @@ export function HclCodeArea({
   textareaRef: externalRef,
   containerClassName = "",
   innerClassName = "",
+  attributeMode = false,
 }: HclCodeAreaProps) {
   const internalRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = (externalRef ?? internalRef) as RefObject<HTMLTextAreaElement | null>;
   const preRef = useRef<HTMLPreElement>(null);
 
-  const highlighted = highlightHcl(value);
+  const highlighted = attributeMode ? highlightHclAttributeMode(value) : highlightHcl(value);
 
   const handleScroll = () => {
     if (preRef.current && textareaRef.current) {

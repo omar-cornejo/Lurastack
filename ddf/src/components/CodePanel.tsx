@@ -88,47 +88,46 @@ const sanitizeLooseQuotedString = (raw: string): string => {
   return value;
 };
 
-const getQuotedContentRanges = (text: string): Array<{ start: number; end: number }> => {
+// Returns the character ranges [start, end] that correspond to the value portion
+// of attribute-assignment lines (the part after `=`). Block headers, closing braces,
+// and blank lines produce no ranges.
+const getAttributeValueRanges = (text: string): Array<{ start: number; end: number }> => {
   const ranges: Array<{ start: number; end: number }> = [];
-  let quoteStart = -1;
-  let escaping = false;
+  const lines = text.split("\n");
+  let offset = 0;
 
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-
-    if (escaping) {
-      escaping = false;
-      continue;
+  for (const line of lines) {
+    // Attribute lines: optional indent + plain identifier + optional spaces + = + rest
+    // Block headers (resource "..." "..." {) never contain a bare `=` at this position.
+    const match = line.match(/^(\s*[a-zA-Z_][a-zA-Z0-9_-]*\s*=\s*)/);
+    if (match) {
+      const valueStart = offset + match[1].length;
+      const lineEnd = offset + line.trimEnd().length;
+      ranges.push({ start: valueStart, end: Math.max(valueStart, lineEnd) });
     }
 
-    if (char === "\\") {
-      escaping = true;
-      continue;
-    }
-
-    if (char !== '"') continue;
-
-    if (quoteStart === -1) {
-      quoteStart = index;
-    } else {
-      ranges.push({ start: quoteStart + 1, end: index });
-      quoteStart = -1;
-    }
+    offset += line.length + 1; // +1 for the newline character
   }
 
   return ranges;
 };
 
-const isPositionInsideQuotedContent = (text: string, position: number) =>
-  getQuotedContentRanges(text).some((range) => position >= range.start && position <= range.end);
+const isPositionInAttributeValue = (text: string, position: number): boolean =>
+  getAttributeValueRanges(text).some(
+    (range) => position >= range.start && position <= range.end,
+  );
 
-const isRangeInsideQuotedContent = (text: string, start: number, end: number) => {
+const isRangeInAttributeValues = (text: string, start: number, end: number): boolean => {
   if (end <= start) return true;
-  const ranges = getQuotedContentRanges(text);
-  return ranges.some((range) => start >= range.start && end <= range.end);
+  return getAttributeValueRanges(text).some(
+    (range) => start >= range.start && end <= range.end,
+  );
 };
 
-const canEditOnlyInsideQuotes = (previous: string, next: string) => {
+// Returns true only if the diff between `previous` and `next` falls entirely
+// within attribute-value zones (right-hand side of `key =` lines).
+// Newline insertion is always blocked to prevent structural changes.
+const canEditOnlyInAttributeValues = (previous: string, next: string): boolean => {
   if (previous === next) return true;
 
   let prefix = 0;
@@ -154,12 +153,14 @@ const canEditOnlyInsideQuotes = (previous: string, next: string) => {
   const removedLen = prevSuffix - prefix;
   const addedLen = nextSuffix - prefix;
 
-  if (removedLen > 0 && !isRangeInsideQuotedContent(previous, prefix, prevSuffix)) {
+  if (removedLen > 0 && !isRangeInAttributeValues(previous, prefix, prevSuffix)) {
     return false;
   }
 
-  if (addedLen > 0 && !isPositionInsideQuotedContent(previous, prefix)) {
-    return false;
+  if (addedLen > 0) {
+    const addedText = next.slice(prefix, nextSuffix);
+    if (addedText.includes("\n")) return false;
+    if (!isPositionInAttributeValue(previous, prefix)) return false;
   }
 
   return true;
@@ -307,6 +308,8 @@ export default function CodePanel({
   const lineGutterRef = useRef<HTMLDivElement | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
   const topLevelSyncSignatureRef = useRef<string>("");
+  const isFreeEditModeRef = useRef(false);
+  isFreeEditModeRef.current = isFreeEditMode;
 
   const isTauriRuntime =
     typeof window !== "undefined" &&
@@ -470,7 +473,9 @@ export default function CodePanel({
   const mainTfLineCount = Math.max(1, mainTfDraft.split("\n").length);
 
   useEffect(() => {
-    setMainTfDraft(mainTfContent);
+    if (!isFreeEditModeRef.current) {
+      setMainTfDraft(mainTfContent);
+    }
   }, [mainTfContent]);
 
   const loadFileIntoEditor = async (relativePath: string) => {
@@ -863,7 +868,15 @@ export default function CodePanel({
   const handleAuxiliaryContentChange = (next: string) => {
     if (activeFilePath === "main.tf" || !projectDir) return;
     const currentValue = openFileContents[activeFilePath] ?? "";
-    if (!isFreeEditMode && !canEditOnlyInsideQuotes(currentValue, next)) return;
+    if (!isFreeEditMode && !canEditOnlyInAttributeValues(currentValue, next)) {
+      if (codeEditorRef.current) {
+        const sel = codeEditorRef.current.selectionStart;
+        codeEditorRef.current.value = currentValue;
+        const cursor = Math.min(sel, currentValue.length);
+        codeEditorRef.current.setSelectionRange(cursor, cursor);
+      }
+      return;
+    }
     const normalizedNext = isFreeEditMode ? next : pruneEmptyAttributeAssignments(next);
 
     setOpenFileContents((current) => ({
@@ -886,7 +899,15 @@ export default function CodePanel({
   };
 
   const handleMainTfContentChange = (next: string) => {
-    if (!isFreeEditMode && !canEditOnlyInsideQuotes(mainTfDraft, next)) return;
+    if (!isFreeEditMode && !canEditOnlyInAttributeValues(mainTfDraft, next)) {
+      if (codeEditorRef.current) {
+        const sel = codeEditorRef.current.selectionStart;
+        codeEditorRef.current.value = mainTfDraft;
+        const cursor = Math.min(sel, mainTfDraft.length);
+        codeEditorRef.current.setSelectionRange(cursor, cursor);
+      }
+      return;
+    }
     onMainTfBlocksChange?.(parseMainTfBlocks(next));
     setMainTfDraft(isFreeEditMode ? next : pruneEmptyAttributeAssignments(next));
   };
@@ -1150,6 +1171,7 @@ export default function CodePanel({
                     textareaRef={codeEditorRef}
                     containerClassName="h-full min-h-0"
                     innerClassName="px-3 py-2 font-mono text-xs leading-5"
+                    attributeMode={!isFreeEditMode}
                   />
                 </div>
               )
@@ -1170,6 +1192,7 @@ export default function CodePanel({
                   textareaRef={codeEditorRef}
                   containerClassName="h-full min-h-0"
                   innerClassName="px-3 py-2 font-mono text-xs leading-5"
+                  attributeMode={!isFreeEditMode}
                 />
               </div>
             )}
