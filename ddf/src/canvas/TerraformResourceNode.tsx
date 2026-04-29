@@ -1,9 +1,10 @@
+import { memo } from "react";
 import type { NodeProps } from "reactflow";
 import { Handle, NodeResizer, Position } from "reactflow";
 import type { CanvasTerraformNodeData } from "./types";
 import { DEFAULT_CONTAINER_SIZE } from "../commands/createCanvasNode";
 
-export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraformNodeData>) {
+export const TerraformResourceNode = memo(function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraformNodeData>) {
   // Plan action styles — computed once, used by all node variants
   const planBorderClass =
     data.planAction === "create"  ? "!border-emerald-400" :
@@ -200,4 +201,4 @@ export function TerraformResourceNode({ data, selected }: NodeProps<CanvasTerraf
       />
     </div>
   );
-}
+});

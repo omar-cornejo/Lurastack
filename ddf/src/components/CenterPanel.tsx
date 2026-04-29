@@ -134,6 +134,7 @@ export default function CenterPanel({
   } | null>(null);
   const [activeLayer, setActiveLayer] = useState(0);
   const lastSelectionRef = useRef<string | undefined>(undefined);
+  const lastDragUpdateRef = useRef<number>(0);
 
   const getEdgeMappings = useCallback(
     (edge: Edge<CanvasEdgeData>): CanvasEdgeMapping[] =>
@@ -465,8 +466,11 @@ export default function CenterPanel({
     (event, draggingNode) => {
       if (readOnly) return;
       if (!reactFlowInstance) return;
-
       if (!nodeById.has(draggingNode.id)) return;
+
+      const now = Date.now();
+      if (now - lastDragUpdateRef.current < 50) return;
+      lastDragUpdateRef.current = now;
 
       const nextNodes = nodes.map((node) =>
         node.id === draggingNode.id

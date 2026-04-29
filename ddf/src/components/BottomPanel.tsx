@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useDeferredValue } from "react";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
@@ -165,6 +165,9 @@ export default function BottomPanel({
     }
   };
 
+  // During drag, React defers BottomPanel node updates so expensive memos don't recompute every frame.
+  const deferredNodes = useDeferredValue(nodes);
+
   const resourcesInCanvas = useMemo(() => {
     const byResourceId = new Map(resources.map((resource) => [resource.id, resource]));
     const collected: Array<{
@@ -172,14 +175,14 @@ export default function BottomPanel({
       resource: TerraformResource;
       schema?: TerraformNodeSchema;
     }> = [];
-    nodes.forEach((node) => {
+    deferredNodes.forEach((node) => {
       const resource = byResourceId.get(node.data.resourceId);
       if (!resource) return;
       const schema = schemas.find((candidate) => candidate.id === resource.schemaId);
       collected.push({ node, resource, schema });
     });
     return collected.sort((left, right) => left.resource.name.localeCompare(right.resource.name));
-  }, [nodes, resources, schemas]);
+  }, [deferredNodes, resources, schemas]);
 
   const selectedMapperItem = useMemo(() => {
     if (!selectedMapperResourceId) return resourcesInCanvas[0];
@@ -278,7 +281,7 @@ export default function BottomPanel({
       mappings
         .filter((mapping) => mapping.toNodeId === targetNodeId)
         .forEach((mapping) => {
-          const fromNode = nodes.find((node) => node.id === mapping.fromNodeId);
+          const fromNode = deferredNodes.find((node) => node.id === mapping.fromNodeId);
           collected.push({
             edgeId: edge.id,
             fromNodeId: mapping.fromNodeId,
@@ -289,7 +292,7 @@ export default function BottomPanel({
         });
     });
     return collected;
-  }, [activeMapperItem, edges, nodes]);
+  }, [activeMapperItem, edges, deferredNodes]);
 
   const mapperIncomingGrouped = useMemo(() => {
     const grouped = new Map<string, { fromNodeLabel: string; entries: Array<{ edgeId: string; sourceExpression: string; targetAttribute: string }> }>();
@@ -307,8 +310,8 @@ export default function BottomPanel({
   }, [mapperIncomingConnectionMappings]);
 
   const mapperInheritedFromContainer = useMemo(() => {
-    if (!activeMapperItem?.node.parentNode) return [] as Array<{ containerLabel: string; attributeName: string; sourceExpression: string }>;
-    const parentNode = nodes.find((node) => node.id === activeMapperItem.node.parentNode);
+    if (!activeMapperItem?.node.parentId) return [] as Array<{ containerLabel: string; attributeName: string; sourceExpression: string }>;
+    const parentNode = deferredNodes.find((node) => node.id === activeMapperItem.node.parentId);
     if (!parentNode) return [];
     const parentResource = resources.find((resource) => resource.id === parentNode.data.resourceId);
     if (!parentResource) return [];
@@ -320,7 +323,7 @@ export default function BottomPanel({
     const prefix = parentResource.kind === "data" ? "data." : "";
     const baseRef = `${prefix}${parentResource.type}.${parentResource.name}`;
     return allKeys.map((attributeName) => ({ containerLabel: parentNode.data.label, attributeName, sourceExpression: `${baseRef}.${attributeName}` }));
-  }, [activeMapperItem, nodes, resources, schemas]);
+  }, [activeMapperItem, deferredNodes, resources, schemas]);
 
   const mapperInheritedFromZones = useMemo(() => {
     if (!activeMapperItem) return [] as Array<{ zoneId: string; zoneLabel: string; entries: Array<{ attributeName: string; sourceExpression: string }> }>;
@@ -328,7 +331,7 @@ export default function BottomPanel({
     if (!zoneIds.length) return [];
     return zoneIds
       .map((zoneId) => {
-        const zoneNode = nodes.find((node) => node.id === zoneId);
+        const zoneNode = deferredNodes.find((node) => node.id === zoneId);
         if (!zoneNode) return undefined;
         const zoneResource = resources.find((resource) => resource.id === zoneNode.data.resourceId);
         if (!zoneResource) return undefined;
@@ -342,7 +345,7 @@ export default function BottomPanel({
         return { zoneId, zoneLabel: zoneNode.data.label, entries: allKeys.map((attributeName) => ({ attributeName, sourceExpression: `${baseRef}.${attributeName}` })) };
       })
       .filter((entry): entry is { zoneId: string; zoneLabel: string; entries: Array<{ attributeName: string; sourceExpression: string }> } => !!entry && entry.entries.length > 0);
-  }, [activeMapperItem, nodes, resources, schemas]);
+  }, [activeMapperItem, deferredNodes, resources, schemas]);
 
   useEffect(() => {
     if (!onHeightChange || !panelRef.current) return;
