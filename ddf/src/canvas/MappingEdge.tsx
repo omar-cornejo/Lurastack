@@ -181,7 +181,7 @@ export function MappingEdge({
             top: 0,
             transform: `translate(-50%, -50%) translate(${desiredMidX}px, ${desiredMidY}px)`,
             zIndex: 12000,
-            width: "240px",
+            width: collapsed ? "240px" : "380px",
           }}
           onPointerDown={(e) => {
             e.stopPropagation();
@@ -234,43 +234,67 @@ export function MappingEdge({
             {/* Mapping rows */}
             {!collapsed && (
               <div className="border-t border-slate-100">
-                {uniqueMappings.map((mapping) => (
-                  <div
-                    key={routeKey(mapping)}
-                    className="group flex items-center gap-2 px-2.5 py-2 hover:bg-slate-50 transition-colors min-h-[32px]"
-                  >
-                    {/* out attr */}
-                    <span
-                      className="truncate text-[11px] font-mono text-sky-700 flex-1"
-                      title={mapping.sourceExpression}
+                {uniqueMappings.map((mapping) => {
+                  const mappingFromLabel = mapping.fromNodeLabel ?? mapping.fromNodeId;
+                  const mappingToLabel = mapping.toNodeLabel ?? mapping.toNodeId;
+                  return (
+                    <div
+                      key={routeKey(mapping)}
+                      className="group flex items-center gap-2 px-2.5 py-1 hover:bg-slate-50 transition-colors"
                     >
-                      {parseOutAttr(mapping.sourceExpression)}
-                    </span>
+                      {/* Source node */}
+                      <span
+                        className="truncate text-[10px] font-semibold text-slate-700 flex-1 min-w-0"
+                        title={mappingFromLabel}
+                      >
+                        {mappingFromLabel}
+                      </span>
 
-                    <span className="shrink-0 text-[11px] text-slate-400">→</span>
+                      <span className="shrink-0 text-[9px] text-slate-400">:</span>
 
-                    {/* in attr */}
-                    <span
-                      className="truncate text-[11px] font-mono text-violet-700 flex-1"
-                      title={mapping.targetAttribute}
-                    >
-                      {mapping.targetAttribute}
-                    </span>
+                      {/* Source attribute */}
+                      <span
+                        className="truncate text-[11px] font-mono text-sky-700 flex-1 min-w-0"
+                        title={mapping.sourceExpression}
+                      >
+                        {parseOutAttr(mapping.sourceExpression)}
+                      </span>
 
-                    {/* Delete button */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveMapping(mapping);
-                      }}
-                      className="shrink-0 flex items-center justify-center w-5 h-5 rounded text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                      title="Remove mapping"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                      <span className="shrink-0 text-[11px] text-slate-400">→</span>
+
+                      {/* Target node */}
+                      <span
+                        className="truncate text-[10px] font-semibold text-slate-700 flex-1 min-w-0"
+                        title={mappingToLabel}
+                      >
+                        {mappingToLabel}
+                      </span>
+
+                      <span className="shrink-0 text-[9px] text-slate-400">:</span>
+
+                      {/* Target attribute */}
+                      <span
+                        className="truncate text-[11px] font-mono text-violet-700 flex-1 min-w-0"
+                        title={mapping.targetAttribute}
+                      >
+                        {mapping.targetAttribute}
+                      </span>
+
+                      {/* Delete button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveMapping(mapping);
+                        }}
+                        className="shrink-0 flex items-center justify-center w-5 h-5 rounded text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Remove mapping"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
 
                 {/* Add mapping button */}
                 <button
