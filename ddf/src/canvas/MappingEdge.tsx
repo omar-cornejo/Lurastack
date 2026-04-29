@@ -8,39 +8,9 @@ import {
 } from "reactflow";
 import type { CanvasEdgeData } from "./types";
 
-const parseAttributeFromExpression = (sourceExpression: string) => {
-  const expression = sourceExpression.trim();
-  if (!expression) return "";
-
-  const parts = expression.split(".");
-  return parts[parts.length - 1] ?? expression;
-};
-
-const unique = (values: string[]) => Array.from(new Set(values));
-
-const buildEndpointLabel = (
-  endpointNodeId: string,
-  mappings: NonNullable<CanvasEdgeData["mappings"]>,
-) => {
-  const outgoing = unique(
-    mappings
-      .filter((mapping) => mapping.fromNodeId === endpointNodeId)
-      .map((mapping) => parseAttributeFromExpression(mapping.sourceExpression))
-      .filter(Boolean),
-  );
-
-  const incoming = unique(
-    mappings
-      .filter((mapping) => mapping.toNodeId === endpointNodeId)
-      .map((mapping) => mapping.targetAttribute.trim())
-      .filter(Boolean),
-  );
-
-  const chunks: string[] = [];
-  if (outgoing.length) chunks.push(`out: ${outgoing.join(", ")}`);
-  if (incoming.length) chunks.push(`in: ${incoming.join(", ")}`);
-
-  return chunks.join(" · ");
+const parseOutAttr = (sourceExpression: string) => {
+  const parts = sourceExpression.trim().split(".");
+  return parts[parts.length - 1] || sourceExpression.trim();
 };
 
 const routeKey = (route: {
@@ -49,15 +19,7 @@ const routeKey = (route: {
   sourceExpression: string;
   targetAttribute: string;
 }) =>
-  [
-    route.fromNodeId,
-    route.toNodeId,
-    route.sourceExpression.trim(),
-    route.targetAttribute.trim(),
-  ].join("|");
-
-const parseOutAttribute = (sourceExpression: string) =>
-  parseAttributeFromExpression(sourceExpression) || sourceExpression.trim();
+  [route.fromNodeId, route.toNodeId, route.sourceExpression.trim(), route.targetAttribute.trim()].join("|");
 
 export function MappingEdge({
   id,
@@ -71,9 +33,10 @@ export function MappingEdge({
   style,
   data,
 }: EdgeProps<CanvasEdgeData>) {
-  const edges = useStore((state) => state.edges);
   const zoom = useStore((state) => state.transform[2] || 1);
-  const { setEdges } = useReactFlow();
+  const edges = useStore((state) => state.edges);
+  const { setEdges, getNodes } = useReactFlow();
+
   const [dragState, setDragState] = useState<{
     startClientX: number;
     startClientY: number;
@@ -87,30 +50,26 @@ export function MappingEdge({
 
   const mappings = Array.isArray(data?.mappings) ? data.mappings : [];
   const uniqueMappings = Array.from(
-    new Map(mappings.map((mapping) => [routeKey(mapping), mapping])).values(),
+    new Map(mappings.map((m) => [routeKey(m), m])).values(),
   );
 
-  const fallbackSummary = buildEndpointLabel(source, mappings) || buildEndpointLabel(target, mappings);
-
+  // Sibling spread so parallel edges don't overlap
   const siblingEdges = edges
     .filter(
-      (edge) =>
-        (edge.source === source && edge.target === target) ||
-        (edge.source === target && edge.target === source),
+      (e) =>
+        (e.source === source && e.target === target) ||
+        (e.source === target && e.target === source),
     )
-    .map((edge) => edge.id)
+    .map((e) => e.id)
     .sort();
-
   const siblingIndex = Math.max(0, siblingEdges.indexOf(id));
   const siblingSpread = (siblingIndex - (siblingEdges.length - 1) / 2) * 22;
 
   const dx = targetX - sourceX;
   const dy = targetY - sourceY;
   const length = Math.hypot(dx, dy) || 1;
-  const ux = dx / length;
-  const uy = dy / length;
-  const nx = -uy;
-  const ny = ux;
+  const nx = -dy / length;
+  const ny = dx / length;
 
   const baseMidX = (sourceX + targetX) / 2;
   const baseMidY = (sourceY + targetY) / 2;
@@ -126,6 +85,11 @@ export function MappingEdge({
   const controlY = 2 * desiredMidY - (sourceY + targetY) / 2;
   const edgePath = `M ${sourceX},${sourceY} Q ${controlX},${controlY} ${targetX},${targetY}`;
 
+  // Get node labels from ReactFlow or from mappings
+  const allNodes = getNodes();
+  const sourceNodeLabel = allNodes.find((n) => n.id === source)?.data?.label ?? source;
+  const targetNodeLabel = allNodes.find((n) => n.id === target)?.data?.label ?? target;
+
   useEffect(() => {
     if (!dragState) return;
 
@@ -133,16 +97,12 @@ export function MappingEdge({
       const deltaX = event.clientX - dragState.startClientX;
       const deltaY = event.clientY - dragState.startClientY;
       const moved = Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2;
-      const flowDeltaX = deltaX / zoom;
-      const flowDeltaY = deltaY / zoom;
-
       if (moved && !dragState.moved) {
-        setDragState((current) => (current ? { ...current, moved: true } : current));
+        setDragState((cur) => (cur ? { ...cur, moved: true } : cur));
       }
-
       setDragPreviewOffset({
-        x: dragState.startOffsetX + flowDeltaX,
-        y: dragState.startOffsetY + flowDeltaY,
+        x: dragState.startOffsetX + deltaX / zoom,
+        y: dragState.startOffsetY + deltaY / zoom,
       });
     };
 
@@ -151,24 +111,14 @@ export function MappingEdge({
         x: dragState.startOffsetX,
         y: dragState.startOffsetY,
       };
-
       setEdges((currentEdges) =>
         currentEdges.map((edge) =>
           edge.id === id
-            ? {
-                ...edge,
-                data: {
-                  ...(edge.data ?? {}),
-                  labelOffset: finalOffset,
-                },
-              }
+            ? { ...edge, data: { ...(edge.data ?? {}), labelOffset: finalOffset } }
             : edge,
         ),
       );
-
-      if (dragState.moved) {
-        setSkipNextToggle(true);
-      }
+      if (dragState.moved) setSkipNextToggle(true);
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
       setDragPreviewOffset(null);
@@ -179,7 +129,6 @@ export function MappingEdge({
     document.body.style.cursor = "move";
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
-
     return () => {
       document.body.style.userSelect = "";
       document.body.style.cursor = "";
@@ -188,78 +137,173 @@ export function MappingEdge({
     };
   }, [dragPreviewOffset, dragState, id, setEdges, zoom]);
 
+  const handleRemoveMapping = (mapping: (typeof uniqueMappings)[number]) => {
+    window.dispatchEvent(
+      new CustomEvent("ddf-remove-edge-mapping", {
+        detail: {
+          edgeId: id,
+          fromNodeId: mapping.fromNodeId,
+          toNodeId: mapping.toNodeId,
+          sourceExpression: mapping.sourceExpression,
+          targetAttribute: mapping.targetAttribute,
+        },
+      }),
+    );
+  };
+
+  const handleAddMapping = () => {
+    window.dispatchEvent(
+      new CustomEvent("ddf-open-edge-mapper", {
+        detail: {
+          edgeId: id,
+        },
+      }),
+    );
+  };
+
+  // Node labels for the header (from mappings or from store)
+  const fromLabel =
+    uniqueMappings.find((m) => m.fromNodeId === source)?.fromNodeLabel ??
+    sourceNodeLabel;
+  const toLabel =
+    uniqueMappings.find((m) => m.toNodeId === target)?.toNodeLabel ??
+    targetNodeLabel;
+
   return (
     <>
       <BaseEdge id={id} path={edgePath} markerEnd={markerEnd} style={style} />
-      {uniqueMappings.length || fallbackSummary ? (
-        <EdgeLabelRenderer>
-          <div
-            className="connection-overlay pointer-events-auto absolute z-[12000] max-w-[320px] rounded-md border border-slate-300 bg-white/95 text-[10px] text-slate-700 shadow"
-            style={{
-              left: 0,
-              top: 0,
-              transform: `translate(-50%, -50%) translate(${desiredMidX}px, ${desiredMidY}px)`,
-              zIndex: 12000,
-            }}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              if (event.button !== 0) return;
-              setDragState({
-                startClientX: event.clientX,
-                startClientY: event.clientY,
-                startOffsetX: persistedOffsetX,
-                startOffsetY: persistedOffsetY,
-                moved: false,
-              });
-            }}
-            onClick={(event) => event.stopPropagation()}
-          >
+
+      {uniqueMappings.length > 0 && <EdgeLabelRenderer>
+        <div
+          className="connection-overlay pointer-events-auto absolute"
+          style={{
+            left: 0,
+            top: 0,
+            transform: `translate(-50%, -50%) translate(${desiredMidX}px, ${desiredMidY}px)`,
+            zIndex: 12000,
+            width: "240px",
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            if (e.button !== 0) return;
+            setDragState({
+              startClientX: e.clientX,
+              startClientY: e.clientY,
+              startOffsetX: persistedOffsetX,
+              startOffsetY: persistedOffsetY,
+              moved: false,
+            });
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Card */}
+          <div className="rounded-lg border border-slate-200 bg-white shadow-md overflow-hidden select-none">
+
+            {/* Header */}
             <button
               type="button"
-              className="flex w-full items-center justify-between gap-2 px-2 py-1 text-left font-semibold text-slate-700"
+              className="w-full flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-slate-50 transition-colors"
               onClick={() => {
-                if (skipNextToggle) {
-                  setSkipNextToggle(false);
-                  return;
-                }
-                setCollapsed((current) => !current);
+                if (skipNextToggle) { setSkipNextToggle(false); return; }
+                setCollapsed((c) => !c);
               }}
             >
-              <span>Connections ({uniqueMappings.length || 1})</span>
-              <span className="text-[9px] font-medium text-slate-500">{collapsed ? "open" : "hide"}</span>
+              {/* Dot indicator */}
+              <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-sky-400" />
+
+              {/* Node names */}
+              <div className="flex-1 min-w-0 flex items-center gap-1 text-[11px]">
+                <span className="truncate font-medium text-slate-700" title={fromLabel}>
+                  {fromLabel}
+                </span>
+                <span className="shrink-0 text-slate-400">→</span>
+                <span className="truncate font-medium text-slate-700" title={toLabel}>
+                  {toLabel}
+                </span>
+              </div>
+
+              {/* Count badge + toggle */}
+              <div className="shrink-0 flex items-center gap-1">
+                <span className="rounded-full bg-sky-100 px-1.5 text-[9px] font-semibold text-sky-700">
+                  {uniqueMappings.length}
+                </span>
+                <span className="text-slate-400 text-[9px]">{collapsed ? "▾" : "▴"}</span>
+              </div>
             </button>
 
-            {!collapsed && uniqueMappings.length ? (
-              <div className="max-h-40 overflow-auto border-t border-slate-200">
-                <table className="w-full border-separate border-spacing-0 text-[10px]">
-                  <thead className="bg-slate-50 text-slate-500">
-                    <tr>
-                      <th className="px-2 py-1 text-left font-medium">FROM NODE</th>
-                      <th className="px-2 py-1 text-left font-medium">TO NODE</th>
-                      <th className="px-2 py-1 text-left font-medium">SENDS</th>
-                      <th className="px-2 py-1 text-left font-medium">SETS</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {uniqueMappings.map((mapping) => (
-                      <tr key={routeKey(mapping)} className="odd:bg-white even:bg-slate-50/70">
-                        <td className="px-2 py-1 text-slate-600">{mapping.fromNodeLabel ?? mapping.fromNodeId}</td>
-                        <td className="px-2 py-1 text-slate-600">{mapping.toNodeLabel ?? mapping.toNodeId}</td>
-                        <td className="px-2 py-1 font-medium text-slate-700">{parseOutAttribute(mapping.sourceExpression)}</td>
-                        <td className="px-2 py-1 font-medium text-slate-700">{mapping.targetAttribute}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {/* Mapping rows */}
+            {!collapsed && (
+              <div className="border-t border-slate-100">
+                {uniqueMappings.map((mapping) => (
+                  <div
+                    key={routeKey(mapping)}
+                    className="group flex items-center gap-2 px-2.5 py-2 hover:bg-slate-50 transition-colors min-h-[32px]"
+                  >
+                    {/* out attr */}
+                    <span
+                      className="truncate text-[11px] font-mono text-sky-700 flex-1"
+                      title={mapping.sourceExpression}
+                    >
+                      {parseOutAttr(mapping.sourceExpression)}
+                    </span>
+
+                    <span className="shrink-0 text-[11px] text-slate-400">→</span>
+
+                    {/* in attr */}
+                    <span
+                      className="truncate text-[11px] font-mono text-violet-700 flex-1"
+                      title={mapping.targetAttribute}
+                    >
+                      {mapping.targetAttribute}
+                    </span>
+
+                    {/* Delete button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveMapping(mapping);
+                      }}
+                      className="shrink-0 flex items-center justify-center w-5 h-5 rounded text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                      title="Remove mapping"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+
+                {/* Add mapping button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAddMapping();
+                  }}
+                  className="w-full flex items-center justify-center py-2 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors border-t border-slate-100 text-xl"
+                  title="Add mapping"
+                >
+                  +
+                </button>
               </div>
-            ) : !collapsed ? (
-              <div className="border-t border-slate-200 px-2 py-1 text-slate-500">
-                {fallbackSummary || "No mappings"}
-              </div>
-            ) : null}
+            )}
+
+            {/* Empty state with add button */}
+            {collapsed && uniqueMappings.length === 0 && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleAddMapping();
+                }}
+                className="w-full flex items-center justify-center py-8 text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors text-3xl"
+                title="Add mapping"
+              >
+                +
+              </button>
+            )}
           </div>
-        </EdgeLabelRenderer>
-      ) : null}
+        </div>
+      </EdgeLabelRenderer>}
     </>
   );
 }

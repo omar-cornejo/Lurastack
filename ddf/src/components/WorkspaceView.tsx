@@ -465,6 +465,55 @@ export default function WorkspaceView({
     [nodes, setEdges],
   );
 
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const { edgeId, toNodeId, targetAttribute, sourceExpression } =
+        (event as CustomEvent<{
+          edgeId: string;
+          fromNodeId: string;
+          toNodeId: string;
+          targetAttribute: string;
+          sourceExpression: string;
+        }>).detail;
+      // fromNodeId not needed for removal — kept in event detail for future use
+
+      setEdges((currentEdges) =>
+        currentEdges.map((edge) => {
+          if (edge.id !== edgeId) return edge;
+          const prev = Array.isArray(edge.data?.mappings) ? edge.data.mappings : [];
+          const next = prev.filter(
+            (m) => !(m.toNodeId === toNodeId && m.targetAttribute === targetAttribute),
+          );
+          return { ...edge, data: { ...(edge.data ?? {}), mappings: next } } as typeof edge;
+        }),
+      );
+
+      const targetNode = nodes.find((n) => n.id === toNodeId);
+      if (!targetNode) return;
+      const targetResourceId = targetNode.data.resourceId;
+
+      setProject((currentProject) => {
+        const updatedProject = {
+          ...currentProject,
+          resources: currentProject.resources.map((resource) => {
+            if (resource.id !== targetResourceId) return resource;
+            const attrs = { ...resource.config.attributes };
+            if (attrs[targetAttribute] === sourceExpression) {
+              delete attrs[targetAttribute];
+            }
+            return { ...resource, config: { ...resource.config, attributes: attrs } };
+          }),
+        };
+        void saveProjectToHCL(updatedProject);
+        return updatedProject;
+      });
+
+    };
+
+    window.addEventListener("ddf-remove-edge-mapping", handler);
+    return () => window.removeEventListener("ddf-remove-edge-mapping", handler);
+  }, [nodes, setEdges]);
+
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
       setNodes((currentNodes) => {

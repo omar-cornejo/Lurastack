@@ -711,6 +711,25 @@ export default function CenterPanel({
   );
 
   useEffect(() => {
+    const handler = (event: Event) => {
+      const { edgeId } = (event as CustomEvent<{
+        edgeId: string;
+      }>).detail;
+
+      const edge = edges.find((e) => e.id === edgeId);
+      if (edge && rootRef.current) {
+        const rootRect = rootRef.current.getBoundingClientRect();
+        const centerX = rootRect.width / 2;
+        const centerY = rootRect.height / 2;
+        openEdgeMapper(edge, centerX, centerY);
+      }
+    };
+
+    window.addEventListener("ddf-open-edge-mapper", handler);
+    return () => window.removeEventListener("ddf-open-edge-mapper", handler);
+  }, [edges, openEdgeMapper]);
+
+  useEffect(() => {
     if (!edgeMapperDrag || !edgeMapper) return;
 
     const handleMouseMove = (event: MouseEvent) => {
@@ -885,15 +904,16 @@ export default function CenterPanel({
 
         {edgeMapper ? (
           <div
-            className="absolute z-30 w-[420px] max-w-[95vw] rounded-2xl border border-slate-300 bg-white p-3 shadow-2xl"
+            className="absolute z-30 w-[460px] max-w-[95vw] rounded-lg border border-slate-200 bg-white shadow-lg"
             style={{
               left: edgeMapper.x,
               top: edgeMapper.y,
             }}
             onClick={(event) => event.stopPropagation()}
           >
+            {/* Header */}
             <div
-              className="mb-3 flex items-center justify-between border-b border-slate-200 pb-2 cursor-move"
+              className="flex items-center justify-between border-b border-slate-100 px-4 py-3 cursor-move"
               onMouseDown={(event) => {
                 const popupRect = (event.currentTarget.parentElement as HTMLDivElement | null)
                   ?.getBoundingClientRect();
@@ -905,161 +925,164 @@ export default function CenterPanel({
                 });
               }}
             >
-              <h4 className="text-sm font-semibold text-slate-800">Edge Mapping</h4>
+              <h4 className="text-sm font-semibold text-slate-900">Link attributes</h4>
               <button
                 type="button"
-                className="rounded-md px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                className="rounded-md px-1.5 py-1 text-sm text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                 onClick={() => setEdgeMapper(null)}
               >
-                Close
+                ✕
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <label className="space-y-1">
-                <span className="text-slate-600 font-medium">From node</span>
-                <select
-                  value={edgeMapper.fromNodeId}
-                  onChange={(event) => {
-                    const nextFrom = event.target.value;
-                    const nextTo =
-                      nextFrom === edgeMapper.toNodeId
-                        ? edgeMapper.fromNodeId
-                        : edgeMapper.toNodeId;
-                    const sourceContext = getNodeResourceContext(nextFrom);
-                    const sourceAttr =
-                      sourceContext?.attributes.find((attr) => attr.name === "id")?.name ??
-                      sourceContext?.attributes[0]?.name ??
-                      "id";
+            <div className="p-4 grid grid-cols-2 gap-6">
+              {/* From Node Section (Left) */}
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Source</span>
+                  <select
+                    value={edgeMapper.fromNodeId}
+                    onChange={(event) => {
+                      const nextFrom = event.target.value;
+                      const nextTo =
+                        nextFrom === edgeMapper.toNodeId
+                          ? edgeMapper.fromNodeId
+                          : edgeMapper.toNodeId;
+                      const sourceContext = getNodeResourceContext(nextFrom);
+                      const sourceAttr =
+                        sourceContext?.attributes.find((attr) => attr.name === "id")?.name ??
+                        sourceContext?.attributes[0]?.name ??
+                        "id";
 
-                    setEdgeMapper((current) =>
-                      current
-                        ? {
-                            ...current,
-                            fromNodeId: nextFrom,
-                            toNodeId: nextTo,
-                            sourceExpression: buildTerraformRef(nextFrom, sourceAttr),
-                          }
-                        : current,
-                    );
-                  }}
-                  className="w-full rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5 text-slate-700 outline-none focus:border-blue-400 focus:bg-white"
-                >
-                  {[edgeMapper.endpointA, edgeMapper.endpointB].map((endpointId) => {
-                    const endpointNode = nodeById.get(endpointId);
-                    return (
-                      <option key={endpointId} value={endpointId}>
-                        {endpointNode?.data.label ?? endpointId}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-
-              <label className="space-y-1">
-                <span className="text-slate-600 font-medium">To node</span>
-                <select
-                  value={edgeMapper.toNodeId}
-                  onChange={(event) => {
-                    const nextTo = event.target.value;
-                    const nextFrom =
-                      nextTo === edgeMapper.fromNodeId
-                        ? edgeMapper.toNodeId
-                        : edgeMapper.fromNodeId;
-                    setEdgeMapper((current) =>
-                      current
-                        ? {
-                            ...current,
-                            fromNodeId: nextFrom,
-                            toNodeId: nextTo,
-                          }
-                        : current,
-                    );
-                  }}
-                  className="w-full rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5 text-slate-700 outline-none focus:border-blue-400 focus:bg-white"
-                >
-                  {[edgeMapper.endpointA, edgeMapper.endpointB].map((endpointId) => {
-                    const endpointNode = nodeById.get(endpointId);
-                    return (
-                      <option key={endpointId} value={endpointId}>
-                        {endpointNode?.data.label ?? endpointId}
-                      </option>
-                    );
-                  })}
-                </select>
-              </label>
-            </div>
-
-            <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-              <label className="space-y-1">
-                <span className="text-slate-600 font-medium">Source attribute</span>
-                <select
-                  value={(() => {
-                    const sourceContext = getNodeResourceContext(edgeMapper.fromNodeId);
-                    const matched = sourceContext?.attributes.find((attr) =>
-                      edgeMapper.sourceExpression.endsWith(`.${attr.name}`),
-                    );
-                    return matched?.name ?? "";
-                  })()}
-                  onChange={(event) => {
-                    const attr = event.target.value;
-                    setEdgeMapper((current) =>
-                      current
-                        ? {
-                            ...current,
-                            sourceExpression: buildTerraformRef(current.fromNodeId, attr),
-                          }
-                        : current,
-                    );
-                  }}
-                  className="w-full rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5 text-slate-700 outline-none focus:border-blue-400 focus:bg-white"
-                >
-                  {(getNodeResourceContext(edgeMapper.fromNodeId)?.attributes ?? []).map((attr) => (
-                    <option key={attr.name} value={attr.name}>
-                      {attr.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label className="space-y-1">
-                <span className="text-slate-600 font-medium">Target attribute</span>
-                <select
-                  value={edgeMapper.targetAttribute}
-                  onChange={(event) =>
-                    setEdgeMapper((current) =>
-                      current
-                        ? {
-                            ...current,
-                            targetAttribute: event.target.value,
-                          }
-                        : current,
-                    )
-                  }
-                  className="w-full rounded-lg border border-slate-300 bg-slate-50 px-2 py-1.5 text-slate-700 outline-none focus:border-blue-400 focus:bg-white"
-                >
-                  {(getNodeResourceContext(edgeMapper.toNodeId)?.attributes ?? [])
-                    .filter((attr) => !attr.computed || attr.optional)
-                    .map((attr) => (
+                      setEdgeMapper((current) =>
+                        current
+                          ? {
+                              ...current,
+                              fromNodeId: nextFrom,
+                              toNodeId: nextTo,
+                              sourceExpression: buildTerraformRef(nextFrom, sourceAttr),
+                            }
+                          : current,
+                      );
+                    }}
+                    className="w-full mt-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                  >
+                    {[edgeMapper.endpointA, edgeMapper.endpointB].map((endpointId) => {
+                      const endpointNode = nodeById.get(endpointId);
+                      return (
+                        <option key={endpointId} value={endpointId}>
+                          {endpointNode?.data.label ?? endpointId}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Attribute</span>
+                  <select
+                    value={(() => {
+                      const sourceContext = getNodeResourceContext(edgeMapper.fromNodeId);
+                      const matched = sourceContext?.attributes.find((attr) =>
+                        edgeMapper.sourceExpression.endsWith(`.${attr.name}`),
+                      );
+                      return matched?.name ?? "";
+                    })()}
+                    onChange={(event) => {
+                      const attr = event.target.value;
+                      setEdgeMapper((current) =>
+                        current
+                          ? {
+                              ...current,
+                              sourceExpression: buildTerraformRef(current.fromNodeId, attr),
+                            }
+                          : current,
+                      );
+                    }}
+                    className="w-full mt-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                  >
+                    {(getNodeResourceContext(edgeMapper.fromNodeId)?.attributes ?? []).map((attr) => (
                       <option key={attr.name} value={attr.name}>
                         {attr.name}
                       </option>
                     ))}
-                </select>
-              </label>
+                  </select>
+                </label>
+              </div>
+
+              {/* To Node Section (Right) */}
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Destination</span>
+                  <select
+                    value={edgeMapper.toNodeId}
+                    onChange={(event) => {
+                      const nextTo = event.target.value;
+                      const nextFrom =
+                        nextTo === edgeMapper.fromNodeId
+                          ? edgeMapper.toNodeId
+                          : edgeMapper.fromNodeId;
+                      setEdgeMapper((current) =>
+                        current
+                          ? {
+                              ...current,
+                              fromNodeId: nextFrom,
+                              toNodeId: nextTo,
+                            }
+                          : current,
+                      );
+                    }}
+                    className="w-full mt-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                  >
+                    {[edgeMapper.endpointA, edgeMapper.endpointB].map((endpointId) => {
+                      const endpointNode = nodeById.get(endpointId);
+                      return (
+                        <option key={endpointId} value={endpointId}>
+                          {endpointNode?.data.label ?? endpointId}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Attribute</span>
+                  <select
+                    value={edgeMapper.targetAttribute}
+                    onChange={(event) =>
+                      setEdgeMapper((current) =>
+                        current
+                          ? {
+                              ...current,
+                              targetAttribute: event.target.value,
+                            }
+                          : current,
+                      )
+                    }
+                    className="w-full mt-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
+                  >
+                    {(getNodeResourceContext(edgeMapper.toNodeId)?.attributes ?? [])
+                      .filter((attr) => !attr.computed || attr.optional)
+                      .map((attr) => (
+                        <option key={attr.name} value={attr.name}>
+                          {attr.name}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              </div>
             </div>
 
-            <div className="mt-4 flex justify-end gap-2">
+            {/* Footer */}
+            <div className="flex justify-end gap-2 border-t border-slate-100 px-4 py-3">
               <button
                 type="button"
-                className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-100"
+                className="rounded-md px-3 py-2 text-sm text-slate-700 font-medium hover:bg-slate-50 transition-colors"
                 onClick={() => setEdgeMapper(null)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700"
+                className="rounded-md bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 transition-colors"
                 onClick={() => {
                   onApplyEdgeMapping?.({
                     edgeId: edgeMapper.edgeId,
@@ -1071,7 +1094,7 @@ export default function CenterPanel({
                   setEdgeMapper(null);
                 }}
               >
-                Apply mapping
+                Link attributes
               </button>
             </div>
           </div>
