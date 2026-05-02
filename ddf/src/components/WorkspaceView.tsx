@@ -187,6 +187,7 @@ export default function WorkspaceView({
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
   const projectRef = useRef<TerraformProject>({ provider: "registry.terraform.io/hashicorp/aws", resources: [] });
+  const activeSectionRef = useRef(activeSection);
   const activeDragNodeIdRef = useRef<string | null>(null);
   const dragSubtreeSnapshotRef = useRef<
     Map<string, { parentNode?: string; position: { x: number; y: number } }> | null
@@ -224,6 +225,7 @@ export default function WorkspaceView({
   nodesRef.current = nodes;
   edgesRef.current = edges;
   projectRef.current = project;
+  activeSectionRef.current = activeSection;
 
   const getCurrentSnapshot = useCallback(
     () => ({ nodes: nodesRef.current, edges: edgesRef.current, project: projectRef.current }),
@@ -243,6 +245,7 @@ export default function WorkspaceView({
   // Keyboard undo/redo — skip when focus is inside a text input to avoid fighting native browser undo
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeSectionRef.current === "diff") return;
       const ctrl = e.ctrlKey || e.metaKey;
       if (!ctrl) return;
       const target = e.target as HTMLElement;
@@ -1032,7 +1035,7 @@ export default function WorkspaceView({
 
   const updateSelectedResource = useCallback(
     (updater: (resource: TerraformResource) => TerraformResource) => {
-      if (!selectedResource) return;
+      if (!selectedResource || activeSection === "diff") return;
 
       const nextResource = updater(selectedResource);
       const updatedSelectedResource: TerraformResource = {
@@ -1079,7 +1082,7 @@ export default function WorkspaceView({
         }),
       );
     },
-    [getResourceIcon, selectedResource, setNodes],
+    [activeSection, getResourceIcon, selectedResource, setNodes],
   );
 
   const syncResourcesFromMainTfBlocks = useCallback(

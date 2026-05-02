@@ -822,6 +822,7 @@ export default function CenterPanel({
           nodesConnectable={!readOnly}
           nodesDraggable={!readOnly}
           elementsSelectable
+          deleteKeyCode={readOnly ? null : "Backspace"}
           selectionKeyCode="Shift"
           multiSelectionKeyCode="Shift"
           onlyRenderVisibleElements
