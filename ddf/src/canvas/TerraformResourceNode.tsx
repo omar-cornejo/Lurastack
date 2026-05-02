@@ -37,7 +37,7 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
 
       return (
         <div
-          className={`pointer-events-none relative flex h-full w-full flex-col overflow-hidden rounded-xl border-2 border-dashed transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}
+          className={`pointer-events-none relative flex h-full w-full flex-col rounded-xl border-2 border-dashed transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}
         >
           {planBadge && (
             <span className={`absolute right-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${planBadge.cls}`}>
@@ -56,7 +56,7 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
           <Handle type="source" id="top" position={Position.Top} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-violet-500" />
 
           {/* Header */}
-          <div className="container-drag-handle pointer-events-auto flex shrink-0 items-start gap-3 border-b border-dashed border-violet-200 bg-white/90 px-3 py-2.5">
+          <div className="container-drag-handle pointer-events-auto flex shrink-0 items-start gap-3 overflow-hidden rounded-t-xl border-b border-dashed border-violet-200 bg-white/90 px-3 py-2.5">
             <div className="mt-0.5 flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-violet-50 to-violet-100/60 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
               <img src={data.icon} alt={data.label} className="h-full w-full object-cover drop-shadow-sm" draggable={false} />
             </div>
@@ -85,7 +85,7 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
 
     return (
       <div
-        className={`pointer-events-none relative flex h-full w-full flex-col overflow-hidden rounded-xl border-2 transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}
+        className={`pointer-events-none relative flex h-full w-full flex-col rounded-xl border-2 transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}
       >
         {planBadge && (
           <span className={`absolute right-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${planBadge.cls}`}>
@@ -104,7 +104,7 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
         <Handle type="source" id="top" position={Position.Top} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-indigo-500" />
 
         {/* Header */}
-        <div className="container-drag-handle pointer-events-auto flex shrink-0 items-start gap-3 border-b border-indigo-100 bg-white px-3 py-2.5">
+        <div className="container-drag-handle pointer-events-auto flex shrink-0 items-start gap-3 overflow-hidden rounded-t-xl border-b border-indigo-100 bg-white px-3 py-2.5">
           <div className="mt-0.5 flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100/60 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
             <img src={data.icon} alt={data.label} className="h-full w-full object-cover drop-shadow-sm" draggable={false} />
           </div>
