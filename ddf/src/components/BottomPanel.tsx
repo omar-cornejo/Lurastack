@@ -310,19 +310,31 @@ export default function BottomPanel({
   }, [mapperIncomingConnectionMappings]);
 
   const mapperInheritedFromContainer = useMemo(() => {
-    if (!activeMapperItem?.node.parentId) return [] as Array<{ containerLabel: string; attributeName: string; sourceExpression: string }>;
-    const parentNode = deferredNodes.find((node) => node.id === activeMapperItem.node.parentId);
-    if (!parentNode) return [];
-    const parentResource = resources.find((resource) => resource.id === parentNode.data.resourceId);
-    if (!parentResource) return [];
-    const parentSchema = schemas.find((schema) => schema.id === parentResource.schemaId);
-    const parentProps = getInspectorPropertiesForSchema(parentSchema);
-    const configuredKeys = Object.keys(parentResource.config.attributes ?? {});
-    const schemaKeys = parentProps.map((prop) => prop.name);
-    const allKeys = Array.from(new Set([...schemaKeys, ...configuredKeys])).filter(Boolean).sort((left, right) => left.localeCompare(right));
-    const prefix = parentResource.kind === "data" ? "data." : "";
-    const baseRef = `${prefix}${parentResource.type}.${parentResource.name}`;
-    return allKeys.map((attributeName) => ({ containerLabel: parentNode.data.label, attributeName, sourceExpression: `${baseRef}.${attributeName}` }));
+    if (!activeMapperItem?.node.parentNode) return [] as Array<{ containerId: string; containerLabel: string; entries: Array<{ attributeName: string; sourceExpression: string }> }>;
+    const nodeById = new Map(deferredNodes.map((n) => [n.id, n]));
+    const result: Array<{ containerId: string; containerLabel: string; entries: Array<{ attributeName: string; sourceExpression: string }> }> = [];
+    let currentParentId: string | undefined = activeMapperItem.node.parentNode;
+    while (currentParentId) {
+      const parentNode = nodeById.get(currentParentId);
+      if (!parentNode) break;
+      const parentResource = resources.find((r) => r.id === parentNode.data.resourceId);
+      if (parentResource) {
+        const parentSchema = schemas.find((s) => s.id === parentResource.schemaId);
+        const parentProps = getInspectorPropertiesForSchema(parentSchema);
+        const configuredKeys = Object.keys(parentResource.config.attributes ?? {});
+        const schemaKeys = parentProps.map((p) => p.name);
+        const allKeys = Array.from(new Set([...schemaKeys, ...configuredKeys])).filter(Boolean).sort((a, b) => a.localeCompare(b));
+        const prefix = parentResource.kind === "data" ? "data." : "";
+        const baseRef = `${prefix}${parentResource.type}.${parentResource.name}`;
+        result.push({
+          containerId: parentNode.id,
+          containerLabel: parentNode.data.label,
+          entries: allKeys.map((attributeName) => ({ attributeName, sourceExpression: `${baseRef}.${attributeName}` })),
+        });
+      }
+      currentParentId = parentNode.parentNode;
+    }
+    return result;
   }, [activeMapperItem, deferredNodes, resources, schemas]);
 
   const mapperInheritedFromZones = useMemo(() => {
@@ -636,43 +648,41 @@ export default function BottomPanel({
                 ) : (
                   <>
                     {/* Sub-toolbar */}
-                    <div className="shrink-0 border-b border-gray-200 bg-white px-3 py-1.5 flex items-center gap-3 flex-wrap">
-                      {/* Selected resource identity */}
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 shrink-0">
-                          {activeMapperItem.resource.kind ?? "resource"}
-                        </span>
-                        <span className="text-xs font-bold text-gray-900 truncate">
-                          {activeMapperItem.resource.name}
-                        </span>
-                        <span className="text-[10px] text-gray-400 truncate hidden sm:block">
-                          · {activeMapperItem.resource.type}
-                        </span>
+                    <div className="shrink-0 border-b border-gray-200 bg-white">
+                      {/* Row 1: identity + tabs always at right */}
+                      <div className="flex items-center gap-3 px-3 py-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 shrink-0">
+                            {activeMapperItem.resource.kind ?? "resource"}
+                          </span>
+                          <span className="text-xs font-bold text-gray-900 truncate">
+                            {activeMapperItem.resource.name}
+                          </span>
+                          <span className="text-[10px] text-gray-400 truncate hidden sm:block">
+                            · {activeMapperItem.resource.type}
+                          </span>
+                        </div>
+                        <div className="ml-auto flex rounded-md bg-gray-100 p-0.5 gap-0.5">
+                          {(["properties", "connections", "container", "zones"] as const).map((src) => (
+                            <button
+                              key={src}
+                              type="button"
+                              onClick={() => setMapperSourceFilter(src)}
+                              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors capitalize ${
+                                mapperSourceFilter === src
+                                  ? "bg-white text-gray-900 shadow-sm"
+                                  : "text-gray-500 hover:text-gray-700"
+                              }`}
+                            >
+                              {src}
+                            </button>
+                          ))}
+                        </div>
                       </div>
 
-                      <div className="flex-1" />
-
-                      {/* Source tabs */}
-                      <div className="flex rounded-md bg-gray-100 p-0.5 gap-0.5">
-                        {(["properties", "connections", "container", "zones"] as const).map((src) => (
-                          <button
-                            key={src}
-                            type="button"
-                            onClick={() => setMapperSourceFilter(src)}
-                            className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors capitalize ${
-                              mapperSourceFilter === src
-                                ? "bg-white text-gray-900 shadow-sm"
-                                : "text-gray-500 hover:text-gray-700"
-                            }`}
-                          >
-                            {src}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Filter chips — properties only */}
+                      {/* Row 2: filter chips — properties only */}
                       {mapperSourceFilter === "properties" && (
-                        <div className="flex items-center gap-1 flex-wrap">
+                        <div className="border-t border-gray-100 px-3 py-1.5 flex items-center gap-1 flex-wrap">
                           <input
                             value={attributeSearch}
                             onChange={(e) => setAttributeSearch(e.target.value)}
@@ -894,27 +904,29 @@ export default function BottomPanel({
                               This resource is not inside a container or no inherited attributes are available.
                             </div>
                           ) : (
-                            <div className="space-y-1.5">
-                              <div className="text-[11px] font-semibold text-gray-600 mb-1.5">
-                                {mapperInheritedFromContainer[0]?.containerLabel}
-                              </div>
-                              <div className="flex flex-wrap gap-1">
-                                {mapperInheritedFromContainer.map((item) => (
-                                  <div
-                                    key={item.sourceExpression}
-                                    className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] text-emerald-700 font-mono cursor-grab hover:border-emerald-300 hover:bg-emerald-100 transition-colors"
-                                    draggable
-                                    onDragStart={(event) => {
-                                      persistMapperDragValue(item.sourceExpression);
-                                      event.dataTransfer.setData(OBJECT_MAPPER_REF_MIME, item.sourceExpression);
-                                      event.dataTransfer.setData("text/plain", item.sourceExpression);
-                                      event.dataTransfer.effectAllowed = "copy";
-                                    }}
-                                  >
-                                    ⠿ {item.sourceExpression}
+                            <div className="space-y-2">
+                              {mapperInheritedFromContainer.map((container) => (
+                                <div key={container.containerId} className="rounded border border-gray-200 bg-white p-2 shadow-sm">
+                                  <div className="mb-1.5 text-[11px] font-semibold text-gray-700">{container.containerLabel}</div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {container.entries.map((item) => (
+                                      <div
+                                        key={item.sourceExpression}
+                                        className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] text-emerald-700 font-mono cursor-grab hover:border-emerald-300 hover:bg-emerald-100 transition-colors"
+                                        draggable
+                                        onDragStart={(event) => {
+                                          persistMapperDragValue(item.sourceExpression);
+                                          event.dataTransfer.setData(OBJECT_MAPPER_REF_MIME, item.sourceExpression);
+                                          event.dataTransfer.setData("text/plain", item.sourceExpression);
+                                          event.dataTransfer.effectAllowed = "copy";
+                                        }}
+                                      >
+                                        ⠿ {item.sourceExpression}
+                                      </div>
+                                    ))}
                                   </div>
-                                ))}
-                              </div>
+                                </div>
+                              ))}
                             </div>
                           )}
                         </div>
