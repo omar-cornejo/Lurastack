@@ -174,7 +174,7 @@ export default function WorkspaceView({
   initialState,
   onStateChange,
 }: WorkspaceViewProps) {
-  const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+  const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
   const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff">("canvas");
   const [cloudProvider, setCloudProvider] = useState<"aws">("aws");
   const [providerRegion] = useState("eu-south-2");
@@ -532,20 +532,44 @@ export default function WorkspaceView({
       setProject((currentProject) => {
         const updatedProject = {
           ...currentProject,
-          resources: currentProject.resources.map((resource) =>
-            resource.id === targetResourceId
-              ? {
-                  ...resource,
-                  config: {
-                    ...resource.config,
-                    attributes: {
-                      ...resource.config.attributes,
-                      [payload.targetAttribute]: payload.sourceExpression,
-                    },
-                  },
-                }
-              : resource,
-          ),
+          resources: currentProject.resources.map((resource) => {
+            if (resource.id !== targetResourceId) return resource;
+
+            const currentAttrs = { ...resource.config.attributes };
+            const parts = payload.targetAttribute.split(".");
+
+            if (parts.length >= 2) {
+              const blockKey = parts[0];
+              const childPath = parts.slice(1).join(".");
+              const existing = currentAttrs[blockKey];
+
+              if (Array.isArray(existing) && existing.length > 0 && existing.every((it) => it && typeof it === "object" && !Array.isArray(it))) {
+                const items = existing.map((item, idx) =>
+                  idx === 0
+                    ? { ...(item as Record<string, unknown>), [childPath]: payload.sourceExpression }
+                    : item,
+                );
+                currentAttrs[blockKey] = items;
+                delete currentAttrs[payload.targetAttribute];
+              } else if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+                currentAttrs[blockKey] = {
+                  ...(existing as Record<string, unknown>),
+                  [childPath]: payload.sourceExpression,
+                };
+                delete currentAttrs[payload.targetAttribute];
+              } else {
+                currentAttrs[blockKey] = [{ [childPath]: payload.sourceExpression }];
+                delete currentAttrs[payload.targetAttribute];
+              }
+            } else {
+              currentAttrs[payload.targetAttribute] = payload.sourceExpression;
+            }
+
+            return {
+              ...resource,
+              config: { ...resource.config, attributes: currentAttrs },
+            };
+          }),
         };
         void saveProjectToHCL(updatedProject);
         return updatedProject;

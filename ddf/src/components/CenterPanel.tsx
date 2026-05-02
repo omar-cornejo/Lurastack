@@ -907,7 +907,44 @@ export default function CenterPanel({
           </div>
         ) : null}
 
-        {edgeMapper ? (
+        {edgeMapper ? (() => {
+          const expandObjectAttributes = (attrs: ReturnType<typeof getInspectorPropertiesForSchema>) => {
+            const findObjectShape = (raw: unknown): Record<string, unknown> | null => {
+              if (!raw) return null;
+              if (Array.isArray(raw)) {
+                const [head, inner] = raw as [unknown, unknown];
+                if (head === "object" && inner && typeof inner === "object" && !Array.isArray(inner)) {
+                  return inner as Record<string, unknown>;
+                }
+                if ((head === "list" || head === "set" || head === "map") && inner !== undefined) {
+                  return findObjectShape(inner);
+                }
+              }
+              return null;
+            };
+            const out: typeof attrs = [];
+            attrs.forEach((attr) => {
+              out.push(attr);
+              const shape = findObjectShape(attr.rawType);
+              if (shape) {
+                Object.entries(shape).forEach(([childName, childType]) => {
+                  out.push({
+                    name: `${attr.name}.${childName}`,
+                    type: typeof childType === "string" ? childType : JSON.stringify(childType),
+                    required: false,
+                    optional: !!attr.optional,
+                    computed: !!attr.computed,
+                    typeKinds: [],
+                    rawType: childType,
+                  });
+                });
+              }
+            });
+            return out;
+          };
+          const sourceAttrs = expandObjectAttributes(getNodeResourceContext(edgeMapper.fromNodeId)?.attributes ?? []);
+          const targetAttrs = expandObjectAttributes(getNodeResourceContext(edgeMapper.toNodeId)?.attributes ?? []);
+          return (
           <div
             className="absolute z-30 w-[460px] max-w-[95vw] rounded-lg border border-slate-200 bg-white shadow-lg"
             style={{
@@ -987,10 +1024,15 @@ export default function CenterPanel({
                   <select
                     value={(() => {
                       const sourceContext = getNodeResourceContext(edgeMapper.fromNodeId);
-                      const matched = sourceContext?.attributes.find((attr) =>
-                        edgeMapper.sourceExpression.endsWith(`.${attr.name}`),
-                      );
-                      return matched?.name ?? "";
+                      if (!sourceContext) return "";
+                      const dataPrefix = sourceContext.resource.kind === "data" ? "data." : "";
+                      const resourcePrefix = `${dataPrefix}${sourceContext.schema.terraformType}.${sourceContext.resource.name}.`;
+                      const attrPart = edgeMapper.sourceExpression.startsWith(resourcePrefix)
+                        ? edgeMapper.sourceExpression.slice(resourcePrefix.length)
+                        : "";
+                      if (attrPart && sourceAttrs.find((a) => a.name === attrPart)) return attrPart;
+                      const sorted = [...sourceAttrs].sort((a, b) => b.name.length - a.name.length);
+                      return sorted.find((a) => edgeMapper.sourceExpression.endsWith(`.${a.name}`))?.name ?? "";
                     })()}
                     onChange={(event) => {
                       const attr = event.target.value;
@@ -1005,7 +1047,7 @@ export default function CenterPanel({
                     }}
                     className="w-full mt-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
                   >
-                    {(getNodeResourceContext(edgeMapper.fromNodeId)?.attributes ?? []).map((attr) => (
+                    {sourceAttrs.map((attr) => (
                       <option key={attr.name} value={attr.name}>
                         {attr.name}
                       </option>
@@ -1064,7 +1106,7 @@ export default function CenterPanel({
                     }
                     className="w-full mt-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-1 focus:ring-slate-400"
                   >
-                    {(getNodeResourceContext(edgeMapper.toNodeId)?.attributes ?? [])
+                    {targetAttrs
                       .filter((attr) => !attr.computed || attr.optional)
                       .map((attr) => (
                         <option key={attr.name} value={attr.name}>
@@ -1103,7 +1145,8 @@ export default function CenterPanel({
               </button>
             </div>
           </div>
-        ) : null}
+          );
+        })() : null}
       </div>
     </section>
   );
