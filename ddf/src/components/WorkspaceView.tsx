@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useUndoRedo } from "../hooks/useUndoRedo";
 import Header from "./Header";
 import { LeftPanel } from "./LeftPanel";
 import CenterPanel from "./CenterPanel";
@@ -183,6 +184,9 @@ export default function WorkspaceView({
   const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdgeData>(
     initialState ? restoreEdges(initialState.edges) : [],
   );
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  const projectRef = useRef<TerraformProject>({ provider: "registry.terraform.io/hashicorp/aws", resources: [] });
   const activeDragNodeIdRef = useRef<string | null>(null);
   const dragSubtreeSnapshotRef = useRef<
     Map<string, { parentNode?: string; position: { x: number; y: number } }> | null
@@ -213,6 +217,51 @@ export default function WorkspaceView({
   const [planChanges, setPlanChanges] = useState<Map<string, ResourcePlanChange>>(new Map());
   const planBufferRef = useRef("");
   const planCurrentAddressRef = useRef<string | null>(null);
+
+  const { pushSnapshot, undo, redo } = useUndoRedo();
+
+  // Keep refs in sync with current state so keyboard handler always reads latest
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+  projectRef.current = project;
+
+  const getCurrentSnapshot = useCallback(
+    () => ({ nodes: nodesRef.current, edges: edgesRef.current, project: projectRef.current }),
+    [],
+  );
+
+  const restoreSnapshot = useCallback(
+    (snapshot: { nodes: typeof nodes; edges: typeof edges; project: TerraformProject }) => {
+      setNodes(snapshot.nodes);
+      setEdges(snapshot.edges);
+      setProject(snapshot.project);
+      void saveProjectToHCL(snapshot.project);
+    },
+    [setNodes, setEdges],
+  );
+
+  // Keyboard undo/redo — skip when focus is inside a text input to avoid fighting native browser undo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (!ctrl) return;
+      const target = e.target as HTMLElement;
+      const isEditing =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+      if (isEditing) return;
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo(getCurrentSnapshot(), restoreSnapshot);
+      } else if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        redo(getCurrentSnapshot(), restoreSnapshot);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo, getCurrentSnapshot, restoreSnapshot]);
 
   const broadcastBottomPanelState = useCallback(() => {
     if (!bottomPanelChannelRef.current) return;
@@ -449,6 +498,7 @@ export default function WorkspaceView({
 
   const onConnect = useCallback(
     (connection: Connection) => {
+      pushSnapshot(getCurrentSnapshot());
       setEdges((currentEdges) =>
         addEdge(
           {
@@ -460,7 +510,7 @@ export default function WorkspaceView({
         ),
       );
     },
-    [setEdges],
+    [setEdges, pushSnapshot, getCurrentSnapshot],
   );
 
   const applyEdgeMapping = useCallback(
@@ -589,6 +639,9 @@ export default function WorkspaceView({
 
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => {
+      const hasRemove = changes.some((c) => c.type === "remove");
+      if (hasRemove) pushSnapshot(getCurrentSnapshot());
+
       setNodes((currentNodes) => {
         const nextNodes = applyNodeChanges(changes, currentNodes);
         const resizedNodeIds = changes
@@ -606,7 +659,7 @@ export default function WorkspaceView({
         ));
       });
     },
-    [setNodes],
+    [setNodes, pushSnapshot, getCurrentSnapshot],
   );
 
   const terraformResourceToHCL = (r: TerraformResource): string | null => {
@@ -797,8 +850,9 @@ export default function WorkspaceView({
     (_event, draggedNode) => {
       activeDragNodeIdRef.current = draggedNode.id;
       dragSubtreeSnapshotRef.current = buildSubtreeSnapshot(draggedNode.id);
+      pushSnapshot(getCurrentSnapshot());
     },
-    [buildSubtreeSnapshot],
+    [buildSubtreeSnapshot, pushSnapshot, getCurrentSnapshot],
   );
 
   const onNodeDragFinalize = useCallback(
@@ -882,6 +936,8 @@ export default function WorkspaceView({
     };
 
     const resolvedDropPosition = dropPosition ?? resolveRandomPositionInViewport();
+
+    pushSnapshot(getCurrentSnapshot());
 
     const resourceName = generateNextResourceName(node);
     const newResource: TerraformResource = createTerraformResourceFromSchema(
@@ -1318,11 +1374,12 @@ export default function WorkspaceView({
                 onNodeDragStart={onNodeDragStart}
                 onNodeDragStop={onNodeDragStop}
                 onNodeSelected={selectNode}
-                onDeleteEdge={(edgeId) =>
+                onDeleteEdge={(edgeId) => {
+                  pushSnapshot(getCurrentSnapshot());
                   setEdges((currentEdges) =>
                     currentEdges.filter((edge) => edge.id !== edgeId),
-                  )
-                }
+                  );
+                }}
                 onApplyEdgeMapping={applyEdgeMapping}
                 onViewportBoundsChange={activeSection === "canvas" ? setCanvasViewportBounds : undefined}
                 rightOverlayOffset={rightPanelOverlayOffset}
