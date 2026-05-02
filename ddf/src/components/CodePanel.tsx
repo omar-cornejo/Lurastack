@@ -1,11 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HclCodeArea } from "./HclCodeArea";
+import type { TypeHintResolver } from "../utils/hclHighlight";
 import { invoke } from "@tauri-apps/api/core";
 import { readDir, readTextFile, writeTextFile, remove, rename, mkdir } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import type { DdfCodeFile } from "../types/project";
 import type { BottomPanelLogEntry, BottomPanelLogLevel } from "../types/logs";
+import {
+  formatTypeLabel,
+  getInspectorPropertiesForSchema,
+} from "../commands/schemaInspector";
 
 type CodePanelProps = {
   resources: TerraformResource[];
@@ -76,21 +81,11 @@ type HclBlockNode = {
 const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 const INVALID_HCL_VALUE = Symbol("invalid-hcl-value");
 
-const sanitizeLooseQuotedString = (raw: string): string => {
-  let value = raw.trim();
-  if (!value) return "";
-
-  value = value.replace(/^\\+"+/, "");
-  value = value.replace(/\\+"+$/, "");
-  value = value.replace(/^"+/, "");
-  value = value.replace(/"+$/, "");
-
-  return value;
-};
 
 // Returns the character ranges [start, end] that correspond to the value portion
 // of attribute-assignment lines (the part after `=`). Block headers, closing braces,
-// and blank lines produce no ranges.
+// and blank lines produce no ranges. For string values (wrapped in outer quotes),
+// the range covers only the content INSIDE the outer quotes so the wrappers are protected.
 const getAttributeValueRanges = (text: string): Array<{ start: number; end: number }> => {
   const ranges: Array<{ start: number; end: number }> = [];
   const lines = text.split("\n");
@@ -103,7 +98,15 @@ const getAttributeValueRanges = (text: string): Array<{ start: number; end: numb
     if (match) {
       const valueStart = offset + match[1].length;
       const lineEnd = offset + line.trimEnd().length;
-      ranges.push({ start: valueStart, end: Math.max(valueStart, lineEnd) });
+      const valueStr = line.slice(match[1].length).trimEnd();
+
+      if (valueStr.length >= 2 && valueStr.startsWith('"') && valueStr.endsWith('"')) {
+        // String value: restrict editable zone to inside the outer quotes so the
+        // wrapper quotes themselves cannot be accidentally deleted.
+        ranges.push({ start: valueStart + 1, end: Math.max(valueStart + 1, lineEnd - 1) });
+      } else {
+        ranges.push({ start: valueStart, end: Math.max(valueStart, lineEnd) });
+      }
     }
 
     offset += line.length + 1; // +1 for the newline character
@@ -114,7 +117,8 @@ const getAttributeValueRanges = (text: string): Array<{ start: number; end: numb
 
 const isPositionInAttributeValue = (text: string, position: number): boolean =>
   getAttributeValueRanges(text).some(
-    (range) => position >= range.start && position <= range.end,
+    // range.end + 1 allows inserting just before the closing wrapper quote
+    (range) => position >= range.start && position <= range.end + 1,
   );
 
 const isRangeInAttributeValues = (text: string, start: number, end: number): boolean => {
@@ -195,26 +199,16 @@ const pruneEmptyAttributeAssignments = (hcl: string): string => {
 
 const parseHclValueToAttribute = (rawValue: string): unknown | typeof INVALID_HCL_VALUE => {
   const trimmed = rawValue.trim();
-  if (!trimmed) return "";
+  // Empty value or empty HCL string literal → treat as cleared
+  if (!trimmed || trimmed === '""') return "";
   if (trimmed === "[" || trimmed === "]" || trimmed === "{" || trimmed === "}") {
     return INVALID_HCL_VALUE;
   }
   if ((trimmed.startsWith("[") && !trimmed.endsWith("]")) || (trimmed.startsWith("{") && !trimmed.endsWith("}"))) {
     return INVALID_HCL_VALUE;
   }
-  if (trimmed === "null") return null;
-  if (trimmed === "true") return true;
-  if (trimmed === "false") return false;
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      return typeof parsed === "string" ? sanitizeLooseQuotedString(parsed) : parsed;
-    } catch {
-      return sanitizeLooseQuotedString(trimmed.slice(1, -1));
-    }
-  }
-  return sanitizeLooseQuotedString(trimmed);
+  // Store raw HCL value as-is — user is responsible for HCL syntax
+  return trimmed;
 };
 
 const parseMainTfBlocks = (hcl: string): ParsedMainTfBlock[] => {
@@ -235,6 +229,8 @@ const parseMainTfBlocks = (hcl: string): ParsedMainTfBlock[] => {
     const blockName = match[3] ?? "";
     const attributes: Record<string, unknown> = {};
 
+    // Stack of block-name prefixes for nested blocks (e.g. "route" → "route.")
+    const prefixStack: string[] = [];
     let depth = 1;
     index += 1;
 
@@ -242,20 +238,35 @@ const parseMainTfBlocks = (hcl: string): ParsedMainTfBlock[] => {
       const line = lines[index] ?? "";
       const trimmed = line.trim();
 
-      if (depth === 1) {
+      // Detect a named block opener at any depth (e.g. `route {`)
+      const blockOpener = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*\{$/);
+
+      if (blockOpener && prefixStack.length === depth - 1) {
+        // Push the block name so child attributes are prefixed with it
+        prefixStack.push(blockOpener[1]);
+      } else {
         const assignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
         if (assignment) {
           const [, key, rawValue] = assignment;
           const parsed = parseHclValueToAttribute(rawValue);
           if (parsed !== INVALID_HCL_VALUE) {
-            attributes[key] = parsed;
+            const prefix = prefixStack.join(".");
+            const fullKey = prefix ? `${prefix}.${key}` : key;
+            attributes[fullKey] = parsed;
           }
         }
       }
 
       const opens = (line.match(/{/g) ?? []).length;
       const closes = (line.match(/}/g) ?? []).length;
-      depth += opens - closes;
+      const nextDepth = depth + opens - closes;
+
+      // When depth decreases, pop the matching prefix (closing a nested block)
+      if (nextDepth < depth && prefixStack.length >= nextDepth) {
+        prefixStack.splice(nextDepth - 1);
+      }
+
+      depth = nextDepth;
       index += 1;
     }
 
@@ -310,6 +321,10 @@ export default function CodePanel({
   const topLevelSyncSignatureRef = useRef<string>("");
   const isFreeEditModeRef = useRef(false);
   isFreeEditModeRef.current = isFreeEditMode;
+  // When the user edits main.tf, we fire onMainTfBlocksChange which causes
+  // resources to update and mainTfContent to regenerate. We must skip that
+  // next reset so we don't clobber the user's own edit.
+  const skipNextMainTfResetRef = useRef(false);
 
   const isTauriRuntime =
     typeof window !== "undefined" &&
@@ -463,6 +478,72 @@ export default function CodePanel({
     [resources, schemas],
   );
 
+  const typeLabelByResource = useMemo(() => {
+    const map = new Map<string, Map<string, string>>();
+    resourcesWithSchemas.forEach(({ resource, schema }) => {
+      if (!schema) return;
+      const properties = getInspectorPropertiesForSchema(schema);
+      const attrMap = new Map<string, string>();
+      properties.forEach((property) => {
+        attrMap.set(property.name, formatTypeLabel(property.rawType));
+      });
+      map.set(`${resource.type}.${resource.name}`, attrMap);
+    });
+    return map;
+  }, [resourcesWithSchemas]);
+
+  const rawTypeByResource = useMemo(() => {
+    const map = new Map<string, Map<string, unknown>>();
+    resourcesWithSchemas.forEach(({ resource, schema }) => {
+      if (!schema) return;
+      const properties = getInspectorPropertiesForSchema(schema);
+      const attrMap = new Map<string, unknown>();
+      properties.forEach((property) => {
+        attrMap.set(property.name, property.rawType);
+      });
+      map.set(`${resource.type}.${resource.name}`, attrMap);
+    });
+    return map;
+  }, [resourcesWithSchemas]);
+
+  const mainTfTypeHints = useCallback<TypeHintResolver>(
+    (header, blockPath, attributeName) => {
+      if (!header || header.kind !== "resource") return undefined;
+      const labelMap = typeLabelByResource.get(`${header.type}.${header.name}`);
+      const rawMap = rawTypeByResource.get(`${header.type}.${header.name}`);
+      if (!labelMap) return undefined;
+
+      if (blockPath.length === 0) {
+        return labelMap.get(attributeName);
+      }
+
+      const dotted = `${blockPath.join(".")}.${attributeName}`;
+      const direct = labelMap.get(dotted);
+      if (direct) return direct;
+
+      if (rawMap) {
+        const parentRaw = rawMap.get(blockPath[0]!);
+        if (
+          Array.isArray(parentRaw) &&
+          (parentRaw[0] === "set" || parentRaw[0] === "list") &&
+          Array.isArray(parentRaw[1]) &&
+          parentRaw[1][0] === "object" &&
+          parentRaw[1][1] &&
+          typeof parentRaw[1][1] === "object"
+        ) {
+          const innerFields = parentRaw[1][1] as Record<string, unknown>;
+          const fieldType = innerFields[attributeName];
+          if (fieldType !== undefined) {
+            return formatTypeLabel(fieldType);
+          }
+        }
+      }
+
+      return labelMap.get(blockPath[0]!);
+    },
+    [typeLabelByResource, rawTypeByResource],
+  );
+
   const auxiliaryContent = openFileContents[activeFilePath] ?? "";
   const lineCount = Math.max(1, auxiliaryContent.split("\n").length);
 
@@ -473,6 +554,10 @@ export default function CodePanel({
   const mainTfLineCount = Math.max(1, mainTfDraft.split("\n").length);
 
   useEffect(() => {
+    if (skipNextMainTfResetRef.current) {
+      skipNextMainTfResetRef.current = false;
+      return;
+    }
     if (!isFreeEditModeRef.current) {
       setMainTfDraft(mainTfContent);
     }
@@ -900,15 +985,15 @@ export default function CodePanel({
 
   const handleMainTfContentChange = (next: string) => {
     if (!isFreeEditMode && !canEditOnlyInAttributeValues(mainTfDraft, next)) {
-      if (codeEditorRef.current) {
-        const sel = codeEditorRef.current.selectionStart;
-        codeEditorRef.current.value = mainTfDraft;
-        const cursor = Math.min(sel, mainTfDraft.length);
-        codeEditorRef.current.setSelectionRange(cursor, cursor);
-      }
       return;
     }
-    onMainTfBlocksChange?.(parseMainTfBlocks(next));
+    if (onMainTfBlocksChange) {
+      // The resource update will cause mainTfContent to regenerate; skip
+      // resetting the draft from that regenerated content so the user's
+      // in-progress edit is preserved.
+      skipNextMainTfResetRef.current = true;
+      onMainTfBlocksChange(parseMainTfBlocks(next));
+    }
     setMainTfDraft(isFreeEditMode ? next : pruneEmptyAttributeAssignments(next));
   };
 
@@ -1172,6 +1257,7 @@ export default function CodePanel({
                     containerClassName="h-full min-h-0"
                     innerClassName="px-3 py-2 font-mono text-xs leading-5"
                     attributeMode={!isFreeEditMode}
+                    typeHints={mainTfTypeHints}
                   />
                 </div>
               )
@@ -1248,18 +1334,20 @@ const toHclLiteral = (value: unknown): string => {
     return `[${value.map(toHclLiteral).join(", ")}]`;
   }
   if (typeof value === "string") {
-    const trimmed = sanitizeLooseQuotedString(value);
+    const trimmed = value.trim();
+    if (!trimmed) return '""';
     if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
     if (
       trimmed === "true" ||
       trimmed === "false" ||
       /^-?\d+(\.\d+)?$/.test(trimmed) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
       (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
       (trimmed.startsWith("{") && trimmed.endsWith("}"))
     ) {
       return trimmed;
     }
-    return JSON.stringify(trimmed);
+    return JSON.stringify(value);
   }
   return JSON.stringify(String(value));
 };

@@ -54,6 +54,7 @@ import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 import { useAwsCredentials } from "../hooks/useAwsCredentials";
+import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 
 const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
 const POPOUT_HEARTBEAT_TTL_MS = 900;
@@ -82,6 +83,78 @@ const isMeaningfulValue = (value: unknown): boolean => {
   if (Array.isArray(value)) return value.length > 0;
   if (isPlainObject(value)) return Object.keys(value).length > 0;
   return true;
+};
+
+const isObjectCollectionType = (rawType: unknown): boolean => {
+  if (!Array.isArray(rawType) || rawType.length < 2) return false;
+  const [container, inner] = rawType as [unknown, unknown];
+  if (container !== "set" && container !== "list") return false;
+  return Array.isArray(inner) && inner[0] === "object";
+};
+
+// Converts flat dotted keys for set(object(...)) / list(object(...)) schema properties
+// into array-of-objects format, so the store stays canonical for the info tab UI.
+// e.g. { "route.carrier_gateway_id": "sd", "route.cidr_block": "10.0.0.0/8" }
+//   → { route: [{ carrier_gateway_id: "sd", cidr_block: "10.0.0.0/8" }] }
+// parsedBlockAttributes: the raw attributes from the CodePanel parser — used to detect
+// when an object-collection block was completely removed (no dotted keys present) so
+// the array entry can be cleared from the store.
+const normalizeDottedKeysToArrayFormat = (
+  attributes: Record<string, unknown>,
+  schema: import("../models/nodeRegistry").TerraformNodeSchema | undefined,
+  parsedBlockAttributes?: Record<string, unknown>,
+): Record<string, unknown> => {
+  if (!schema) return attributes;
+
+  const properties = getInspectorPropertiesForSchema(schema);
+  const objectCollectionProps = new Map<string, unknown>(
+    properties
+      .filter((p) => isObjectCollectionType(p.rawType))
+      .map((p) => [p.name, p.rawType]),
+  );
+
+  if (!objectCollectionProps.size) return attributes;
+
+  const result: Record<string, unknown> = {};
+  const blockAccumulators = new Map<string, Array<Record<string, unknown>>>();
+
+  Object.entries(attributes).forEach(([key, value]) => {
+    const dotIdx = key.indexOf(".");
+    if (dotIdx === -1) {
+      result[key] = value;
+      return;
+    }
+    const blockName = key.slice(0, dotIdx);
+    const fieldName = key.slice(dotIdx + 1);
+    if (!objectCollectionProps.has(blockName)) {
+      result[key] = value;
+      return;
+    }
+    if (!blockAccumulators.has(blockName)) {
+      blockAccumulators.set(blockName, [{}]);
+    }
+    const entries = blockAccumulators.get(blockName)!;
+    entries[0]![fieldName] = value;
+  });
+
+  blockAccumulators.forEach((entries, blockName) => {
+    result[blockName] = entries;
+  });
+
+  // If parsedBlockAttributes is provided, remove array-format keys for object-collection
+  // properties that had no dotted keys in the parsed HCL (user deleted the whole block).
+  if (parsedBlockAttributes) {
+    objectCollectionProps.forEach((_, blockName) => {
+      const hasDottedKey = Object.keys(parsedBlockAttributes).some(
+        (k) => k === `${blockName}.` || k.startsWith(`${blockName}.`),
+      );
+      if (!hasDottedKey && Object.prototype.hasOwnProperty.call(result, blockName)) {
+        delete result[blockName];
+      }
+    });
+  }
+
+  return result;
 };
 
 type CanvasViewportBounds = {
@@ -563,13 +636,14 @@ export default function WorkspaceView({
           trimmed === "true" ||
           trimmed === "false" ||
           /^-?\d+(\.\d+)?$/.test(trimmed) ||
+          (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
           (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
           (trimmed.startsWith("{") && trimmed.endsWith("}"))
         ) {
           return trimmed;
         }
 
-        return `"${trimmed.replace(/"/g, '\\"')}"`;
+        return `"${value.replace(/"/g, '\\"')}"`;
       }
 
       if (value === null || value === undefined) return '""';
@@ -961,21 +1035,56 @@ export default function WorkspaceView({
     }>) => {
       if (!blocks.length) return;
 
+      // Build a lookup map keyed by "type.name" so edits in CodePanel find the
+      // correct resource regardless of declaration order in the HCL file.
+      const blockByKey = new Map(
+        blocks.map((block) => [`${block.type}.${block.name}`, block]),
+      );
+
       const visualUpdates: Array<{ resourceId: string; label: string; icon: string }> = [];
 
       setProject((currentProject) => {
         let changed = false;
 
-        const updatedResources = currentProject.resources.map((resource, index) => {
-          const block = blocks[index];
+        const updatedResources = currentProject.resources.map((resource) => {
+          const block = blockByKey.get(`${resource.type}.${resource.name}`);
           if (!block) return resource;
 
+          const resourceSchema = NODE_SCHEMAS.find((s) => s.id === resource.schemaId);
           const nextAttributes = { ...resource.config.attributes };
-          Object.keys(nextAttributes).forEach((key) => {
-            if (Object.prototype.hasOwnProperty.call(block.attributes, key)) {
-              nextAttributes[key] = block.attributes[key];
+
+          // Apply every key the parsed HCL block knows about (flat + nested via dotted keys).
+          // Empty-string means the line was cleared — delete the attribute.
+          Object.keys(block.attributes).forEach((key) => {
+            const parsed = block.attributes[key];
+            if (parsed === "" || parsed === null || parsed === undefined) {
+              delete nextAttributes[key];
+            } else {
+              nextAttributes[key] = parsed;
             }
           });
+
+          // Remove keys that were rendered in the CodePanel HCL (meaningful value) but are
+          // now absent from the parse — the user deleted or cleared them.
+          // Only touch keys with meaningful values so computed/null attributes in the store
+          // are never accidentally wiped.
+          Object.keys(resource.config.attributes).forEach((key) => {
+            if (
+              isMeaningfulValue(resource.config.attributes[key]) &&
+              !Object.prototype.hasOwnProperty.call(block.attributes, key)
+            ) {
+              delete nextAttributes[key];
+            }
+          });
+
+          // Convert dotted keys for set(object(...))/list(object(...)) schema attributes
+          // into the canonical array-of-objects format the info tab UI expects.
+          // Also removes array-format keys whose blocks were entirely removed from the HCL.
+          const normalizedAttributes = normalizeDottedKeysToArrayFormat(
+            nextAttributes,
+            resourceSchema,
+            block.attributes,
+          );
 
           const nextKind = block.kind;
           const nextType = block.type || resource.type;
@@ -985,10 +1094,10 @@ export default function WorkspaceView({
               ? (isSubnetIconPath(resource.ui.icon)
                   ? resource.ui.icon
                   : SUBNET_PRIVATE_ICON_PATH)
-              : resolveTerraformIcon(nextType, nextAttributes);
+              : resolveTerraformIcon(nextType, normalizedAttributes);
 
           const attributesChanged =
-            JSON.stringify(resource.config.attributes) !== JSON.stringify(nextAttributes);
+            JSON.stringify(resource.config.attributes) !== JSON.stringify(normalizedAttributes);
           const identityChanged =
             resource.kind !== nextKind ||
             resource.type !== nextType ||
@@ -1018,7 +1127,7 @@ export default function WorkspaceView({
             },
             config: {
               ...resource.config,
-              attributes: nextAttributes,
+              attributes: normalizedAttributes,
             },
           };
         });

@@ -88,22 +88,94 @@ function scanString(src: string, start: number): { html: string; end: number } {
   return { html: parts.join(""), end: i };
 }
 
+// Resolves the type label for an attribute on a resource at a given block
+// path (e.g. ["route"] for nested blocks). Implementations should return
+// undefined when no schema info is available so the hint is omitted.
+export type TypeHintResolver = (
+  resourceHeader: { kind: "resource" | "data"; type: string; name: string } | null,
+  blockPath: string[],
+  attributeName: string,
+) => string | undefined;
+
 // Attribute-mode highlight: dims structural lines and the key portion of attribute
 // lines, leaving only the value zone (right side of `=`) at full brightness with
-// a subtle background so users immediately see what is editable.
-export function highlightHclAttributeMode(source: string): string {
-  return source
-    .split("\n")
+// a subtle background so users immediately see what is editable. When a
+// `typeHints` resolver is supplied, each attribute line gets a faded inline
+// type label suffix (e.g. `: string`) to mirror the RightPanel info tab.
+export function highlightHclAttributeMode(
+  source: string,
+  typeHints?: TypeHintResolver,
+): string {
+  const lines = source.split("\n");
+  let currentHeader: { kind: "resource" | "data"; type: string; name: string } | null = null;
+  const blockPath: string[] = [];
+  let depth = 0;
+
+  return lines
     .map((line) => {
+      const trimmed = line.trim();
+
+      const headerMatch = trimmed.match(/^(resource|data)\s+"([^"]+)"\s+"([^"]+)"\s*\{\s*$/);
+      const namedBlockOpen = !headerMatch && trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*\{\s*$/);
+      const opens = (line.match(/{/g) ?? []).length;
+      const closes = (line.match(/}/g) ?? []).length;
+      const lineDepthAtStart = depth;
+
+      if (headerMatch) {
+        currentHeader = {
+          kind: headerMatch[1] as "resource" | "data",
+          type: headerMatch[2] ?? "",
+          name: headerMatch[3] ?? "",
+        };
+      } else if (namedBlockOpen && lineDepthAtStart >= 1) {
+        blockPath.push(namedBlockOpen[1]);
+      }
+
       const m = line.match(/^(\s*[a-zA-Z_][a-zA-Z0-9_-]*\s*=\s*)(.*)/);
-      if (m) {
+      let rendered: string;
+      if (m && lineDepthAtStart >= 1) {
         const keyHtml = `<span style="opacity:0.38">${highlightHcl(m[1] ?? "")}</span>`;
         const valHtml =
           `<span style="background:rgba(96,165,250,0.10);border-radius:2px;` +
           `box-shadow:0 0 0 1px rgba(96,165,250,0.22)">${highlightHcl(m[2] ?? "")}</span>`;
-        return keyHtml + valHtml;
+
+        let hintHtml = "";
+        if (typeHints) {
+          const keyMatch = (m[1] ?? "").match(/^\s*([a-zA-Z_][a-zA-Z0-9_-]*)\s*=/);
+          const attrName = keyMatch?.[1];
+          if (attrName) {
+            const label = typeHints(currentHeader, [...blockPath], attrName);
+            if (label) {
+              hintHtml =
+                `<span style="opacity:0.45;color:#9ca3af;font-style:italic">` +
+                ` : ${esc(label)}</span>`;
+            }
+          }
+        }
+
+        rendered = keyHtml + valHtml + hintHtml;
+      } else {
+        rendered = `<span style="opacity:0.35">${highlightHcl(line)}</span>`;
       }
-      return `<span style="opacity:0.35">${highlightHcl(line)}</span>`;
+
+      depth += opens - closes;
+      if (depth < 0) depth = 0;
+
+      // Pop block path when a nested block closes (depth dropped back below its push level)
+      if (closes > 0) {
+        const closeCount = closes;
+        for (let c = 0; c < closeCount; c += 1) {
+          if (blockPath.length > 0 && depth < blockPath.length + 1) {
+            blockPath.pop();
+          }
+        }
+        if (depth === 0) {
+          currentHeader = null;
+          blockPath.length = 0;
+        }
+      }
+
+      return rendered;
     })
     .join("\n");
 }

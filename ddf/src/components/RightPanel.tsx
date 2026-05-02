@@ -13,6 +13,8 @@ import {
 } from "../models/iconRegistry";
 import {
   getInspectorPropertiesForSchema,
+  formatTypeLabel,
+  getValuePlaceholder,
   type InspectorProperty,
 } from "../commands/schemaInspector";
 
@@ -64,31 +66,20 @@ const RIGHT_PANEL_MAX_WIDTH = 600;
 const RIGHT_PANEL_KEYBOARD_STEP = 12;
 const RIGHT_PANEL_KEYBOARD_FAST_STEP = 32;
 
-const sanitizeLooseQuotedString = (raw: string): string => {
-  let value = raw.trim();
-  if (!value) return "";
-
-  value = value.replace(/^\\+"+/, "");
-  value = value.replace(/\\+"+$/, "");
-  value = value.replace(/^"+/, "");
-  value = value.replace(/"+$/, "");
-
-  return value;
-};
 
 const normalizeMappedReference = (
   rawValue: string,
   targetPropertyName: string,
   resources: TerraformResource[],
 ) => {
-  const value = rawValue.trim();
-  if (!value) return value;
-  if (terraformRefPattern.test(value) || value.startsWith("var.")) {
-    return value;
+  const trimmed = rawValue.trim();
+  if (!trimmed) return rawValue;
+  if (terraformRefPattern.test(trimmed) || trimmed.startsWith("var.")) {
+    return trimmed;
   }
 
-  const match = value.match(/^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?$/);
-  if (!match) return value;
+  const match = trimmed.match(/^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?$/);
+  if (!match) return rawValue;
 
   const [, schemaOrType, resourceName, explicitAttr] = match;
   const schema = NODE_SCHEMAS.find(
@@ -97,7 +88,7 @@ const normalizeMappedReference = (
       candidate.terraformType.toLowerCase() === schemaOrType.toLowerCase(),
   );
 
-  if (!schema) return value;
+  if (!schema) return rawValue;
 
   const resource = resources.find(
     (candidate) =>
@@ -105,7 +96,7 @@ const normalizeMappedReference = (
       (candidate.schemaId === schema.id || candidate.type === schema.terraformType),
   );
 
-  if (!resource) return value;
+  if (!resource) return rawValue;
 
   const attr = explicitAttr ?? (targetPropertyName.endsWith("_id") ? "id" : "id");
   const prefix = resource.kind === "data" ? "data." : "";
@@ -114,81 +105,104 @@ const normalizeMappedReference = (
 
 const parseHclValueToAttribute = (input: string): unknown | typeof INVALID_HCL_VALUE => {
   const trimmed = input.trim();
-  if (!trimmed) return "";
-  if (trimmed === "null") return null;
-  if (trimmed === "true") return true;
-  if (trimmed === "false") return false;
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
-  if (trimmed.includes('"') && !(trimmed.startsWith('"') && trimmed.endsWith('"'))) {
+  // Empty value or empty HCL string literal → treat as cleared
+  if (!trimmed || trimmed === '""') return "";
+  if (trimmed === "[" || trimmed === "]" || trimmed === "{" || trimmed === "}") {
     return INVALID_HCL_VALUE;
   }
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      return typeof parsed === "string" ? sanitizeLooseQuotedString(parsed) : parsed;
-    } catch {
-      return sanitizeLooseQuotedString(trimmed.slice(1, -1));
-    }
+  if (
+    (trimmed.startsWith("[") && !trimmed.endsWith("]")) ||
+    (trimmed.startsWith("{") && !trimmed.endsWith("}"))
+  ) {
+    return INVALID_HCL_VALUE;
   }
-  return sanitizeLooseQuotedString(trimmed);
+  // Store raw HCL as-is — user is responsible for HCL syntax.
+  return trimmed;
 };
 
 const parseHclAttributesForAllowedKeys = (
   hcl: string,
   allowedKeys: Set<string>,
+  objectCollectionKeys: Set<string> = new Set(),
 ): Record<string, unknown> => {
   const attributes: Record<string, unknown> = {};
   const lines = hcl.split("\n");
+  const prefixStack: string[] = [];
+  // For each object-collection block we're currently inside, accumulate field entries.
+  // Stack entry: { blockName, entry } — entry collects field assignments.
+  const objBlockStack: Array<{ blockName: string; entry: Record<string, unknown> }> = [];
+  let rawDepth = 0;
 
   lines.forEach((line) => {
     const trimmed = line.trim();
-    if (
-      !trimmed ||
-      trimmed.startsWith("#") ||
-      trimmed.startsWith("//") ||
-      trimmed.startsWith("resource ") ||
-      trimmed.startsWith("data ") ||
-      trimmed === "{" ||
-      trimmed === "}"
-    ) {
-      return;
+    if (!trimmed || trimmed.startsWith("#") || trimmed.startsWith("//")) return;
+
+    const opens = (line.match(/{/g) ?? []).length;
+    const closes = (line.match(/}/g) ?? []).length;
+
+    const isOuterHeader = !!trimmed.match(/^(?:resource|data)\s+"[^"]+"\s+"[^"]+"\s*\{/);
+    const namedOpener = !isOuterHeader ? trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*\{$/) : null;
+
+    if (namedOpener) {
+      const blockName = namedOpener[1];
+      if (objectCollectionKeys.has(blockName) && prefixStack.length === 0) {
+        // Start accumulating a new entry for this object-collection block.
+        objBlockStack.push({ blockName, entry: {} });
+      } else {
+        prefixStack.push(blockName);
+      }
     }
 
-    const simpleAssignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
-    if (!simpleAssignment) return;
+    const assignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
+    if (assignment) {
+      const [, key, rawValue] = assignment;
+      if (objBlockStack.length > 0) {
+        // Inside an object-collection block — accumulate into entry.
+        const parsed = parseHclValueToAttribute(rawValue);
+        if (parsed !== INVALID_HCL_VALUE) {
+          objBlockStack[objBlockStack.length - 1]!.entry[key] = parsed;
+        }
+      } else {
+        const prefix = prefixStack.join(".");
+        const fullKey = prefix ? `${prefix}.${key}` : key;
+        if (allowedKeys.has(fullKey)) {
+          const parsed = parseHclValueToAttribute(rawValue);
+          if (parsed !== INVALID_HCL_VALUE) {
+            attributes[fullKey] = parsed;
+          }
+        }
+      }
+    }
 
-    const [, key, rawValue] = simpleAssignment;
-    if (!allowedKeys.has(key)) return;
-    const parsed = parseHclValueToAttribute(rawValue);
-    if (parsed === INVALID_HCL_VALUE) return;
-    attributes[key] = parsed;
+    const nextRawDepth = rawDepth + opens - closes;
+    if (nextRawDepth < rawDepth) {
+      if (objBlockStack.length > 0) {
+        // Closing an object-collection block entry — append to the array.
+        const top = objBlockStack.pop()!;
+        const existing = attributes[top.blockName];
+        const arr = Array.isArray(existing) ? (existing as Array<Record<string, unknown>>) : [];
+        attributes[top.blockName] = [...arr, top.entry];
+      } else {
+        const keepCount = Math.max(0, nextRawDepth - 1);
+        if (prefixStack.length > keepCount) {
+          prefixStack.splice(keepCount);
+        }
+      }
+    }
+    rawDepth = nextRawDepth;
   });
 
   return attributes;
 };
 
 const parseInspectorInputValue = (input: string): unknown => {
-  const trimmed = input.trim();
-  if (trimmed === "") return "";
-  if (trimmed === "null") return null;
-  if (trimmed === "true") return true;
-  if (trimmed === "false") return false;
-  if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
-  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    try {
-      const parsed = JSON.parse(trimmed);
-      return typeof parsed === "string" ? sanitizeLooseQuotedString(parsed) : parsed;
-    } catch {
-      return sanitizeLooseQuotedString(trimmed.slice(1, -1));
-    }
-  }
-  return sanitizeLooseQuotedString(trimmed);
+  return input;
 };
 
 const formatInspectorInputValue = (value: unknown): string => {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") {
-    return sanitizeLooseQuotedString(value);
+    return value;
   }
   if (Array.isArray(value)) return JSON.stringify(value);
   if (typeof value === "object") return JSON.stringify(value);
@@ -213,15 +227,17 @@ const toHclLiteral = (value: unknown): string => {
     return `[${value.map(toHclLiteral).join(", ")}]`;
   }
   if (typeof value === "string") {
-    const trimmed = sanitizeLooseQuotedString(value);
+    const trimmed = value.trim();
+    if (!trimmed) return '""';
     if (terraformRefPattern.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
     if (
       trimmed === "true" || trimmed === "false" ||
       /^-?\d+(\.\d+)?$/.test(trimmed) ||
+      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
       (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
       (trimmed.startsWith("{") && trimmed.endsWith("}"))
     ) return trimmed;
-    return JSON.stringify(trimmed);
+    return JSON.stringify(value);
   }
   return JSON.stringify(String(value));
 };
@@ -257,18 +273,90 @@ const displaySubFieldValue = (value: unknown): string => {
   return formatInspectorInputValue(value);
 };
 
+type HclBlockNode = {
+  attributes: Record<string, unknown>;
+  blocks: Record<string, HclBlockNode>;
+};
+
+const isPlainObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isMeaningfulValue = (value: unknown): boolean => {
+  if (value === undefined || value === null) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) {
+    if (!value.length) return false;
+    if (value.every((item) => isPlainObject(item))) {
+      return value.some((item) => Object.values(item).some((nested) => isMeaningfulValue(nested)));
+    }
+    return value.some((item) => isMeaningfulValue(item));
+  }
+  if (isPlainObject(value)) return Object.values(value).some((nested) => isMeaningfulValue(nested));
+  return true;
+};
+
 const buildHclFromResource = (resource: TerraformResource) => {
   const blockKind = resource.kind ?? "resource";
-  const header = `${blockKind} "${resource.type}" "${resource.name}" {`;
   const attrs = resource.config.attributes ?? {};
-  const lines = Object.entries(attrs)
-    .filter(([, value]) =>
-      value !== "" && value !== undefined && value !== null &&
-      !(Array.isArray(value) && value.length === 0),
-    )
-    .map(([key, value]) => `  ${key} = ${toHclLiteral(value)}`);
+  const root: HclBlockNode = { attributes: {}, blocks: {} };
 
-  return [header, ...lines, "}"].join("\n");
+  Object.entries(attrs).forEach(([rawKey, rawValue]) => {
+    if (!isMeaningfulValue(rawValue)) return;
+    const pathParts = rawKey.split(".").filter(Boolean);
+    if (!pathParts.length) return;
+
+    if (pathParts.length === 1) {
+      root.attributes[pathParts[0]] = rawValue;
+      return;
+    }
+
+    let cursor = root;
+    for (const blockName of pathParts.slice(0, -1)) {
+      if (!cursor.blocks[blockName]) {
+        cursor.blocks[blockName] = { attributes: {}, blocks: {} };
+      }
+      cursor = cursor.blocks[blockName];
+    }
+    cursor.attributes[pathParts[pathParts.length - 1]] = rawValue;
+  });
+
+  const renderAssignment = (key: string, value: unknown, indent: string): string =>
+    `${indent}${key} = ${toHclLiteral(value)}\n`;
+
+  const renderObjectBlock = (blockName: string, value: Record<string, unknown>, indent: string): string => {
+    const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
+    if (!entries.length) return "";
+    let lines = `${indent}${blockName} {\n`;
+    entries.forEach(([k, v]) => { lines += renderAssignment(k, v, `${indent}  `); });
+    lines += `${indent}}\n`;
+    return lines;
+  };
+
+  const renderNode = (node: HclBlockNode, indent: string): string => {
+    let lines = "";
+    Object.entries(node.attributes).forEach(([key, value]) => {
+      if (!isMeaningfulValue(value)) return;
+      if (Array.isArray(value) && value.every((item) => isPlainObject(item))) {
+        value.forEach((item) => {
+          const rendered = renderObjectBlock(key, item as Record<string, unknown>, indent);
+          if (rendered) lines += rendered;
+        });
+        return;
+      }
+      lines += renderAssignment(key, value, indent);
+    });
+    Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
+      const inner = renderNode(blockNode, `${indent}  `);
+      if (!inner.trim()) return;
+      lines += `${indent}${blockName} {\n`;
+      lines += inner;
+      lines += `${indent}}\n`;
+    });
+    return lines;
+  };
+
+  const body = renderNode(root, "  ");
+  return `${blockKind} "${resource.type}" "${resource.name}" {\n${body}}`;
 };
 
 export const RightPanel = ({
@@ -946,7 +1034,7 @@ export const RightPanel = ({
                                 <div className="mb-2 flex items-start justify-between gap-2">
                                   <div className="min-w-0">
                                     <p className="text-[11.5px] font-semibold text-slate-800 break-all">{property.fieldName}</p>
-                                    <p className="font-mono text-[9.5px] text-slate-400">{property.type}</p>
+                                    <p className="font-mono text-[9.5px] text-slate-400 break-all">{formatTypeLabel(property.rawType)}</p>
                                   </div>
                                   <div className="flex shrink-0 gap-1">
                                     <span className="rounded-[4px] bg-slate-100 px-1.5 py-[1.5px] text-[9px] font-semibold text-slate-500">optional</span>
@@ -1012,7 +1100,7 @@ export const RightPanel = ({
                               <div className="mb-1.5 flex items-start justify-between gap-2">
                                 <div className="min-w-0">
                                   <p className="text-[11.5px] font-semibold text-slate-800 break-all">{property.fieldName}</p>
-                                  <p className="font-mono text-[9.5px] text-slate-400">{property.type}</p>
+                                  <p className="font-mono text-[9.5px] text-slate-400 break-all">{formatTypeLabel(property.rawType)}</p>
                                 </div>
                                 <div className="flex shrink-0 gap-1">
                                   <span className={`rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ${
@@ -1033,6 +1121,7 @@ export const RightPanel = ({
                                 <input
                                   disabled={!isEditable}
                                   value={displayValue}
+                                  placeholder={getValuePlaceholder(property.rawType)}
                                   onDragOver={(event) => event.preventDefault()}
                                   onDrop={(event) => {
                                     event.preventDefault();
@@ -1052,10 +1141,15 @@ export const RightPanel = ({
                                       typeof parsed === "string"
                                         ? normalizeMappedReference(parsed, property.name, resources)
                                         : parsed;
-                                    onUpdateSelectedResource((resource) => ({
-                                      ...resource,
-                                      config: { ...resource.config, attributes: { ...resource.config.attributes, [property.name]: nextValue } },
-                                    }));
+                                    onUpdateSelectedResource((resource) => {
+                                      const nextAttrs = { ...resource.config.attributes };
+                                      if (nextValue === "" || nextValue === null || nextValue === undefined) {
+                                        delete nextAttrs[property.name];
+                                      } else {
+                                        nextAttrs[property.name] = nextValue;
+                                      }
+                                      return { ...resource, config: { ...resource.config, attributes: nextAttrs } };
+                                    });
                                   }}
                                   className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-800 transition-all outline-none ring-0 focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 focus:border-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                                 />
@@ -1165,14 +1259,52 @@ export const RightPanel = ({
                     onChange={(next) => {
                       if (!selectedResource) return;
                       const currentAttributes = selectedResource.config.attributes ?? {};
-                      const allowedKeys = new Set(Object.keys(currentAttributes));
-                      const parsedAllowedAttributes = parseHclAttributesForAllowedKeys(next, allowedKeys);
+                      const allowedKeys = new Set([
+                        ...Object.keys(currentAttributes),
+                        ...inspectorProperties.map((p) => p.name),
+                      ]);
+                      const objectCollectionKeys = new Set(
+                        inspectorProperties
+                          .filter((p) => isObjectCollection(p.rawType))
+                          .map((p) => p.name),
+                      );
+                      const parsedAttributes = parseHclAttributesForAllowedKeys(
+                        next,
+                        allowedKeys,
+                        objectCollectionKeys,
+                      );
                       const nextAttributes: Record<string, unknown> = { ...currentAttributes };
-                      Object.keys(currentAttributes).forEach((key) => {
-                        if (Object.prototype.hasOwnProperty.call(parsedAllowedAttributes, key)) {
-                          nextAttributes[key] = parsedAllowedAttributes[key];
+
+                      // Apply every key present in the parsed HCL.
+                      Object.keys(parsedAttributes).forEach((key) => {
+                        const val = parsedAttributes[key];
+                        if (val === "" || val === null || val === undefined) {
+                          delete nextAttributes[key];
+                        } else {
+                          nextAttributes[key] = val;
                         }
                       });
+
+                      // Remove dotted keys from the store that are no longer in the parsed HCL.
+                      Object.keys(currentAttributes).forEach((key) => {
+                        if (
+                          key.includes(".") &&
+                          !Object.prototype.hasOwnProperty.call(parsedAttributes, key)
+                        ) {
+                          delete nextAttributes[key];
+                        }
+                      });
+
+                      // Clear object-collection arrays that are no longer present in the HCL.
+                      objectCollectionKeys.forEach((key) => {
+                        if (
+                          Object.prototype.hasOwnProperty.call(currentAttributes, key) &&
+                          !Object.prototype.hasOwnProperty.call(parsedAttributes, key)
+                        ) {
+                          delete nextAttributes[key];
+                        }
+                      });
+
                       const nextResource: TerraformResource = {
                         ...selectedResource,
                         config: { ...selectedResource.config, attributes: nextAttributes },

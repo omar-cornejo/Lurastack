@@ -139,3 +139,34 @@ export const getInspectorPropertiesForSchema = (
     typeKinds: extractTypeKinds(property.type),
   }));
 };
+
+export const formatTypeLabel = (rawType: unknown): string => {
+  if (typeof rawType === "string") return rawType;
+  if (!Array.isArray(rawType) || rawType.length === 0) return "any";
+  const [container, inner] = rawType as [unknown, unknown];
+  if (typeof container !== "string") return "any";
+  if (inner === undefined) return container;
+  if (typeof inner === "string") return `${container}(${inner})`;
+  if (Array.isArray(inner)) return `${container}(${formatTypeLabel(inner)})`;
+  if (inner && typeof inner === "object") {
+    const entries = Object.entries(inner as Record<string, unknown>);
+    const shown = entries.slice(0, 3).map(([k, v]) => `${k}: ${formatTypeLabel(v)}`).join(", ");
+    const extra = entries.length > 3 ? `, +${entries.length - 3}` : "";
+    return `${container}({${shown}${extra}})`;
+  }
+  return container;
+};
+
+export const getValuePlaceholder = (rawType: unknown): string => {
+  if (typeof rawType === "string") {
+    if (rawType === "string") return '"value"';
+    if (rawType === "number") return "0";
+    if (rawType === "bool") return "true";
+    return "";
+  }
+  if (!Array.isArray(rawType) || rawType.length === 0) return "";
+  const [container] = rawType as [unknown];
+  if (container === "list" || container === "set") return '["value"]';
+  if (container === "map") return '{key = "value"}';
+  return "";
+};
