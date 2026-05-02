@@ -56,6 +56,7 @@ import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 import { useAwsCredentials } from "../hooks/useAwsCredentials";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
+import { sileo } from "sileo";
 
 const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
 const POPOUT_HEARTBEAT_TTL_MS = 900;
@@ -1293,8 +1294,17 @@ export default function WorkspaceView({
             region: awsCredentials.region,
           },
         });
+        const successMessages: Record<string, { title: string; description: string }> = {
+          terraform_plan: { title: "Plan completado", description: "Revisa los cambios en el panel diff." },
+          terraform_plan_destroy: { title: "Plan destroy completado", description: "Revisa los cambios en el panel diff." },
+          terraform_apply: { title: "Apply completado", description: "La infraestructura se ha aplicado correctamente." },
+          terraform_destroy: { title: "Destroy completado", description: "La infraestructura se ha destruido correctamente." },
+        };
+        const msg = successMessages[action];
+        if (msg) sileo.success({ title: msg.title, description: msg.description });
       } catch (error) {
         console.error(`${action} error:`, error);
+        sileo.error({ title: "Error en la operación", description: "Consulta el terminal para más detalles." });
       } finally {
         setIsDeploying(false);
         setPendingDeployConfirmation(null);
