@@ -47,7 +47,6 @@ type RightPanelProps = {
   cloudState?: Map<string, Record<string, unknown>>;
   cloudStateAvailable?: boolean;
   cloudStateLoading?: boolean;
-  onRefreshCloudState?: () => void | Promise<void>;
   onOverlayWidthChange?: (width: number) => void;
   onOverlayResizingChange?: (isResizing: boolean) => void;
 };
@@ -379,7 +378,6 @@ export const RightPanel = ({
   cloudState,
   cloudStateAvailable = false,
   cloudStateLoading = false,
-  onRefreshCloudState,
   onOverlayWidthChange,
   onOverlayResizingChange,
 }: RightPanelProps) => {
@@ -907,21 +905,6 @@ export const RightPanel = ({
                     return a.localeCompare(b);
                   });
 
-                  const refreshHeader = (
-                    <div className="flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={() => { void onRefreshCloudState?.(); }}
-                        disabled={cloudStateLoading}
-                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 disabled:opacity-50"
-                        title="Refrescar estado del cloud"
-                      >
-                        <Icon icon="lucide:refresh-cw" className={`h-3 w-3 ${cloudStateLoading ? "animate-spin" : ""}`} />
-                        {cloudStateLoading ? "Cargando..." : "Refrescar"}
-                      </button>
-                    </div>
-                  );
-
                   if (cloudAttributeRows.length === 0) {
                     const emptyMessage = cloudStateLoading
                       ? "Cargando estado del cloud..."
@@ -930,7 +913,6 @@ export const RightPanel = ({
                         : "Este recurso aún no existe en el cloud.";
                     return (
                       <div className="space-y-2">
-                        {refreshHeader}
                         <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                           <div className="mb-2.5 flex items-center justify-between">
                             <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Cloud state</span>
@@ -946,7 +928,6 @@ export const RightPanel = ({
 
                   return (
                     <div className="space-y-2">
-                      {refreshHeader}
                       {sortedSections.map(([sectionKey, rows]) => {
                         const sectionTitle = sectionKey === "root" ? "Atributos principales" : `Bloque: ${sectionKey}`;
                         return (

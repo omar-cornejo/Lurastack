@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Icon } from "@iconify/react";
 import { useUndoRedo } from "../hooks/useUndoRedo";
 import Header from "./Header";
 import { LeftPanel } from "./LeftPanel";
@@ -222,6 +223,9 @@ export default function WorkspaceView({
   const [cloudState, setCloudState] = useState<Map<string, Record<string, unknown>>>(new Map());
   const [cloudStateAvailable, setCloudStateAvailable] = useState(false);
   const [cloudStateLoading, setCloudStateLoading] = useState(false);
+  const [cloudStateSignature, setCloudStateSignature] = useState<string | null>(null);
+  const [cloudStateStale, setCloudStateStale] = useState(false);
+  const cloudStaleNoticeShownRef = useRef(false);
 
   const { pushSnapshot, undo, redo } = useUndoRedo();
 
@@ -1367,6 +1371,7 @@ export default function WorkspaceView({
           mode: string;
           values: Record<string, unknown> | null;
         }>;
+        stateSignature: string | null;
       }>("terraform_show", {
         projectDir,
         files: [],
@@ -1384,14 +1389,48 @@ export default function WorkspaceView({
       });
       setCloudState(next);
       setCloudStateAvailable(result.hasState);
+      setCloudStateSignature(result.stateSignature ?? null);
+      setCloudStateStale(false);
+      cloudStaleNoticeShownRef.current = false;
     } catch (error) {
       console.error("terraform_show error:", error);
       setCloudState(new Map());
       setCloudStateAvailable(false);
+      setCloudStateSignature(null);
+      setCloudStateStale(false);
     } finally {
       setCloudStateLoading(false);
     }
   }, [projectDir, isTauriRuntime, awsCredentials]);
+
+  useEffect(() => {
+    if (activeSection !== "cloud" || !projectDir || !isTauriRuntime) return;
+    let cancelled = false;
+    const checkSignature = async () => {
+      try {
+        const sig = await invoke<string | null>("terraform_state_signature", { projectDir });
+        if (cancelled) return;
+        if (sig !== cloudStateSignature) {
+          setCloudStateStale(true);
+          if (!cloudStaleNoticeShownRef.current) {
+            cloudStaleNoticeShownRef.current = true;
+            sileo.warning({
+              title: "El state ha cambiado",
+              description: "Pulsa el botón Refrescar para ver el último terraform show.",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("terraform_state_signature error:", error);
+      }
+    };
+    void checkSignature();
+    const interval = window.setInterval(() => { void checkSignature(); }, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [activeSection, projectDir, isTauriRuntime, cloudStateSignature]);
 
   useEffect(() => {
     if (activeSection !== "diff" && activeSection !== "cloud") return;
@@ -1513,7 +1552,47 @@ export default function WorkspaceView({
               onWidthChange={setLeftPanelWidth}
             />
 
-            <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
+            <main className="relative flex flex-1 min-h-0 overflow-hidden bg-white">
+              {activeSection === "cloud" && (
+                <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2">
+                  <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 shadow-md backdrop-blur">
+                    <span
+                      className={`inline-block h-2 w-2 rounded-full ${
+                        cloudStateLoading
+                          ? "bg-slate-300 animate-pulse"
+                          : cloudStateStale
+                            ? "bg-amber-400 animate-pulse"
+                            : cloudStateAvailable
+                              ? "bg-emerald-400"
+                              : "bg-slate-300"
+                      }`}
+                    />
+                    <span className="text-[11px] font-medium text-slate-600">
+                      {cloudStateLoading
+                        ? "Cargando estado del cloud..."
+                        : cloudStateStale
+                          ? "El state ha cambiado — refresca"
+                          : cloudStateAvailable
+                            ? "Cloud sincronizado"
+                            : "Sin state disponible"}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { void refreshCloudState(); }}
+                      disabled={cloudStateLoading}
+                      className={`ml-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-colors disabled:opacity-50 ${
+                        cloudStateStale
+                          ? "bg-amber-500 text-white hover:bg-amber-600"
+                          : "border border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+                      }`}
+                      title="Refrescar terraform show"
+                    >
+                      <Icon icon="lucide:refresh-cw" className={`h-3 w-3 ${cloudStateLoading ? "animate-spin" : ""}`} />
+                      Refrescar
+                    </button>
+                  </div>
+                </div>
+              )}
               <CenterPanel
                 autoFitKey={`${projectDir ?? "no-project"}:${viewId}`}
                 readOnly={activeSection === "diff" || activeSection === "cloud"}
@@ -1560,7 +1639,6 @@ export default function WorkspaceView({
               cloudState={cloudState}
               cloudStateAvailable={cloudStateAvailable}
               cloudStateLoading={cloudStateLoading}
-              onRefreshCloudState={refreshCloudState}
             />
           </div>
         )}

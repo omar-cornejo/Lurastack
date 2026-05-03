@@ -496,6 +496,20 @@ pub struct TerraformShowResource {
 pub struct TerraformShowResult {
     has_state: bool,
     resources: Vec<TerraformShowResource>,
+    state_signature: Option<String>,
+}
+
+fn read_state_signature(project_dir_path: &PathBuf) -> Option<String> {
+    let state_file = project_dir_path.join("terraform.tfstate");
+    let metadata = fs::metadata(&state_file).ok()?;
+    let len = metadata.len();
+    let modified_nanos = metadata
+        .modified()
+        .ok()
+        .and_then(|time| time.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|duration| duration.as_nanos())
+        .unwrap_or(0);
+    Some(format!("{len}-{modified_nanos}"))
 }
 
 fn collect_state_resources(module: &Value, acc: &mut Vec<TerraformShowResource>) {
@@ -568,8 +582,10 @@ pub async fn terraform_show(
             return Ok(TerraformShowResult {
                 has_state: false,
                 resources: Vec::new(),
+                state_signature: None,
             });
         }
+        let state_signature = read_state_signature(&project_dir_path);
 
         let mut cmd = Command::new("terraform");
         cmd.arg("show")
@@ -606,6 +622,7 @@ pub async fn terraform_show(
             return Ok(TerraformShowResult {
                 has_state: false,
                 resources: Vec::new(),
+                state_signature: state_signature.clone(),
             });
         }
 
@@ -620,10 +637,27 @@ pub async fn terraform_show(
         Ok(TerraformShowResult {
             has_state: !resources.is_empty(),
             resources,
+            state_signature,
         })
     })
     .await
     .map_err(|error| format!("Error interno ejecutando terraform show: {error}"))?
+}
+
+#[tauri::command]
+pub async fn terraform_state_signature(project_dir: String) -> Result<Option<String>, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if project_dir.trim().is_empty() {
+            return Ok(None);
+        }
+        let project_dir_path = PathBuf::from(project_dir.trim());
+        if !project_dir_path.exists() {
+            return Ok(None);
+        }
+        Ok(read_state_signature(&project_dir_path))
+    })
+    .await
+    .map_err(|error| format!("Error interno leyendo signature: {error}"))?
 }
 
 #[derive(Debug, Deserialize)]
