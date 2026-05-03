@@ -59,7 +59,7 @@ const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
 const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
 let latestMapperDragPayload = "";
 
-const terraformRefPattern = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+const terraformRefPattern = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
 const INVALID_HCL_VALUE = Symbol("invalid-hcl-value");
 const RIGHT_PANEL_MIN_WIDTH = 350;
 const RIGHT_PANEL_MAX_WIDTH = 600;
@@ -865,47 +865,116 @@ export const RightPanel = ({
                 )}
 
                 {/* Attributes section */}
-                {diffMode ? (
-                  <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
-                    <div className="mb-2.5 flex items-center justify-between">
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Diff attributes</span>
-                      <span className="text-[9px] text-slate-400">{diffAttributeRows.length} activos</span>
-                    </div>
+                {diffMode ? (() => {
+                  const statusBadge = (status: DiffAttributeStatus) => {
+                    const cls =
+                      status === "create"   ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
+                      status === "change"   ? "bg-amber-50 text-amber-700 ring-amber-200" :
+                      status === "destroy"  ? "bg-red-50 text-red-700 ring-red-200" :
+                      null;
+                    if (!cls) return null;
+                    return (
+                      <span className={`shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${cls}`}>
+                        {status}
+                      </span>
+                    );
+                  };
 
-                    {diffAttributeRows.length === 0 ? (
-                      <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
-                        No hay atributos activos para este recurso
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {diffAttributeRows.map((attribute) => {
-                          const statusClasses =
-                            attribute.status === "create"   ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
-                            attribute.status === "change"   ? "bg-amber-50 text-amber-700 ring-amber-200" :
-                            attribute.status === "destroy"  ? "bg-red-50 text-red-700 ring-red-200" :
-                            null;
+                  const groups = new Map<string, DiffAttributeRow[]>();
+                  diffAttributeRows.forEach((row) => {
+                    const parts = row.name.split(".");
+                    const sectionKey = parts.length > 1 ? parts.slice(0, -1).join(".") : "root";
+                    if (!groups.has(sectionKey)) groups.set(sectionKey, []);
+                    groups.get(sectionKey)!.push(row);
+                  });
+                  const sortedSections = Array.from(groups.entries()).sort(([a], [b]) => {
+                    if (a === "root") return -1;
+                    if (b === "root") return 1;
+                    return a.localeCompare(b);
+                  });
 
-                          return (
-                            <div key={attribute.name} className={`rounded-lg border p-2.5 ${attribute.status === "unchanged" ? "border-slate-100 bg-white opacity-50" : "border-slate-200 bg-slate-50/80"}`}>
-                              <div className="mb-1.5 flex items-start justify-between gap-2">
-                                <p className="text-[11.5px] font-semibold text-slate-800 break-all">{attribute.name}</p>
-                                {statusClasses && (
-                                  <span className={`shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${statusClasses}`}>
-                                    {attribute.status}
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] text-slate-700 break-all">
-                                {toHclLiteral(attribute.value)}
-                              </div>
-                            </div>
-                          );
-                        })}
+                  if (diffAttributeRows.length === 0) {
+                    return (
+                      <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                        <div className="mb-2.5 flex items-center justify-between">
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Diff attributes</span>
+                          <span className="text-[9px] text-slate-400">0 activos</span>
+                        </div>
+                        <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
+                          No hay atributos activos para este recurso
+                        </p>
                       </div>
-                    )}
-                  </div>
-                ) : (
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {sortedSections.map(([sectionKey, rows]) => {
+                        const sectionTitle = sectionKey === "root" ? "Atributos principales" : `Bloque: ${sectionKey}`;
+                        return (
+                          <div key={sectionKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 break-words">
+                                {sectionTitle}
+                              </span>
+                              <div className="h-px flex-1 bg-slate-100" />
+                              <span className="text-[9px] tabular-nums text-slate-400">{rows.length}</span>
+                            </div>
+
+                            <div className="space-y-1.5 p-2">
+                              {rows.map((row) => {
+                                const fieldName = row.name.split(".").pop() ?? row.name;
+                                const isCollection = Array.isArray(row.value) && row.value.every((it) => it && typeof it === "object" && !Array.isArray(it));
+
+                                if (isCollection) {
+                                  const entries = row.value as Array<Record<string, unknown>>;
+                                  return (
+                                    <div key={row.name} className={`rounded-lg border p-2.5 ${row.status === "unchanged" ? "border-slate-100 bg-white opacity-60" : "border-slate-200 bg-slate-50"}`}>
+                                      <div className="mb-2 flex items-start justify-between gap-2">
+                                        <p className="text-[11.5px] font-semibold text-slate-800 break-all">{fieldName}</p>
+                                        {statusBadge(row.status)}
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        {entries.map((entry, idx) => (
+                                          <div key={idx} className="rounded-lg border border-slate-200 bg-white p-2">
+                                            <div className="mb-1 text-[10px] font-semibold text-slate-400">Entry {idx + 1}</div>
+                                            <div className="space-y-0.5">
+                                              {Object.entries(entry).map(([k, v]) => (
+                                                <div key={k} className="flex items-center gap-1.5">
+                                                  <span className="w-[42%] shrink-0 truncate text-[10px] text-slate-500" title={k}>{k}</span>
+                                                  <span className="shrink-0 font-mono text-[10px] text-slate-300">=</span>
+                                                  <span className="w-[58%] truncate font-mono text-[10px] text-slate-700" title={typeof v === "string" ? v : JSON.stringify(v)}>
+                                                    {toHclLiteral(v)}
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div key={row.name} className={`rounded-lg border p-2.5 ${row.status === "unchanged" ? "border-slate-100 bg-white opacity-50" : "border-slate-200 bg-slate-50/80"}`}>
+                                    <div className="mb-1.5 flex items-start justify-between gap-2">
+                                      <p className="text-[11.5px] font-semibold text-slate-800 break-all">{fieldName}</p>
+                                      {statusBadge(row.status)}
+                                    </div>
+                                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] text-slate-700 break-all">
+                                      {toHclLiteral(row.value)}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })() : (
                 <div className="space-y-2">
                   {/* Filters bar */}
                   <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">

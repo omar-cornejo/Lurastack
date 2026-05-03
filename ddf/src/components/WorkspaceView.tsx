@@ -649,9 +649,54 @@ export default function WorkspaceView({
           resources: currentProject.resources.map((resource) => {
             if (resource.id !== targetResourceId) return resource;
             const attrs = { ...resource.config.attributes };
+
             if (attrs[targetAttribute] === sourceExpression) {
               delete attrs[targetAttribute];
             }
+
+            const parts = targetAttribute.split(".");
+            if (parts.length >= 2) {
+              const blockKey = parts[0];
+              const childPath = parts.slice(1).join(".");
+              const existing = attrs[blockKey];
+
+              const isMeaningful = (v: unknown): boolean => {
+                if (v === null || v === undefined) return false;
+                if (typeof v === "string") return v.trim() !== "";
+                if (Array.isArray(v)) return v.some(isMeaningful);
+                if (typeof v === "object") return Object.values(v).some(isMeaningful);
+                return true;
+              };
+
+              if (Array.isArray(existing)) {
+                const cleaned = existing
+                  .map((item) => {
+                    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+                    const obj = { ...(item as Record<string, unknown>) };
+                    if (obj[childPath] === sourceExpression) delete obj[childPath];
+                    return obj;
+                  })
+                  .filter((item) => {
+                    if (!item || typeof item !== "object" || Array.isArray(item)) return true;
+                    return Object.values(item).some(isMeaningful);
+                  });
+
+                if (cleaned.length === 0) {
+                  delete attrs[blockKey];
+                } else {
+                  attrs[blockKey] = cleaned;
+                }
+              } else if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+                const obj = { ...(existing as Record<string, unknown>) };
+                if (obj[childPath] === sourceExpression) delete obj[childPath];
+                if (!Object.values(obj).some(isMeaningful)) {
+                  delete attrs[blockKey];
+                } else {
+                  attrs[blockKey] = obj;
+                }
+              }
+            }
+
             return { ...resource, config: { ...resource.config, attributes: attrs } };
           }),
         };
@@ -1308,7 +1353,7 @@ export default function WorkspaceView({
       setBottomPreferredTab("terminal");
       setBottomOpenSignal((s) => s + 1);
       try {
-        await invoke(action, {
+        const ok = await invoke<boolean>(action, {
           projectDir,
           files: [],
           awsCredentials: {
@@ -1324,11 +1369,22 @@ export default function WorkspaceView({
           terraform_apply: { title: "Apply completado", description: "La infraestructura se ha aplicado correctamente." },
           terraform_destroy: { title: "Destroy completado", description: "La infraestructura se ha destruido correctamente." },
         };
-        const msg = successMessages[action];
-        if (msg) sileo.success({ title: msg.title, description: msg.description });
+        const failureMessages: Record<string, { title: string; description: string }> = {
+          terraform_plan: { title: "Plan ha fallado", description: "Ha salido mal, revisa los logs en el terminal." },
+          terraform_plan_destroy: { title: "Plan destroy ha fallado", description: "Ha salido mal, revisa los logs en el terminal." },
+          terraform_apply: { title: "Apply ha fallado", description: "Ha salido mal, revisa los logs en el terminal." },
+          terraform_destroy: { title: "Destroy ha fallado", description: "Ha salido mal, revisa los logs en el terminal." },
+        };
+        if (ok) {
+          const msg = successMessages[action];
+          if (msg) sileo.success({ title: msg.title, description: msg.description });
+        } else {
+          const msg = failureMessages[action];
+          if (msg) sileo.error({ title: msg.title, description: msg.description });
+        }
       } catch (error) {
         console.error(`${action} error:`, error);
-        sileo.error({ title: "Error en la operación", description: "Consulta el terminal para más detalles." });
+        sileo.error({ title: "Error en la operación", description: "Ha salido mal, revisa los logs en el terminal." });
       } finally {
         setIsDeploying(false);
         setPendingDeployConfirmation(null);
