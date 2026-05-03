@@ -42,7 +42,12 @@ type RightPanelProps = {
     updater: (resource: TerraformResource) => TerraformResource,
   ) => void;
   diffMode?: boolean;
+  cloudMode?: boolean;
   planChanges?: Map<string, ResourcePlanChange>;
+  cloudState?: Map<string, Record<string, unknown>>;
+  cloudStateAvailable?: boolean;
+  cloudStateLoading?: boolean;
+  onRefreshCloudState?: () => void | Promise<void>;
   onOverlayWidthChange?: (width: number) => void;
   onOverlayResizingChange?: (isResizing: boolean) => void;
 };
@@ -369,7 +374,12 @@ export const RightPanel = ({
   onSelectNode,
   onUpdateSelectedResource,
   diffMode = false,
+  cloudMode = false,
   planChanges,
+  cloudState,
+  cloudStateAvailable = false,
+  cloudStateLoading = false,
+  onRefreshCloudState,
   onOverlayWidthChange,
   onOverlayResizingChange,
 }: RightPanelProps) => {
@@ -581,6 +591,24 @@ export const RightPanel = ({
       });
   }, [selectedResource, planChanges]);
 
+  const cloudResourceValues = useMemo<Record<string, unknown> | undefined>(() => {
+    if (!selectedResource || !cloudState) return undefined;
+    return cloudState.get(`${selectedResource.type}.${selectedResource.name}`);
+  }, [selectedResource, cloudState]);
+
+  const cloudAttributeRows = useMemo<DiffAttributeRow[]>(() => {
+    if (!cloudResourceValues) return [];
+    return Object.entries(cloudResourceValues)
+      .filter(([, value]) => {
+        if (value === undefined || value === null) return false;
+        if (typeof value === "string" && value.trim() === "") return false;
+        if (Array.isArray(value) && value.length === 0) return false;
+        if (typeof value === "object" && !Array.isArray(value) && Object.keys(value as Record<string, unknown>).length === 0) return false;
+        return true;
+      })
+      .map(([name, value]) => ({ name, value, status: "unchanged" as DiffAttributeStatus }));
+  }, [cloudResourceValues]);
+
   useEffect(() => {
     if (!selectedResource) {
       setHclDraft("");
@@ -747,7 +775,7 @@ export const RightPanel = ({
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    {selectedResource && isEditingName && !diffMode ? (
+                    {selectedResource && isEditingName && !diffMode && !cloudMode ? (
                       <input
                         ref={nameInputRef}
                         value={nameInputValue}
@@ -763,14 +791,14 @@ export const RightPanel = ({
                     ) : (
                       <button
                         type="button"
-                        onClick={selectedResource && !diffMode ? startEditingName : undefined}
-                        disabled={!selectedResource || diffMode}
+                        onClick={selectedResource && !diffMode && !cloudMode ? startEditingName : undefined}
+                        disabled={!selectedResource || diffMode || cloudMode}
                         className="group flex w-full items-center gap-1 text-left disabled:cursor-default"
                       >
                         <span className="truncate text-[12.5px] font-semibold text-slate-900">
                           {selectedResource?.name ?? selectedNode.data.label}
                         </span>
-                        {selectedResource && !diffMode && (
+                        {selectedResource && !diffMode && !cloudMode && (
                           <Icon
                             icon="mdi:pencil-outline"
                             className="shrink-0 text-slate-300 opacity-0 transition-opacity group-hover:opacity-100"
@@ -845,7 +873,7 @@ export const RightPanel = ({
             {activeTab === "info" && selectedNode && selectedResource && selectedSchema && (
               <div className="space-y-3 px-3">
                 {/* Subnet toggle */}
-                {!diffMode && selectedSchema.terraformType === "aws_subnet" && (
+                {!diffMode && !cloudMode && selectedSchema.terraformType === "aws_subnet" && (
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400">Subnet type</label>
                     <button
@@ -865,7 +893,124 @@ export const RightPanel = ({
                 )}
 
                 {/* Attributes section */}
-                {diffMode ? (() => {
+                {cloudMode ? (() => {
+                  const groups = new Map<string, DiffAttributeRow[]>();
+                  cloudAttributeRows.forEach((row) => {
+                    const parts = row.name.split(".");
+                    const sectionKey = parts.length > 1 ? parts.slice(0, -1).join(".") : "root";
+                    if (!groups.has(sectionKey)) groups.set(sectionKey, []);
+                    groups.get(sectionKey)!.push(row);
+                  });
+                  const sortedSections = Array.from(groups.entries()).sort(([a], [b]) => {
+                    if (a === "root") return -1;
+                    if (b === "root") return 1;
+                    return a.localeCompare(b);
+                  });
+
+                  const refreshHeader = (
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => { void onRefreshCloudState?.(); }}
+                        disabled={cloudStateLoading}
+                        className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2 py-1 text-[10px] font-semibold text-slate-600 shadow-sm transition-colors hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700 disabled:opacity-50"
+                        title="Refrescar estado del cloud"
+                      >
+                        <Icon icon="lucide:refresh-cw" className={`h-3 w-3 ${cloudStateLoading ? "animate-spin" : ""}`} />
+                        {cloudStateLoading ? "Cargando..." : "Refrescar"}
+                      </button>
+                    </div>
+                  );
+
+                  if (cloudAttributeRows.length === 0) {
+                    const emptyMessage = cloudStateLoading
+                      ? "Cargando estado del cloud..."
+                      : !cloudStateAvailable
+                        ? "No hay state file. Ejecuta apply para crear recursos en el cloud."
+                        : "Este recurso aún no existe en el cloud.";
+                    return (
+                      <div className="space-y-2">
+                        {refreshHeader}
+                        <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+                          <div className="mb-2.5 flex items-center justify-between">
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Cloud state</span>
+                            <span className="text-[9px] text-slate-400">0 activos</span>
+                          </div>
+                          <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
+                            {emptyMessage}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {refreshHeader}
+                      {sortedSections.map(([sectionKey, rows]) => {
+                        const sectionTitle = sectionKey === "root" ? "Atributos principales" : `Bloque: ${sectionKey}`;
+                        return (
+                          <div key={sectionKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 break-words">
+                                {sectionTitle}
+                              </span>
+                              <div className="h-px flex-1 bg-slate-100" />
+                              <span className="text-[9px] tabular-nums text-slate-400">{rows.length}</span>
+                            </div>
+
+                            <div className="space-y-1.5 p-2">
+                              {rows.map((row) => {
+                                const fieldName = row.name.split(".").pop() ?? row.name;
+                                const isCollection = Array.isArray(row.value) && row.value.every((it) => it && typeof it === "object" && !Array.isArray(it));
+
+                                if (isCollection) {
+                                  const entries = row.value as Array<Record<string, unknown>>;
+                                  return (
+                                    <div key={row.name} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                                      <div className="mb-2 flex items-start justify-between gap-2">
+                                        <p className="text-[11.5px] font-semibold text-slate-800 break-all">{fieldName}</p>
+                                      </div>
+                                      <div className="space-y-1.5">
+                                        {entries.map((entry, idx) => (
+                                          <div key={idx} className="rounded-lg border border-slate-200 bg-white p-2">
+                                            <div className="mb-1 text-[10px] font-semibold text-slate-400">Entry {idx + 1}</div>
+                                            <div className="space-y-0.5">
+                                              {Object.entries(entry).map(([k, v]) => (
+                                                <div key={k} className="flex items-center gap-1.5">
+                                                  <span className="w-[42%] shrink-0 truncate text-[10px] text-slate-500" title={k}>{k}</span>
+                                                  <span className="shrink-0 font-mono text-[10px] text-slate-300">=</span>
+                                                  <span className="w-[58%] truncate font-mono text-[10px] text-slate-700" title={typeof v === "string" ? v : JSON.stringify(v)}>
+                                                    {toHclLiteral(v)}
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+
+                                return (
+                                  <div key={row.name} className="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5">
+                                    <div className="mb-1.5 flex items-start justify-between gap-2">
+                                      <p className="text-[11.5px] font-semibold text-slate-800 break-all">{fieldName}</p>
+                                    </div>
+                                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] text-slate-700 break-all">
+                                      {toHclLiteral(row.value)}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })() : diffMode ? (() => {
                   const statusBadge = (status: DiffAttributeStatus) => {
                     const cls =
                       status === "create"   ? "bg-emerald-50 text-emerald-700 ring-emerald-200" :
@@ -1239,7 +1384,7 @@ export const RightPanel = ({
                 )}
 
                 {/* Children / zone nodes */}
-                {!diffMode && selectedNode.data.isContainer && (
+                {!diffMode && !cloudMode && selectedNode.data.isContainer && (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
@@ -1289,6 +1434,29 @@ export const RightPanel = ({
                       <Icon icon="mdi:code-braces" className="text-slate-400" width={22} />
                     </div>
                     <p className="text-[11px] text-slate-400">Select a node to view its HCL</p>
+                  </div>
+                ) : cloudMode ? (
+                  <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
+                    <div className="border-b border-slate-100 px-3 py-2">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Cloud HCL</p>
+                    </div>
+                    <div className="space-y-1 p-3 font-mono text-[11px] text-slate-700">
+                      <div className="text-slate-600">
+                        {`${selectedResource.kind ?? "resource"} \"${selectedResource.type}\" \"${selectedResource.name}\" {`}
+                      </div>
+                      {cloudAttributeRows.length === 0 ? (
+                        <div className="px-2 py-1 text-slate-400">
+                          {cloudStateLoading ? "// cargando..." : "// sin datos en el state"}
+                        </div>
+                      ) : (
+                        cloudAttributeRows.map((attribute) => (
+                          <div key={attribute.name} className="flex items-start gap-2">
+                            <span className="break-all">{`  ${attribute.name} = ${toHclLiteral(attribute.value)}`}</span>
+                          </div>
+                        ))
+                      )}
+                      <div className="text-slate-600">{"}"}</div>
+                    </div>
                   </div>
                 ) : diffMode ? (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">

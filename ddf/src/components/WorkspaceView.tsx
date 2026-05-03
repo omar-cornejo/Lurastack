@@ -175,7 +175,7 @@ export default function WorkspaceView({
   onStateChange,
 }: WorkspaceViewProps) {
   const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
-  const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff">("canvas");
+  const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff" | "cloud">("canvas");
   const [cloudProvider, setCloudProvider] = useState<"aws">("aws");
   const [providerRegion] = useState("eu-south-2");
 
@@ -219,6 +219,9 @@ export default function WorkspaceView({
   const [planChanges, setPlanChanges] = useState<Map<string, ResourcePlanChange>>(new Map());
   const planBufferRef = useRef("");
   const planCurrentAddressRef = useRef<string | null>(null);
+  const [cloudState, setCloudState] = useState<Map<string, Record<string, unknown>>>(new Map());
+  const [cloudStateAvailable, setCloudStateAvailable] = useState(false);
+  const [cloudStateLoading, setCloudStateLoading] = useState(false);
 
   const { pushSnapshot, undo, redo } = useUndoRedo();
 
@@ -368,6 +371,19 @@ export default function WorkspaceView({
     );
   }, [planChanges, activeSection, project.resources, setNodes]);
 
+  // Sync cloudPresence into node data when cloudState or activeSection changes
+  useEffect(() => {
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        const resource = project.resources.find((r) => r.id === node.data.resourceId);
+        const presence: "present" | "missing" | undefined = (resource && activeSection === "cloud")
+          ? (cloudState.has(`${resource.type}.${resource.name}`) ? "present" : "missing")
+          : undefined;
+        if (node.data.cloudPresence === presence) return node;
+        return { ...node, data: { ...node.data, cloudPresence: presence } };
+      }),
+    );
+  }, [cloudState, activeSection, project.resources, setNodes]);
 
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") return;
@@ -1105,7 +1121,7 @@ export default function WorkspaceView({
 
   const updateSelectedResource = useCallback(
     (updater: (resource: TerraformResource) => TerraformResource) => {
-      if (!selectedResource || activeSection === "diff") return;
+      if (!selectedResource || activeSection === "diff" || activeSection === "cloud") return;
 
       const nextResource = updater(selectedResource);
       const updatedSelectedResource: TerraformResource = {
@@ -1338,6 +1354,50 @@ export default function WorkspaceView({
     typeof window !== "undefined" &&
     !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
+  const refreshCloudState = useCallback(async () => {
+    if (!projectDir || !isTauriRuntime) return;
+    setCloudStateLoading(true);
+    try {
+      const result = await invoke<{
+        hasState: boolean;
+        resources: Array<{
+          address: string;
+          type: string;
+          name: string;
+          mode: string;
+          values: Record<string, unknown> | null;
+        }>;
+      }>("terraform_show", {
+        projectDir,
+        files: [],
+        awsCredentials: {
+          accessKeyId: awsCredentials.accessKeyId,
+          secretAccessKey: awsCredentials.secretAccessKey,
+          sessionToken: awsCredentials.sessionToken,
+          region: awsCredentials.region,
+        },
+      });
+      const next = new Map<string, Record<string, unknown>>();
+      result.resources.forEach((resource) => {
+        const key = `${resource.type}.${resource.name}`;
+        next.set(key, resource.values ?? {});
+      });
+      setCloudState(next);
+      setCloudStateAvailable(result.hasState);
+    } catch (error) {
+      console.error("terraform_show error:", error);
+      setCloudState(new Map());
+      setCloudStateAvailable(false);
+    } finally {
+      setCloudStateLoading(false);
+    }
+  }, [projectDir, isTauriRuntime, awsCredentials]);
+
+  useEffect(() => {
+    if (activeSection !== "diff" && activeSection !== "cloud") return;
+    void refreshCloudState();
+  }, [activeSection, refreshCloudState]);
+
   const runTerraformAction = useCallback(
     async (
       action: "terraform_plan" | "terraform_plan_destroy" | "terraform_apply" | "terraform_destroy",
@@ -1382,6 +1442,9 @@ export default function WorkspaceView({
           const msg = failureMessages[action];
           if (msg) sileo.error({ title: msg.title, description: msg.description });
         }
+        if (action === "terraform_apply" || action === "terraform_destroy") {
+          void refreshCloudState();
+        }
       } catch (error) {
         console.error(`${action} error:`, error);
         sileo.error({ title: "Error en la operación", description: "Ha salido mal, revisa los logs en el terminal." });
@@ -1390,7 +1453,7 @@ export default function WorkspaceView({
         setPendingDeployConfirmation(null);
       }
     },
-    [projectDir, isTauriRuntime, awsCredentials],
+    [projectDir, isTauriRuntime, awsCredentials, refreshCloudState],
   );
 
   const confirmTerraformAction = useCallback(
@@ -1453,7 +1516,7 @@ export default function WorkspaceView({
             <main className="flex flex-1 min-h-0 overflow-hidden bg-white">
               <CenterPanel
                 autoFitKey={`${projectDir ?? "no-project"}:${viewId}`}
-                readOnly={activeSection === "diff"}
+                readOnly={activeSection === "diff" || activeSection === "cloud"}
                 leftOverlayOffset={leftPanelWidth}
                 nodes={nodes}
                 edges={edges}
@@ -1492,7 +1555,12 @@ export default function WorkspaceView({
               onOverlayWidthChange={setRightPanelOverlayOffset}
               onOverlayResizingChange={setIsRightPanelOverlayResizing}
               diffMode={activeSection === "diff"}
+              cloudMode={activeSection === "cloud"}
               planChanges={planChanges}
+              cloudState={cloudState}
+              cloudStateAvailable={cloudStateAvailable}
+              cloudStateLoading={cloudStateLoading}
+              onRefreshCloudState={refreshCloudState}
             />
           </div>
         )}
@@ -1533,7 +1601,7 @@ export default function WorkspaceView({
           enabled={isVisible}
           openSignal={bottomOpenSignal}
           preferredTab={bottomPreferredTab}
-          leftOffset={activeSection === "canvas" || activeSection === "diff" ? leftPanelWidth : 0}
+          leftOffset={activeSection === "canvas" || activeSection === "diff" || activeSection === "cloud" ? leftPanelWidth : 0}
         />
       ) : null}
     </div>

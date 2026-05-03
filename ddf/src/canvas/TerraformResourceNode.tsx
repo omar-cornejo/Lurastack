@@ -24,6 +24,16 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
     data.planAction === "destroy" ? { label: "destroy", cls: "bg-red-100 text-red-700" } :
     null;
 
+  const cloudClass =
+    data.cloudPresence === "missing" ? "opacity-30 grayscale" :
+    data.cloudPresence === "present" ? "ring-2 ring-sky-300/70" :
+    "";
+
+  const cloudBadge =
+    data.cloudPresence === "present" ? { label: "in cloud", cls: "bg-sky-100 text-sky-700" } :
+    data.cloudPresence === "missing" ? { label: "not in cloud", cls: "bg-slate-100 text-slate-500" } :
+    null;
+
   if (data.isContainer) {
     const isZoneContainer =
       data.containerKind === "zone" ||
@@ -37,11 +47,16 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
 
       return (
         <div
-          className={`pointer-events-none relative flex h-full w-full flex-col rounded-xl border-2 border-dashed transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}
+          className={`pointer-events-none relative flex h-full w-full flex-col rounded-xl border-2 border-dashed transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""} ${cloudClass}`}
         >
           {planBadge && (
             <span className={`absolute right-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${planBadge.cls}`}>
               {planBadge.label}
+            </span>
+          )}
+          {cloudBadge && (
+            <span className={`absolute left-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${cloudBadge.cls}`}>
+              {cloudBadge.label}
             </span>
           )}
           <NodeResizer
@@ -85,11 +100,16 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
 
     return (
       <div
-        className={`pointer-events-none relative flex h-full w-full flex-col rounded-xl border-2 transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""}`}
+        className={`pointer-events-none relative flex h-full w-full flex-col rounded-xl border-2 transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""} ${cloudClass}`}
       >
         {planBadge && (
           <span className={`absolute right-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${planBadge.cls}`}>
             {planBadge.label}
+          </span>
+        )}
+        {cloudBadge && (
+          <span className={`absolute left-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${cloudBadge.cls}`}>
+            {cloudBadge.label}
           </span>
         )}
         <NodeResizer
@@ -150,11 +170,17 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
         ${planBg ?? "bg-white"}
         ${cardBorder}
         ${data.isLayerGhost ? "opacity-40 grayscale" : ""}
+        ${cloudClass}
       `}
     >
       {planBadge && (
         <span className={`absolute -top-2 right-2 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${planBadge.cls}`}>
           {planBadge.label}
+        </span>
+      )}
+      {cloudBadge && (
+        <span className={`absolute -top-2 left-2 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${cloudBadge.cls}`}>
+          {cloudBadge.label}
         </span>
       )}
       <Handle

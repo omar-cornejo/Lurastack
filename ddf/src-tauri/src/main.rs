@@ -17,6 +17,7 @@ fn main() {
             terraform_actions::terraform_plan_destroy,
             terraform_actions::terraform_apply,
             terraform_actions::terraform_destroy,
+            terraform_actions::terraform_show,
             terraform_actions::terraform_confirm
         ])
         .plugin(tauri_plugin_fs::init())

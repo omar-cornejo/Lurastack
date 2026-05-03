@@ -37,4 +37,5 @@ export type CanvasTerraformNodeData = {
   isDropTarget?: boolean;
   isLayerGhost?: boolean;
   planAction?: PlanAction;
+  cloudPresence?: "present" | "missing";
 };

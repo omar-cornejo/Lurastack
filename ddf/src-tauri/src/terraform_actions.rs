@@ -480,6 +480,152 @@ pub async fn terraform_destroy(
     .map_err(|error| format!("Error interno ejecutando destroy: {error}"))?
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerraformShowResource {
+    address: String,
+    #[serde(rename = "type")]
+    type_name: String,
+    name: String,
+    mode: String,
+    values: Value,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TerraformShowResult {
+    has_state: bool,
+    resources: Vec<TerraformShowResource>,
+}
+
+fn collect_state_resources(module: &Value, acc: &mut Vec<TerraformShowResource>) {
+    if let Some(resources) = module.get("resources").and_then(Value::as_array) {
+        for resource in resources {
+            let address = resource
+                .get("address")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+            let type_name = resource
+                .get("type")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+            let name = resource
+                .get("name")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .to_string();
+            let mode = resource
+                .get("mode")
+                .and_then(Value::as_str)
+                .unwrap_or("managed")
+                .to_string();
+            let values = resource.get("values").cloned().unwrap_or(Value::Null);
+
+            if address.is_empty() || type_name.is_empty() {
+                continue;
+            }
+
+            acc.push(TerraformShowResource {
+                address,
+                type_name,
+                name,
+                mode,
+                values,
+            });
+        }
+    }
+
+    if let Some(child_modules) = module.get("child_modules").and_then(Value::as_array) {
+        for child in child_modules {
+            collect_state_resources(child, acc);
+        }
+    }
+}
+
+#[tauri::command]
+pub async fn terraform_show(
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+    aws_credentials: AwsCredentials,
+) -> Result<TerraformShowResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        if project_dir.trim().is_empty() {
+            return Err("No se recibió directorio de proyecto.".to_string());
+        }
+        let project_dir_path = PathBuf::from(project_dir.trim());
+        if !project_dir_path.exists() {
+            return Err("El directorio del proyecto no existe.".to_string());
+        }
+
+        if !files.is_empty() {
+            let _ = sync_project_tf_files(&project_dir_path, &files);
+        }
+
+        let state_file = project_dir_path.join("terraform.tfstate");
+        if !state_file.exists() {
+            return Ok(TerraformShowResult {
+                has_state: false,
+                resources: Vec::new(),
+            });
+        }
+
+        let mut cmd = Command::new("terraform");
+        cmd.arg("show")
+            .arg("-json")
+            .arg("-no-color")
+            .current_dir(&project_dir_path)
+            .env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
+            .env("AWS_SECRET_ACCESS_KEY", &aws_credentials.secret_access_key)
+            .env("AWS_DEFAULT_REGION", &aws_credentials.region)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+
+        if let Some(token) = aws_credentials.session_token.as_deref() {
+            if !token.trim().is_empty() {
+                cmd.env("AWS_SESSION_TOKEN", token);
+            }
+        }
+
+        let output = cmd
+            .output()
+            .map_err(|error| format!("No se pudo ejecutar terraform show: {error}"))?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+            return Err(if stderr.is_empty() {
+                "terraform show falló".to_string()
+            } else {
+                format!("terraform show falló: {stderr}")
+            });
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        if stdout.trim().is_empty() {
+            return Ok(TerraformShowResult {
+                has_state: false,
+                resources: Vec::new(),
+            });
+        }
+
+        let parsed: Value = serde_json::from_str(&stdout)
+            .map_err(|error| format!("No se pudo parsear el JSON de terraform show: {error}"))?;
+
+        let mut resources = Vec::<TerraformShowResource>::new();
+        if let Some(root_module) = parsed.get("values").and_then(|v| v.get("root_module")) {
+            collect_state_resources(root_module, &mut resources);
+        }
+
+        Ok(TerraformShowResult {
+            has_state: !resources.is_empty(),
+            resources,
+        })
+    })
+    .await
+    .map_err(|error| format!("Error interno ejecutando terraform show: {error}"))?
+}
+
 #[derive(Debug, Deserialize)]
 struct TerraformValidateJson {
     valid: Option<bool>,
