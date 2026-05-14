@@ -1,3 +1,4 @@
+mod aws_credentials;
 mod terminal_commands;
 mod terraform_actions;
 
@@ -19,7 +20,14 @@ fn main() {
             terraform_actions::terraform_destroy,
             terraform_actions::terraform_show,
             terraform_actions::terraform_state_signature,
-            terraform_actions::terraform_confirm
+            terraform_actions::terraform_confirm,
+            aws_credentials::list_aws_profiles,
+            aws_credentials::get_aws_env_credentials,
+            aws_credentials::get_aws_profile_credentials,
+            aws_credentials::resolve_aws_env_credentials,
+            aws_credentials::get_aws_paths,
+            aws_credentials::check_aws_path_exists,
+            aws_credentials::get_aws_env_source
         ])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())

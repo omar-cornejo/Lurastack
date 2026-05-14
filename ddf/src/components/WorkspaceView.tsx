@@ -216,7 +216,7 @@ export default function WorkspaceView({
   const hclPersistenceDisabledRef = useRef(false);
   const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
   const lastPopoutHeartbeatRef = useRef<number>(0);
-  const { credentials: awsCredentials, save: saveAwsCredentials, isConfigured: awsConfigured } = useAwsCredentials();
+  const { stored: awsCredentials, save: saveAwsCredentials, isConfigured: awsConfigured } = useAwsCredentials();
   const [planChanges, setPlanChanges] = useState<Map<string, ResourcePlanChange>>(new Map());
   const planBufferRef = useRef("");
   const planCurrentAddressRef = useRef<string | null>(null);
