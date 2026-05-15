@@ -38,6 +38,7 @@ import {
   applyManualContainerResizeEffects,
   placeCanvasNodeFromUserAction,
   reparentCanvasNodeAfterDrag,
+  expandAncestorContainers,
 } from "../commands/placeCanvasNode";
 import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
 import { warn } from "../commands/warn";
@@ -56,8 +57,8 @@ import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 import { useAwsCredentials } from "../hooks/useAwsCredentials";
-import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 import { sileo } from "sileo";
+import { importHclBlocksToResources } from "../commands/hclImporter";
 
 const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
 const POPOUT_HEARTBEAT_TTL_MS = 900;
@@ -86,78 +87,6 @@ const isMeaningfulValue = (value: unknown): boolean => {
   if (Array.isArray(value)) return value.length > 0;
   if (isPlainObject(value)) return Object.keys(value).length > 0;
   return true;
-};
-
-const isObjectCollectionType = (rawType: unknown): boolean => {
-  if (!Array.isArray(rawType) || rawType.length < 2) return false;
-  const [container, inner] = rawType as [unknown, unknown];
-  if (container !== "set" && container !== "list") return false;
-  return Array.isArray(inner) && inner[0] === "object";
-};
-
-// Converts flat dotted keys for set(object(...)) / list(object(...)) schema properties
-// into array-of-objects format, so the store stays canonical for the info tab UI.
-// e.g. { "route.carrier_gateway_id": "sd", "route.cidr_block": "10.0.0.0/8" }
-//   → { route: [{ carrier_gateway_id: "sd", cidr_block: "10.0.0.0/8" }] }
-// parsedBlockAttributes: the raw attributes from the CodePanel parser — used to detect
-// when an object-collection block was completely removed (no dotted keys present) so
-// the array entry can be cleared from the store.
-const normalizeDottedKeysToArrayFormat = (
-  attributes: Record<string, unknown>,
-  schema: import("../models/nodeRegistry").TerraformNodeSchema | undefined,
-  parsedBlockAttributes?: Record<string, unknown>,
-): Record<string, unknown> => {
-  if (!schema) return attributes;
-
-  const properties = getInspectorPropertiesForSchema(schema);
-  const objectCollectionProps = new Map<string, unknown>(
-    properties
-      .filter((p) => isObjectCollectionType(p.rawType))
-      .map((p) => [p.name, p.rawType]),
-  );
-
-  if (!objectCollectionProps.size) return attributes;
-
-  const result: Record<string, unknown> = {};
-  const blockAccumulators = new Map<string, Array<Record<string, unknown>>>();
-
-  Object.entries(attributes).forEach(([key, value]) => {
-    const dotIdx = key.indexOf(".");
-    if (dotIdx === -1) {
-      result[key] = value;
-      return;
-    }
-    const blockName = key.slice(0, dotIdx);
-    const fieldName = key.slice(dotIdx + 1);
-    if (!objectCollectionProps.has(blockName)) {
-      result[key] = value;
-      return;
-    }
-    if (!blockAccumulators.has(blockName)) {
-      blockAccumulators.set(blockName, [{}]);
-    }
-    const entries = blockAccumulators.get(blockName)!;
-    entries[0]![fieldName] = value;
-  });
-
-  blockAccumulators.forEach((entries, blockName) => {
-    result[blockName] = entries;
-  });
-
-  // If parsedBlockAttributes is provided, remove array-format keys for object-collection
-  // properties that had no dotted keys in the parsed HCL (user deleted the whole block).
-  if (parsedBlockAttributes) {
-    objectCollectionProps.forEach((_, blockName) => {
-      const hasDottedKey = Object.keys(parsedBlockAttributes).some(
-        (k) => k === `${blockName}.` || k.startsWith(`${blockName}.`),
-      );
-      if (!hasDottedKey && Object.prototype.hasOwnProperty.call(result, blockName)) {
-        delete result[blockName];
-      }
-    });
-  }
-
-  return result;
 };
 
 type CanvasViewportBounds = {
@@ -1175,6 +1104,18 @@ export default function WorkspaceView({
     [activeSection, getResourceIcon, selectedResource, setNodes],
   );
 
+  const createLogEntry = (
+    level: "info" | "success" | "warning" | "error",
+    title: string,
+    message: string,
+  ): BottomPanelLogEntry => ({
+    id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    level,
+    title,
+    message,
+  });
+
   const syncResourcesFromMainTfBlocks = useCallback(
     (blocks: Array<{
       kind: "resource" | "data";
@@ -1184,112 +1125,105 @@ export default function WorkspaceView({
     }>) => {
       if (!blocks.length) return;
 
-      // Build a lookup map keyed by "type.name" so edits in CodePanel find the
-      // correct resource regardless of declaration order in the HCL file.
-      const blockByKey = new Map(
-        blocks.map((block) => [`${block.type}.${block.name}`, block]),
-      );
+      // Usar el importador para procesar los bloques
+      const importResult = importHclBlocksToResources({
+        parsedBlocks: blocks,
+        existingResources: project.resources,
+        existingNodes: nodes,
+        schemas: NODE_SCHEMAS,
+        ignoreOrigins: ["canvas"], // No reimportar recursos del canvas
+        currentNodeIndex: nodes.length,
+      });
 
+      // Emitir advertencias y conflictos como logs
+      const warningLogs = importResult.warnings.map((w) =>
+        createLogEntry("warning", "HCL Import", `${w.resourceKey} — ${w.reason}`),
+      );
+      const conflictLogs = importResult.conflicts.map((c) =>
+        createLogEntry(
+          "warning",
+          "HCL Conflict",
+          `${c.resourceKey} — Conflicto entre importado (${c.importedOrigin}) y existente (${c.existingOrigin}). Se mantiene el existente.`,
+        ),
+      );
+      const allLogs = [...warningLogs, ...conflictLogs];
+      if (allLogs.length > 0) {
+        setCodeLogs((current) => [...allLogs, ...current].slice(0, 200));
+      }
+
+      // Actualizar proyecto: agregar nuevos recursos, eliminar importados que ya no están en HCL
+      setProject((currentProject) => {
+        // Filtrar recursos: mantener los que no están marcados para eliminación
+        const filteredResources = currentProject.resources.filter(
+          (r) => !importResult.deletedResourceIds.includes(r.id),
+        );
+
+        // Agregar nuevos recursos
+        const nextResources = [...filteredResources, ...importResult.newResources];
+
+        // Actualizar atributos de recursos existentes
+        for (const resource of nextResources) {
+          if (importResult.updatedResourceIds.has(resource.id)) {
+            // El importador ya actualizó los atributos en el recurso in-place,
+            // no hay que hacer nada más aquí.
+          }
+        }
+
+        const nextProject = {
+          ...currentProject,
+          resources: nextResources,
+        };
+
+        void saveProjectToHCL(nextProject);
+        return nextProject;
+      });
+
+      // Actualizar canvas: agregar nuevos nodos, eliminar los que corresponden a recursos eliminados
+      setNodes((currentNodes) => {
+        // Filtrar nodos: eliminar los que corresponden a recursos eliminados
+        let workingNodes = currentNodes.filter(
+          (n) => !importResult.deletedResourceIds.includes(n.data.resourceId),
+        );
+
+        // Agregar nodos nuevos con placement automático
+        if (importResult.newNodes.length > 0) {
+          // Calcular posiciones para los nuevos nodos de forma determinista
+          const newNodesWithPositions = importResult.newNodes.map((node, idx) => {
+            const baseX = 80 + (idx % 4) * 220;
+            const baseY = 80 + Math.floor(idx / 4) * 130;
+            return {
+              ...node,
+              position: { x: baseX, y: baseY },
+            };
+          });
+
+          workingNodes = [...workingNodes, ...newNodesWithPositions];
+
+          // Aplicar expansión de contenedores si es necesario
+          for (const newNode of newNodesWithPositions) {
+            workingNodes = expandAncestorContainers(workingNodes, newNode.id);
+          }
+        }
+
+        // Aplicar membresías de zone containers
+        workingNodes = applyZoneContainerMemberships(workingNodes);
+
+        return workingNodes;
+      });
+
+      // Actualizar nodos visuales (iconos, etiquetas)
       const visualUpdates: Array<{ resourceId: string; label: string; icon: string }> = [];
 
-      setProject((currentProject) => {
-        let changed = false;
-
-        const updatedResources = currentProject.resources.map((resource) => {
-          const block = blockByKey.get(`${resource.type}.${resource.name}`);
-          if (!block) return resource;
-
-          const resourceSchema = NODE_SCHEMAS.find((s) => s.id === resource.schemaId);
-          const nextAttributes = { ...resource.config.attributes };
-
-          // Apply every key the parsed HCL block knows about (flat + nested via dotted keys).
-          // Empty-string means the line was cleared — delete the attribute.
-          Object.keys(block.attributes).forEach((key) => {
-            const parsed = block.attributes[key];
-            if (parsed === "" || parsed === null || parsed === undefined) {
-              delete nextAttributes[key];
-            } else {
-              nextAttributes[key] = parsed;
-            }
-          });
-
-          // Remove keys that were rendered in the CodePanel HCL (meaningful value) but are
-          // now absent from the parse — the user deleted or cleared them.
-          // Only touch keys with meaningful values so computed/null attributes in the store
-          // are never accidentally wiped.
-          Object.keys(resource.config.attributes).forEach((key) => {
-            if (
-              isMeaningfulValue(resource.config.attributes[key]) &&
-              !Object.prototype.hasOwnProperty.call(block.attributes, key)
-            ) {
-              delete nextAttributes[key];
-            }
-          });
-
-          // Convert dotted keys for set(object(...))/list(object(...)) schema attributes
-          // into the canonical array-of-objects format the info tab UI expects.
-          // Also removes array-format keys whose blocks were entirely removed from the HCL.
-          const normalizedAttributes = normalizeDottedKeysToArrayFormat(
-            nextAttributes,
-            resourceSchema,
-            block.attributes,
-          );
-
-          const nextKind = block.kind;
-          const nextType = block.type || resource.type;
-          const nextName = block.name || resource.name;
-          const nextIcon =
-            nextType === "aws_subnet"
-              ? (isSubnetIconPath(resource.ui.icon)
-                  ? resource.ui.icon
-                  : SUBNET_PRIVATE_ICON_PATH)
-              : resolveTerraformIcon(nextType, normalizedAttributes);
-
-          const attributesChanged =
-            JSON.stringify(resource.config.attributes) !== JSON.stringify(normalizedAttributes);
-          const identityChanged =
-            resource.kind !== nextKind ||
-            resource.type !== nextType ||
-            resource.name !== nextName;
-          const iconChanged = resource.ui.icon !== nextIcon;
-
-          if (!attributesChanged && !identityChanged && !iconChanged) {
-            return resource;
-          }
-
-          changed = true;
-
+      for (const resource of project.resources) {
+        if (importResult.updatedResourceIds.has(resource.id)) {
+          const nextIcon = getResourceIcon(resource);
           visualUpdates.push({
             resourceId: resource.id,
-            label: nextName,
+            label: resource.name,
             icon: nextIcon,
           });
-
-          return {
-            ...resource,
-            kind: nextKind,
-            type: nextType,
-            name: nextName,
-            ui: {
-              ...resource.ui,
-              icon: nextIcon,
-            },
-            config: {
-              ...resource.config,
-              attributes: normalizedAttributes,
-            },
-          };
-        });
-
-        if (!changed) return currentProject;
-
-        const updatedProject = {
-          ...currentProject,
-          resources: updatedResources,
-        };
-        void saveProjectToHCL(updatedProject);
-        return updatedProject;
-      });
+        }
+      }
 
       if (visualUpdates.length) {
         const visualByResourceId = new Map(
@@ -1318,7 +1252,7 @@ export default function WorkspaceView({
         );
       }
     },
-    [setNodes],
+    [setNodes, setProject, project.resources, nodes, NODE_SCHEMAS, getResourceIcon, setCodeLogs],
   );
 
   useEffect(() => {

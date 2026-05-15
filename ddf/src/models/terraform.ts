@@ -3,6 +3,8 @@ export type TerraformBlock = {
   blocks: Record<string, TerraformBlock[]>;
 };
 
+export type ResourceOrigin = "canvas" | "imported-hcl" | "imported-file";
+
 export type TerraformResource = {
   id: string;              
   kind?: "resource" | "data";
@@ -10,6 +12,7 @@ export type TerraformResource = {
   name: string;            
   hclTemplate?: string;
   schemaId?: string;
+  origin?: ResourceOrigin;
 
   config: {
     attributes: Record<string, any>;
