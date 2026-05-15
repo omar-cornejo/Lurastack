@@ -11,11 +11,15 @@ import {
   formatTypeLabel,
   getInspectorPropertiesForSchema,
 } from "../commands/schemaInspector";
+import {
+  extractManualSegments,
+  mergeWithManualCode,
+} from "../utils/hclParser";
 
 type CodePanelProps = {
   resources: TerraformResource[];
   schemas: TerraformNodeSchema[];
-  cloudProvider: "aws";
+  cloudProvider: "aws" | "gcp" | "azure";
   region: string;
   projectDir?: string;
   initialCustomFiles?: DdfCodeFile[];
@@ -326,6 +330,14 @@ export default function CodePanel({
   // next reset so we don't clobber the user's own edit.
   const skipNextMainTfResetRef = useRef(false);
 
+  // Cache manual code segments when entering free edit mode
+  const manualSegmentsRef = useRef<{
+    comments: string[];
+    customProviderConfig: string;
+    preProviderContent: string;
+    postResourcesContent: string;
+  } | null>(null);
+
   const isTauriRuntime =
     typeof window !== "undefined" &&
     !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
@@ -562,6 +574,19 @@ export default function CodePanel({
       setMainTfDraft(mainTfContent);
     }
   }, [mainTfContent]);
+  // Handle manual code preservation when toggling free edit mode
+  useEffect(() => {
+    if (isFreeEditMode) {
+      // User entering free edit mode: cache current manual segments
+      manualSegmentsRef.current = extractManualSegments(mainTfDraft, "");
+    } else if (manualSegmentsRef.current && mainTfContent !== mainTfDraft) {
+      // User exiting free edit mode with changes: preserve manual segments in generated HCL
+      const preservedHcl = mergeWithManualCode(mainTfContent, manualSegmentsRef.current);
+      setMainTfDraft(preservedHcl);
+      manualSegmentsRef.current = null; // Clear cache after merge
+    }
+  }, [isFreeEditMode, mainTfContent]);
+
 
   const loadFileIntoEditor = async (relativePath: string) => {
     if (!projectDir || relativePath === "main.tf") {
@@ -1457,18 +1482,25 @@ const buildResourceHcl = (resource: TerraformResource): string => {
 
 const buildMainTerraformFile = (
   resources: TerraformResource[],
-  cloudProvider: "aws",
+  cloudProvider: "aws" | "gcp" | "azure",
   region: string,
 ) => {
+    const providerConfig: Record<string, { name: string; source: string; version: string }> = {
+      aws: { name: "aws", source: "hashicorp/aws", version: "~> 5.0" },
+      gcp: { name: "google", source: "hashicorp/google", version: "~> 5.0" },
+      azure: { name: "azurerm", source: "hashicorp/azurerm", version: "~> 3.0" },
+    };
+    const config = providerConfig[cloudProvider];
+
   let hcl = "terraform {\n";
   hcl += "  required_providers {\n";
-  hcl += `    ${cloudProvider} = {\n`;
-  hcl += `      source  = \"hashicorp/${cloudProvider}\"\n`;
-  hcl += "      version = \"~> 5.0\"\n";
+  hcl += `    ${config.name} = {\n`;
+  hcl += `      source  = \"${config.source}\"\n`;
+  hcl += `      version = \"${config.version}\"\n`;
   hcl += "    }\n";
   hcl += "  }\n";
   hcl += "}\n\n";
-  hcl += `provider \"${cloudProvider}\" {\n`;
+  hcl += `provider \"${config.name}\" {\n`;
   hcl += `  region = \"${region}\"\n`;
   hcl += "}\n\n";
 

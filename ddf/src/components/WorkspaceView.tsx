@@ -105,9 +105,33 @@ export default function WorkspaceView({
   onStateChange,
 }: WorkspaceViewProps) {
   const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
+
+  const PROVIDER_CONFIG = {
+    aws: {
+      source: "hashicorp/aws",
+      version: "~> 5.0",
+      defaultRegion: "eu-south-2",
+    },
+    gcp: {
+      source: "hashicorp/google",
+      version: "~> 5.0",
+      defaultRegion: "europe-west1",
+    },
+    azure: {
+      source: "hashicorp/azurerm",
+      version: "~> 3.0",
+      defaultRegion: "westeurope",
+    },
+  } as const;
+
   const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff" | "cloud">("canvas");
-  const [cloudProvider, setCloudProvider] = useState<"aws">("aws");
-  const [providerRegion] = useState("eu-south-2");
+  const [cloudProvider, setCloudProvider] = useState<"aws" | "gcp" | "azure">("aws");
+  const [providerRegion, setProviderRegion] = useState<string>(PROVIDER_CONFIG.aws.defaultRegion);
+  // Update default region when provider changes
+  useEffect(() => {
+    setProviderRegion(PROVIDER_CONFIG[cloudProvider].defaultRegion);
+  }, [cloudProvider]);
+
 
   const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>(
     initialState ? restoreNodes(initialState.nodes) : [],
@@ -800,11 +824,13 @@ export default function WorkspaceView({
   };
 
   const buildGlobalHcl = useCallback((proj: TerraformProject) => {
+    const providerConfig = PROVIDER_CONFIG[cloudProvider];
+    
     let hcl = `terraform {\n`;
     hcl += `  required_providers {\n`;
     hcl += `    ${cloudProvider} = {\n`;
-    hcl += `      source  = "hashicorp/${cloudProvider}"\n`;
-    hcl += `      version = "~> 5.0"\n`;
+    hcl += `      source  = "${providerConfig.source}"\n`;
+    hcl += `      version = "${providerConfig.version}"\n`;
     hcl += `    }\n`;
     hcl += `  }\n`;
     hcl += `}\n\n`;
@@ -818,7 +844,7 @@ export default function WorkspaceView({
     });
 
     return hcl;
-  }, [cloudProvider, providerRegion]);
+  }, [cloudProvider, providerRegion, PROVIDER_CONFIG]);
 
   const saveProjectToHCL = async (proj: TerraformProject) => {
     if (hclPersistenceDisabledRef.current) return;

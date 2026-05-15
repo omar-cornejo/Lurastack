@@ -14,11 +14,12 @@ import {
   clearActiveLeftPanelDrag,
   setActiveLeftPanelDrag,
 } from "../commands/leftPanelDragState";
+import { ProviderSelector } from "./ProviderSelector";
 
 type LeftPanelProps = {
   addResource: (node: TerraformNodeSchema) => void;
-  cloudProvider: "aws";
-  onCloudProviderChange: (provider: "aws") => void;
+  cloudProvider: "aws" | "gcp" | "azure";
+  onCloudProviderChange: (provider: "aws" | "gcp" | "azure") => void;
   onWidthChange?: (width: number) => void;
 };
 
@@ -136,6 +137,7 @@ const rankNode = (node: TerraformNodeSchema, query: string) => {
 export const LeftPanel = ({
   addResource,
   cloudProvider,
+    onCloudProviderChange,
   onWidthChange,
 }: LeftPanelProps) => {
   const [visible, setVisible] = useState(false);
@@ -307,6 +309,12 @@ export const LeftPanel = ({
       </button>
 
       <div className="overflow-hidden flex flex-col h-full w-full min-w-0">
+          {/* Provider selector */}
+          <ProviderSelector
+            selectedProvider={cloudProvider}
+            onProviderChange={onCloudProviderChange}
+          />
+
           {/* Provider header */}
           <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3.5">
             <div className="flex items-center gap-3">
