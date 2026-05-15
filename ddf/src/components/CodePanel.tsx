@@ -1377,7 +1377,7 @@ const isMeaningfulValue = (value: unknown): boolean => {
 };
 
 
-const buildResourceHcl = (resource: TerraformResource): string | null => {
+const buildResourceHcl = (resource: TerraformResource): string => {
   const blockKind = resource.kind ?? "resource";
   const attrs = resource.config.attributes ?? {};
   const root: HclBlockNode = { attributes: {}, blocks: {} };
@@ -1452,7 +1452,6 @@ const buildResourceHcl = (resource: TerraformResource): string | null => {
   };
 
   const body = renderNode(root, "  ");
-  if (!body.trim()) return null;
   return `${blockKind} "${resource.type}" "${resource.name}" {\n${body}}`;
 };
 
@@ -1475,7 +1474,6 @@ const buildMainTerraformFile = (
 
   resources.forEach((resource) => {
     const block = buildResourceHcl(resource);
-    if (!block) return;
     hcl += block;
     hcl += "\n\n";
   });

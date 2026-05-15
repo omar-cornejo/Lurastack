@@ -684,7 +684,7 @@ export default function WorkspaceView({
     [setNodes, pushSnapshot, getCurrentSnapshot],
   );
 
-  const terraformResourceToHCL = (r: TerraformResource): string | null => {
+  const terraformResourceToHCL = (r: TerraformResource): string => {
     const toHclLiteral = (value: unknown): string => {
       if (Array.isArray(value)) {
         if (value.length === 0) return "[]";
@@ -796,7 +796,6 @@ export default function WorkspaceView({
 
     const blockKind = r.kind ?? "resource";
     const body = renderNode(root, "  ");
-    if (!body.trim()) return null;
     return `${blockKind} "${r.type}" "${r.name}" {\n${body}}\n`;
   };
 
@@ -815,7 +814,6 @@ export default function WorkspaceView({
 
     proj.resources.forEach((r) => {
       const block = terraformResourceToHCL(r);
-      if (!block) return;
       hcl += block + "\n";
     });
 
