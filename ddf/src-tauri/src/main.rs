@@ -21,6 +21,7 @@ fn main() {
             terraform_actions::terraform_show,
             terraform_actions::terraform_state_signature,
             terraform_actions::terraform_confirm,
+            terraform_actions::terraform_cancel,
             aws_credentials::list_aws_profiles,
             aws_credentials::get_aws_env_credentials,
             aws_credentials::get_aws_profile_credentials,

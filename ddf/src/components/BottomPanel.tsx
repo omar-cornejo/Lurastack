@@ -29,6 +29,8 @@ type BottomPanelProps = {
   showPopoutButton?: boolean;
   suppressTerminal?: boolean;
   leftOffset?: number;
+  terminalEnvVars?: Record<string, string>;
+  isTerraformRunning?: boolean;
 };
 
 type BottomPanelTab = "terminal" | "mapper" | "logs";
@@ -57,6 +59,8 @@ export default function BottomPanel({
   showPopoutButton = true,
   suppressTerminal = false,
   leftOffset = 0,
+  terminalEnvVars,
+  isTerraformRunning = false,
 }: BottomPanelProps) {
   const showMapperTab = mode === "canvas";
   const [open, setOpen] = useState(true);
@@ -82,6 +86,18 @@ export default function BottomPanel({
   const heightNotifyFrameRef = useRef<number | null>(null);
   const lastReportedPanelHeightRef = useRef<number | null>(null);
   const handledOpenSignalRef = useRef<number>(openSignal);
+  const isTerraformRunningRef = useRef<boolean>(isTerraformRunning);
+  useEffect(() => {
+    isTerraformRunningRef.current = isTerraformRunning;
+  }, [isTerraformRunning]);
+
+  const envVarsKey = useMemo(() => {
+    if (!terminalEnvVars) return "";
+    return Object.keys(terminalEnvVars)
+      .sort()
+      .map((k) => `${k}=${terminalEnvVars[k]}`)
+      .join("\n");
+  }, [terminalEnvVars]);
 
   const sortedLogs = useMemo(
     () => [...logs].sort((left, right) => right.timestamp.localeCompare(left.timestamp)),
@@ -403,11 +419,21 @@ export default function BottomPanel({
       terminalReadyRef.current = true;
     }, 0);
     if (isTauriRuntime) {
-      void invoke("init_terminal_session", { cwd: projectDir ?? "" }).catch(() => {});
+      void invoke("init_terminal_session", {
+        cwd: projectDir ?? "",
+        env: { vars: terminalEnvVars ?? {} },
+      }).catch(() => {});
     }
     const currentWindowLabel = getCurrentWindow().label;
     const onDataDisposable = term.current.onData((data: string) => {
       if (terminalDisposedRef.current) return;
+      // If a terraform process spawned from the app is running, Ctrl+C in the
+      // in-app terminal targets that process (the PTY shell can't reach it).
+      if (data === "\x03" && isTerraformRunningRef.current) {
+        void invoke("terraform_cancel").catch(() => {});
+        try { term.current?.write("\r\n\x1b[33m^C → terraform_cancel\x1b[0m\r\n"); } catch {}
+        return;
+      }
       void invoke("write_to_pty", { input: data });
     });
     const unlisten = listen<{ window_label: string; output: string }>("pty-output", (event) => {
@@ -430,7 +456,8 @@ export default function BottomPanel({
       term.current = null;
       fitAddon.current = null;
     };
-  }, [enabled, isTauriRuntime, projectDir, suppressTerminal]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, isTauriRuntime, projectDir, suppressTerminal, envVarsKey]);
 
   useEffect(() => {
     if (isResizing) return;

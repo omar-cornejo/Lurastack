@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useUndoRedo } from "../hooks/useUndoRedo";
 import Header from "./Header";
@@ -176,7 +176,40 @@ export default function WorkspaceView({
     save: saveProviderCredentials,
     isConfigured: providerConfigured,
     aws: awsCredentials,
+    gcp: gcpCredentials,
+    azure: azureCredentials,
   } = useProviderCredentials(cloudProvider);
+
+  const terminalEnvVars = useMemo<Record<string, string>>(() => {
+    const env: Record<string, string> = {};
+    if (cloudProvider === "aws") {
+      if (awsCredentials.accessKeyId) env.AWS_ACCESS_KEY_ID = awsCredentials.accessKeyId;
+      if (awsCredentials.secretAccessKey) env.AWS_SECRET_ACCESS_KEY = awsCredentials.secretAccessKey;
+      if (awsCredentials.sessionToken) env.AWS_SESSION_TOKEN = awsCredentials.sessionToken;
+      if (awsCredentials.region) {
+        env.AWS_DEFAULT_REGION = awsCredentials.region;
+        env.AWS_REGION = awsCredentials.region;
+      }
+    } else if (cloudProvider === "gcp") {
+      if (gcpCredentials.projectId) {
+        env.GOOGLE_PROJECT = gcpCredentials.projectId;
+        env.GOOGLE_CLOUD_PROJECT = gcpCredentials.projectId;
+      }
+      if (gcpCredentials.region) env.GOOGLE_REGION = gcpCredentials.region;
+      if (gcpCredentials.serviceAccountFilePath) {
+        env.GOOGLE_APPLICATION_CREDENTIALS = gcpCredentials.serviceAccountFilePath;
+      } else if (gcpCredentials.serviceAccountJson) {
+        env.GOOGLE_CREDENTIALS = gcpCredentials.serviceAccountJson;
+      }
+    } else if (cloudProvider === "azure") {
+      if (azureCredentials.subscriptionId) env.ARM_SUBSCRIPTION_ID = azureCredentials.subscriptionId;
+      if (azureCredentials.tenantId) env.ARM_TENANT_ID = azureCredentials.tenantId;
+      if (azureCredentials.clientId) env.ARM_CLIENT_ID = azureCredentials.clientId;
+      if (azureCredentials.clientSecret) env.ARM_CLIENT_SECRET = azureCredentials.clientSecret;
+      if (azureCredentials.region) env.ARM_LOCATION = azureCredentials.region;
+    }
+    return env;
+  }, [cloudProvider, awsCredentials, gcpCredentials, azureCredentials]);
   const [planChanges, setPlanChanges] = useState<Map<string, ResourcePlanChange>>(new Map());
   const planBufferRef = useRef("");
   const planCurrentAddressRef = useRef<string | null>(null);
@@ -245,10 +278,12 @@ export default function WorkspaceView({
         resources: project.resources,
         logs: codeLogs,
         projectDir,
+        terminalEnvVars,
+        isTerraformRunning: isDeploying,
         updatedAt: Date.now(),
       },
     });
-  }, [codeLogs, edges, nodes, project.resources, projectDir, viewId]);
+  }, [codeLogs, edges, nodes, project.resources, projectDir, viewId, terminalEnvVars, isDeploying]);
 
   useEffect(() => {
     broadcastBottomPanelState();
@@ -1648,6 +1683,8 @@ export default function WorkspaceView({
           openSignal={bottomOpenSignal}
           preferredTab={bottomPreferredTab}
           leftOffset={activeSection === "canvas" || activeSection === "diff" || activeSection === "cloud" ? leftPanelWidth : 0}
+          terminalEnvVars={terminalEnvVars}
+          isTerraformRunning={isDeploying}
         />
       ) : null}
     </div>

@@ -13,14 +13,44 @@ use tauri::Emitter;
 
 pub struct TerraformInteractiveState {
     pub stdin: Arc<Mutex<Option<ChildStdin>>>,
+    pub current_pid: Arc<Mutex<Option<u32>>>,
 }
 
 impl Default for TerraformInteractiveState {
     fn default() -> Self {
         Self {
             stdin: Arc::new(Mutex::new(None)),
+            current_pid: Arc::new(Mutex::new(None)),
         }
     }
+}
+
+#[tauri::command]
+pub fn terraform_cancel(
+    state: tauri::State<'_, TerraformInteractiveState>,
+) -> Result<bool, String> {
+    let pid_opt = state
+        .current_pid
+        .lock()
+        .map_err(|error| format!("Error de lock: {error}"))?
+        .clone();
+    let Some(pid) = pid_opt else {
+        return Ok(false);
+    };
+    #[cfg(unix)]
+    {
+        use std::process::Command as StdCommand;
+        // Send SIGINT first (graceful), then SIGTERM as a follow-up if still alive.
+        let _ = StdCommand::new("kill").arg("-INT").arg(pid.to_string()).status();
+        std::thread::sleep(Duration::from_millis(800));
+        let _ = StdCommand::new("kill").arg("-TERM").arg(pid.to_string()).status();
+    }
+    #[cfg(windows)]
+    {
+        use std::process::Command as StdCommand;
+        let _ = StdCommand::new("taskkill").args(["/PID", &pid.to_string(), "/T", "/F"]).status();
+    }
+    Ok(true)
 }
 
 #[derive(Debug, Deserialize)]
@@ -126,6 +156,7 @@ fn run_terraform_streaming(
     args: &[&str],
     project_dir_path: &PathBuf,
     aws_credentials: &AwsCredentials,
+    pid_arc: Option<&Arc<Mutex<Option<u32>>>>,
 ) -> Result<bool, String> {
     let mut cmd = Command::new("terraform");
     for arg in args {
@@ -148,6 +179,12 @@ fn run_terraform_streaming(
     let mut child = cmd
         .spawn()
         .map_err(|error| format!("No se pudo iniciar terraform {}: {error}", args.first().unwrap_or(&"")))?;
+
+    if let Some(pid_arc) = pid_arc {
+        if let Ok(mut guard) = pid_arc.lock() {
+            *guard = Some(child.id());
+        }
+    }
 
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
@@ -184,6 +221,11 @@ fn run_terraform_streaming(
     }
 
     let status = child.wait().map_err(|error| format!("Error esperando terraform: {error}"))?;
+    if let Some(pid_arc) = pid_arc {
+        if let Ok(mut guard) = pid_arc.lock() {
+            *guard = None;
+        }
+    }
     Ok(status.success())
 }
 
@@ -193,6 +235,7 @@ fn run_terraform_interactive_inner(
     project_dir_path: &PathBuf,
     aws_credentials: &AwsCredentials,
     stdin_arc: &Arc<Mutex<Option<ChildStdin>>>,
+    pid_arc: &Arc<Mutex<Option<u32>>>,
 ) -> Result<bool, String> {
     let mut cmd = Command::new("terraform");
     for arg in args {
@@ -215,6 +258,8 @@ fn run_terraform_interactive_inner(
     let mut child = cmd
         .spawn()
         .map_err(|error| format!("No se pudo iniciar terraform {}: {error}", args.first().unwrap_or(&"")))?;
+
+    *pid_arc.lock().unwrap() = Some(child.id());
 
     let child_stdin = child
         .stdin
@@ -278,6 +323,7 @@ fn run_terraform_interactive_inner(
 
     let status = child.wait().map_err(|error| format!("Error esperando terraform: {error}"))?;
     *stdin_arc.lock().unwrap() = None;
+    *pid_arc.lock().unwrap() = None;
     Ok(status.success())
 }
 
@@ -308,7 +354,9 @@ pub async fn terraform_plan(
     project_dir: String,
     files: Vec<TerraformSourceFile>,
     aws_credentials: AwsCredentials,
+    state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
+    let pid_arc = state.current_pid.clone();
     tauri::async_runtime::spawn_blocking(move || {
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
@@ -332,6 +380,7 @@ pub async fn terraform_plan(
             &["plan", "-no-color", "-input=false"],
             &project_dir_path,
             &aws_credentials,
+            Some(&pid_arc),
         )?;
 
         if success {
@@ -351,7 +400,9 @@ pub async fn terraform_plan_destroy(
     project_dir: String,
     files: Vec<TerraformSourceFile>,
     aws_credentials: AwsCredentials,
+    state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
+    let pid_arc = state.current_pid.clone();
     tauri::async_runtime::spawn_blocking(move || {
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
@@ -375,6 +426,7 @@ pub async fn terraform_plan_destroy(
             &["plan", "-destroy", "-no-color", "-input=false"],
             &project_dir_path,
             &aws_credentials,
+            Some(&pid_arc),
         )?;
 
         if success {
@@ -397,6 +449,7 @@ pub async fn terraform_apply(
     state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
     let stdin_arc = state.stdin.clone();
+    let pid_arc = state.current_pid.clone();
     tauri::async_runtime::spawn_blocking(move || {
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
@@ -421,6 +474,7 @@ pub async fn terraform_apply(
             &project_dir_path,
             &aws_credentials,
             &stdin_arc,
+            &pid_arc,
         )?;
 
         if success {
@@ -443,6 +497,7 @@ pub async fn terraform_destroy(
     state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
     let stdin_arc = state.stdin.clone();
+    let pid_arc = state.current_pid.clone();
     tauri::async_runtime::spawn_blocking(move || {
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
@@ -467,6 +522,7 @@ pub async fn terraform_destroy(
             &project_dir_path,
             &aws_credentials,
             &stdin_arc,
+            &pid_arc,
         )?;
 
         if success {

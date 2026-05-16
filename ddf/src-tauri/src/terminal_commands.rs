@@ -5,8 +5,15 @@ use std::{
 };
 
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+
+#[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct TerminalEnv {
+    #[serde(default)]
+    pub vars: HashMap<String, String>,
+}
 
 struct TerminalSession {
     writer: Box<dyn Write + Send>,
@@ -37,6 +44,7 @@ pub fn init_terminal_session(
     window: tauri::Window,
     state: tauri::State<TerminalState>,
     cwd: String,
+    env: Option<TerminalEnv>,
 ) -> Result<(), String> {
     let window_label = window.label().to_string();
     let thread_window_label = window_label.clone();
@@ -54,6 +62,13 @@ pub fn init_terminal_session(
     let mut command = CommandBuilder::new(&shell);
     if !cwd.trim().is_empty() {
         command.cwd(cwd.trim());
+    }
+    if let Some(terminal_env) = env.as_ref() {
+        for (key, value) in &terminal_env.vars {
+            if !key.trim().is_empty() {
+                command.env(key, value);
+            }
+        }
     }
 
     let child = pair

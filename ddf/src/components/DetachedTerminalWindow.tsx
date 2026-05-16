@@ -24,6 +24,8 @@ export default function DetachedTerminalWindow() {
   const [syncedEdges, setSyncedEdges] = useState<Edge<CanvasEdgeData>[]>([]);
   const [syncedResources, setSyncedResources] = useState<TerraformResource[]>([]);
   const [syncedLogs, setSyncedLogs] = useState<BottomPanelLogEntry[]>([]);
+  const [syncedEnv, setSyncedEnv] = useState<Record<string, string>>({});
+  const [syncedTfRunning, setSyncedTfRunning] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
 
   const handlePopdown = async () => {
@@ -60,6 +62,8 @@ export default function DetachedTerminalWindow() {
               edges?: Edge<CanvasEdgeData>[];
               resources?: TerraformResource[];
               logs?: BottomPanelLogEntry[];
+              terminalEnvVars?: Record<string, string>;
+              isTerraformRunning?: boolean;
             };
           }
         | undefined;
@@ -74,6 +78,8 @@ export default function DetachedTerminalWindow() {
       setSyncedEdges(Array.isArray(payload.edges) ? payload.edges : []);
       setSyncedResources(Array.isArray(payload.resources) ? payload.resources : []);
       setSyncedLogs(Array.isArray(payload.logs) ? payload.logs : []);
+      setSyncedEnv(payload.terminalEnvVars && typeof payload.terminalEnvVars === "object" ? payload.terminalEnvVars : {});
+      setSyncedTfRunning(!!payload.isTerraformRunning);
     };
 
     channel.postMessage({ type: "popout-open", viewId, timestamp: Date.now() });
@@ -117,6 +123,8 @@ export default function DetachedTerminalWindow() {
           projectDir={cwd}
           viewId={viewId}
           showPopoutButton={false}
+          terminalEnvVars={syncedEnv}
+          isTerraformRunning={syncedTfRunning}
           onHeightChange={() => {
             // no-op in detached window
           }}
