@@ -8,18 +8,19 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { Icon } from '@iconify/react';
-import { NODE_SCHEMAS, type TerraformNodeSchema } from "../models/nodeRegistry";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import { NODE_DRAG_MIME, serializeDraggedNode } from "../commands/nodeDragPayload";
 import {
   clearActiveLeftPanelDrag,
   setActiveLeftPanelDrag,
 } from "../commands/leftPanelDragState";
-import { ProviderSelector } from "./ProviderSelector";
+
 
 type LeftPanelProps = {
   addResource: (node: TerraformNodeSchema) => void;
   cloudProvider: "aws" | "gcp" | "azure";
   onCloudProviderChange: (provider: "aws" | "gcp" | "azure") => void;
+  schemas: TerraformNodeSchema[];
   onWidthChange?: (width: number) => void;
 };
 
@@ -137,7 +138,8 @@ const rankNode = (node: TerraformNodeSchema, query: string) => {
 export const LeftPanel = ({
   addResource,
   cloudProvider,
-    onCloudProviderChange,
+  onCloudProviderChange,
+  schemas,
   onWidthChange,
 }: LeftPanelProps) => {
   const [visible, setVisible] = useState(false);
@@ -145,6 +147,26 @@ export const LeftPanel = ({
   const [isResizing, setIsResizing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
+  const [providerMenuOpen, setProviderMenuOpen] = useState(false);
+  const providerMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!providerMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (providerMenuRef.current && !providerMenuRef.current.contains(e.target as Node)) {
+        setProviderMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [providerMenuOpen]);
+
+  const PROVIDER_OPTIONS: Array<{ id: "aws" | "gcp" | "azure"; label: string; icon: string }> = [
+    { id: "aws", label: "Amazon Web Services", icon: "/icons/AWS-Cloud-logo_32_Dark.svg" },
+    { id: "gcp", label: "Google Cloud", icon: "/icons/GCP-Cloud-logo_32_Dark.svg" },
+    { id: "azure", label: "Microsoft Azure", icon: "/icons/Azure-Cloud-logo_32_Dark.svg" },
+  ];
+  const currentProvider = PROVIDER_OPTIONS.find((p) => p.id === cloudProvider)!;
 
   const handleDragStart = (
     event: DragEvent<HTMLButtonElement>,
@@ -161,14 +183,7 @@ export const LeftPanel = ({
   };
 
   const filteredNodes = useMemo(() => {
-    const providerFiltered = NODE_SCHEMAS.filter((node) => {
-      if (cloudProvider === "aws") {
-        return node.terraformType.startsWith("aws_");
-      }
-      return true;
-    });
-
-    return providerFiltered
+    return schemas
       .map((node) => ({ node, score: rankNode(node, search) }))
       .filter((entry) => entry.score > 0)
       .sort((left, right) => {
@@ -176,7 +191,7 @@ export const LeftPanel = ({
         return left.node.label.localeCompare(right.node.label);
       })
       .map((entry) => entry.node);
-  }, [cloudProvider, search]);
+  }, [schemas, search]);
 
   const groupedNodes = useMemo(() => {
     const groups: Record<TerraformNodeSchema["schemaGroup"], TerraformNodeSchema[]> = {
@@ -309,22 +324,76 @@ export const LeftPanel = ({
       </button>
 
       <div className="overflow-hidden flex flex-col h-full w-full min-w-0">
-          {/* Provider selector */}
-          <ProviderSelector
-            selectedProvider={cloudProvider}
-            onProviderChange={onCloudProviderChange}
-          />
-
-          {/* Provider header */}
+          {/* Provider header — title acts as provider selector */}
           <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3.5">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
-                <img src="/icons/AWS-Cloud-logo_32_Dark.svg" alt="AWS" className="h-full w-full object-cover" draggable={false} />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-[12.5px] font-semibold text-slate-900">Amazon Web Services</p>
-                <p className="mt-0.5 text-[10px] text-slate-400">Resource library</p>
-              </div>
+            <div ref={providerMenuRef} className="relative flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setProviderMenuOpen((v) => !v)}
+                aria-haspopup="listbox"
+                aria-expanded={providerMenuOpen}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 -m-1 text-left transition-colors hover:bg-slate-50"
+              >
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
+                  <img
+                    src={currentProvider.icon}
+                    alt={currentProvider.label}
+                    className="h-full w-full object-cover"
+                    draggable={false}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1">
+                    <p className="truncate text-[12.5px] font-semibold text-slate-900">
+                      {currentProvider.label}
+                    </p>
+                    <Icon
+                      icon="mdi:chevron-down"
+                      className={`text-slate-400 transition-transform ${providerMenuOpen ? "rotate-180" : ""}`}
+                      width={14}
+                    />
+                  </div>
+                  <p className="mt-0.5 text-[10px] text-slate-400">Resource library</p>
+                </div>
+              </button>
+
+              {providerMenuOpen && (
+                <ul
+                  role="listbox"
+                  className="absolute left-0 right-0 top-full z-30 mt-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg"
+                >
+                  {PROVIDER_OPTIONS.map((option) => {
+                    const isActive = option.id === cloudProvider;
+                    return (
+                      <li key={option.id}>
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={isActive}
+                          onClick={() => {
+                            onCloudProviderChange(option.id);
+                            setProviderMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12px] transition-colors hover:bg-slate-50 ${
+                            isActive ? "bg-slate-50 font-semibold text-slate-900" : "text-slate-700"
+                          }`}
+                        >
+                          <img
+                            src={option.icon}
+                            alt=""
+                            draggable={false}
+                            className="h-5 w-5 object-cover"
+                          />
+                          <span className="flex-1 truncate">{option.label}</span>
+                          {isActive && (
+                            <Icon icon="mdi:check" width={14} className="text-emerald-500" />
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
 
             {/* Search */}

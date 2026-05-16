@@ -42,7 +42,7 @@ import {
 } from "../commands/placeCanvasNode";
 import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
 import { warn } from "../commands/warn";
-import { NODE_SCHEMAS } from "../models/nodeRegistry";
+import { NODE_SCHEMAS, getSchemasForProvider } from "../models/nodeRegistry";
 import {
   isSubnetIconPath,
   resolveTerraformIcon,
@@ -127,9 +127,11 @@ export default function WorkspaceView({
   const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff" | "cloud">("canvas");
   const [cloudProvider, setCloudProvider] = useState<"aws" | "gcp" | "azure">("aws");
   const [providerRegion, setProviderRegion] = useState<string>(PROVIDER_CONFIG.aws.defaultRegion);
-  // Update default region when provider changes
+  const [nodeSchemas, setNodeSchemas] = useState<TerraformNodeSchema[]>(() => getSchemasForProvider("aws"));
+
   useEffect(() => {
     setProviderRegion(PROVIDER_CONFIG[cloudProvider].defaultRegion);
+    setNodeSchemas(getSchemasForProvider(cloudProvider));
   }, [cloudProvider]);
 
 
@@ -1507,6 +1509,7 @@ export default function WorkspaceView({
               addResource={addResource}
               cloudProvider={cloudProvider}
               onCloudProviderChange={setCloudProvider}
+              schemas={nodeSchemas}
               onWidthChange={setLeftPanelWidth}
             />
 
