@@ -299,6 +299,88 @@ const isMeaningfulValue = (value: unknown): boolean => {
   return true;
 };
 
+// Read an attribute by its dotted key, falling back to a nested lookup
+// inside block-shaped containers ({foo: [{bar: ...}]} or {foo: {bar: ...}}),
+// which is the shape applyEdgeMapping persists for non-root targets.
+const readNestedAttribute = (attrs: Record<string, unknown>, dottedKey: string): unknown => {
+  if (Object.prototype.hasOwnProperty.call(attrs, dottedKey)) {
+    return attrs[dottedKey];
+  }
+  const parts = dottedKey.split(".").filter(Boolean);
+  if (parts.length < 2) return undefined;
+
+  let cursor: unknown = attrs[parts[0]];
+  for (let i = 1; i < parts.length; i++) {
+    if (cursor === undefined || cursor === null) return undefined;
+    if (Array.isArray(cursor)) {
+      // Block-list form: read from the first entry (the only one applyEdgeMapping writes to)
+      if (cursor.length === 0) return undefined;
+      cursor = cursor[0];
+    }
+    if (!isPlainObject(cursor)) return undefined;
+    const childKey = parts.slice(i).join(".");
+    if (Object.prototype.hasOwnProperty.call(cursor, childKey)) {
+      return (cursor as Record<string, unknown>)[childKey];
+    }
+    cursor = (cursor as Record<string, unknown>)[parts[i]];
+  }
+  return cursor;
+};
+
+// Write/remove an attribute keyed by a dotted path, mirroring the convention
+// applyEdgeMapping uses so the inspector and the edge mapper agree.
+const writeNestedAttribute = (
+  attrs: Record<string, unknown>,
+  dottedKey: string,
+  value: unknown,
+): Record<string, unknown> => {
+  const next = { ...attrs };
+  const shouldDelete = value === "" || value === null || value === undefined;
+  const parts = dottedKey.split(".").filter(Boolean);
+
+  if (parts.length <= 1) {
+    if (shouldDelete) delete next[dottedKey];
+    else next[dottedKey] = value;
+    return next;
+  }
+
+  // Always clean up a legacy dotted-key entry if present.
+  delete next[dottedKey];
+
+  const blockKey = parts[0];
+  const childPath = parts.slice(1).join(".");
+  const existing = next[blockKey];
+
+  if (Array.isArray(existing) && existing.length > 0 && existing.every((it) => isPlainObject(it))) {
+    const items = existing.map((item, idx) => {
+      if (idx !== 0) return item;
+      const copy = { ...(item as Record<string, unknown>) };
+      if (shouldDelete) delete copy[childPath];
+      else copy[childPath] = value;
+      return copy;
+    });
+    const firstHasContent = isPlainObject(items[0]) && Object.keys(items[0]).length > 0;
+    if (!firstHasContent && items.length === 1) {
+      delete next[blockKey];
+    } else {
+      next[blockKey] = items;
+    }
+  } else if (isPlainObject(existing)) {
+    const copy = { ...(existing as Record<string, unknown>) };
+    if (shouldDelete) delete copy[childPath];
+    else copy[childPath] = value;
+    if (Object.keys(copy).length === 0) {
+      delete next[blockKey];
+    } else {
+      next[blockKey] = copy;
+    }
+  } else if (!shouldDelete) {
+    next[blockKey] = [{ [childPath]: value }];
+  }
+
+  return next;
+};
+
 const buildHclFromResource = (resource: TerraformResource) => {
   const blockKind = resource.kind ?? "resource";
   const attrs = resource.config.attributes ?? {};
@@ -1210,7 +1292,10 @@ export const RightPanel = ({
 
                       <div className="space-y-1.5 p-2">
                         {section.properties.map((property) => {
-                          const currentValue = selectedResource.config.attributes[property.name];
+                          const currentValue = readNestedAttribute(
+                            selectedResource.config.attributes ?? {},
+                            property.name,
+                          );
                           const isEditable = !property.computed || !!property.optional;
 
                           if (isObjectCollection(property.rawType) && isEditable) {
@@ -1327,7 +1412,14 @@ export const RightPanel = ({
                                     const mapped = normalizeMappedReference(droppedValue, property.name, resources);
                                     onUpdateSelectedResource((resource) => ({
                                       ...resource,
-                                      config: { ...resource.config, attributes: { ...resource.config.attributes, [property.name]: mapped } },
+                                      config: {
+                                        ...resource.config,
+                                        attributes: writeNestedAttribute(
+                                          resource.config.attributes ?? {},
+                                          property.name,
+                                          mapped,
+                                        ),
+                                      },
                                     }));
                                   }}
                                   onChange={(event) => {
@@ -1336,15 +1428,17 @@ export const RightPanel = ({
                                       typeof parsed === "string"
                                         ? normalizeMappedReference(parsed, property.name, resources)
                                         : parsed;
-                                    onUpdateSelectedResource((resource) => {
-                                      const nextAttrs = { ...resource.config.attributes };
-                                      if (nextValue === "" || nextValue === null || nextValue === undefined) {
-                                        delete nextAttrs[property.name];
-                                      } else {
-                                        nextAttrs[property.name] = nextValue;
-                                      }
-                                      return { ...resource, config: { ...resource.config, attributes: nextAttrs } };
-                                    });
+                                    onUpdateSelectedResource((resource) => ({
+                                      ...resource,
+                                      config: {
+                                        ...resource.config,
+                                        attributes: writeNestedAttribute(
+                                          resource.config.attributes ?? {},
+                                          property.name,
+                                          nextValue,
+                                        ),
+                                      },
+                                    }));
                                   }}
                                   className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-800 transition-all outline-none ring-0 focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 focus:border-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                                 />
