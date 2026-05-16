@@ -1,8 +1,10 @@
-import { useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+export type CloudProvider = "aws" | "gcp" | "azure";
 
 export type CredentialMode = "manual" | "profile" | "env";
 
-export interface StoredCredentials {
+export interface AwsStoredCredentials {
   mode: CredentialMode;
   accessKeyId?: string;
   secretAccessKey?: string;
@@ -16,6 +18,31 @@ export interface StoredCredentials {
   envFilePath?: string;
 }
 
+export interface GcpStoredCredentials {
+  mode: "manual";
+  serviceAccountJson?: string;
+  serviceAccountFilePath?: string;
+  projectId?: string;
+  region?: string;
+}
+
+export interface AzureStoredCredentials {
+  mode: "manual";
+  subscriptionId?: string;
+  tenantId?: string;
+  clientId?: string;
+  clientSecret?: string;
+  region?: string;
+}
+
+export type StoredCredentialsMap = {
+  aws: AwsStoredCredentials;
+  gcp: GcpStoredCredentials;
+  azure: AzureStoredCredentials;
+};
+
+export type StoredCredentials = AwsStoredCredentials;
+
 export type ResolvedAwsCredentials = {
   accessKeyId: string;
   secretAccessKey: string;
@@ -23,21 +50,19 @@ export type ResolvedAwsCredentials = {
   region: string;
 };
 
-// Backwards-compat alias used by existing callers (Header etc.)
 export type AwsCredentials = ResolvedAwsCredentials;
 
-const STORAGE_KEY = "ddf_aws_credentials";
+const STORAGE_KEYS: Record<CloudProvider, string> = {
+  aws: "ddf_aws_credentials",
+  gcp: "ddf_gcp_credentials",
+  azure: "ddf_azure_credentials",
+};
 
-function loadFromStorage(): StoredCredentials {
+function loadAwsFromStorage(): AwsStoredCredentials {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEYS.aws);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<StoredCredentials> & {
-        accessKeyId?: string;
-        secretAccessKey?: string;
-        sessionToken?: string;
-        region?: string;
-      };
+      const parsed = JSON.parse(raw) as Partial<AwsStoredCredentials>;
       if (!parsed.mode && (parsed.accessKeyId || parsed.secretAccessKey)) {
         return {
           mode: "manual",
@@ -61,43 +86,127 @@ function loadFromStorage(): StoredCredentials {
         envFilePath: parsed.envFilePath ?? "",
       };
     }
-  } catch {
-    // ignore
-  }
-  return {
-    mode: "manual",
-    accessKeyId: "",
-    secretAccessKey: "",
-    sessionToken: "",
-    region: "us-east-1",
-  };
+  } catch { /* ignore */ }
+  return { mode: "manual", accessKeyId: "", secretAccessKey: "", sessionToken: "", region: "us-east-1" };
 }
 
-export function useAwsCredentials() {
-  const [stored, setStored] = useState<StoredCredentials>(loadFromStorage);
-
-  const save = useCallback((next: StoredCredentials) => {
-    setStored(next);
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    } catch {
-      // ignore storage errors
+function loadGcpFromStorage(): GcpStoredCredentials {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.gcp);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<GcpStoredCredentials>;
+      return {
+        mode: "manual",
+        serviceAccountJson: parsed.serviceAccountJson ?? "",
+        serviceAccountFilePath: parsed.serviceAccountFilePath ?? "",
+        projectId: parsed.projectId ?? "",
+        region: parsed.region ?? "europe-west1",
+      };
     }
+  } catch { /* ignore */ }
+  return { mode: "manual", serviceAccountJson: "", serviceAccountFilePath: "", projectId: "", region: "europe-west1" };
+}
+
+function loadAzureFromStorage(): AzureStoredCredentials {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.azure);
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<AzureStoredCredentials>;
+      return {
+        mode: "manual",
+        subscriptionId: parsed.subscriptionId ?? "",
+        tenantId: parsed.tenantId ?? "",
+        clientId: parsed.clientId ?? "",
+        clientSecret: parsed.clientSecret ?? "",
+        region: parsed.region ?? "westeurope",
+      };
+    }
+  } catch { /* ignore */ }
+  return { mode: "manual", subscriptionId: "", tenantId: "", clientId: "", clientSecret: "", region: "westeurope" };
+}
+
+function isAwsConfigured(c: AwsStoredCredentials): boolean {
+  if (c.mode === "manual") {
+    return (c.accessKeyId ?? "").trim() !== "" && (c.secretAccessKey ?? "").trim() !== "" && (c.region ?? "").trim() !== "";
+  }
+  if (c.mode === "profile") {
+    return (c.profile ?? "").trim() !== "";
+  }
+  return true;
+}
+
+function isGcpConfigured(c: GcpStoredCredentials): boolean {
+  return (
+    ((c.serviceAccountJson ?? "").trim() !== "" || (c.serviceAccountFilePath ?? "").trim() !== "") &&
+    (c.projectId ?? "").trim() !== ""
+  );
+}
+
+function isAzureConfigured(c: AzureStoredCredentials): boolean {
+  return (
+    (c.subscriptionId ?? "").trim() !== "" &&
+    (c.tenantId ?? "").trim() !== "" &&
+    (c.clientId ?? "").trim() !== "" &&
+    (c.clientSecret ?? "").trim() !== ""
+  );
+}
+
+export function useProviderCredentials(provider: CloudProvider) {
+  const [aws, setAws] = useState<AwsStoredCredentials>(loadAwsFromStorage);
+  const [gcp, setGcp] = useState<GcpStoredCredentials>(loadGcpFromStorage);
+  const [azure, setAzure] = useState<AzureStoredCredentials>(loadAzureFromStorage);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEYS.aws) setAws(loadAwsFromStorage());
+      else if (e.key === STORAGE_KEYS.gcp) setGcp(loadGcpFromStorage());
+      else if (e.key === STORAGE_KEYS.azure) setAzure(loadAzureFromStorage());
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
-  const isConfigured = (() => {
-    if (stored.mode === "manual") {
-      return (
-        (stored.accessKeyId ?? "").trim() !== "" &&
-        (stored.secretAccessKey ?? "").trim() !== "" &&
-        (stored.region ?? "").trim() !== ""
-      );
-    }
-    if (stored.mode === "profile") {
-      return (stored.profile ?? "").trim() !== "";
-    }
-    return true;
-  })();
+  const saveAws = useCallback((next: AwsStoredCredentials) => {
+    setAws(next);
+    try { localStorage.setItem(STORAGE_KEYS.aws, JSON.stringify(next)); } catch { /* ignore */ }
+  }, []);
+  const saveGcp = useCallback((next: GcpStoredCredentials) => {
+    setGcp(next);
+    try { localStorage.setItem(STORAGE_KEYS.gcp, JSON.stringify(next)); } catch { /* ignore */ }
+  }, []);
+  const saveAzure = useCallback((next: AzureStoredCredentials) => {
+    setAzure(next);
+    try { localStorage.setItem(STORAGE_KEYS.azure, JSON.stringify(next)); } catch { /* ignore */ }
+  }, []);
 
-  return { stored, save, isConfigured };
+  const save = useCallback(
+    (next: AwsStoredCredentials | GcpStoredCredentials | AzureStoredCredentials) => {
+      if (provider === "aws") saveAws(next as AwsStoredCredentials);
+      else if (provider === "gcp") saveGcp(next as GcpStoredCredentials);
+      else saveAzure(next as AzureStoredCredentials);
+    },
+    [provider, saveAws, saveGcp, saveAzure],
+  );
+
+  const stored: AwsStoredCredentials | GcpStoredCredentials | AzureStoredCredentials =
+    provider === "aws" ? aws : provider === "gcp" ? gcp : azure;
+
+  const isConfigured =
+    provider === "aws" ? isAwsConfigured(aws) :
+    provider === "gcp" ? isGcpConfigured(gcp) :
+    isAzureConfigured(azure);
+
+  return { stored, save, isConfigured, aws, gcp, azure };
+}
+
+// Backwards-compatible hook (returns AWS only) for callers that still rely on it
+export function useAwsCredentials() {
+  const [stored, setStored] = useState<AwsStoredCredentials>(loadAwsFromStorage);
+
+  const save = useCallback((next: AwsStoredCredentials) => {
+    setStored(next);
+    try { localStorage.setItem(STORAGE_KEYS.aws, JSON.stringify(next)); } catch { /* ignore */ }
+  }, []);
+
+  return { stored, save, isConfigured: isAwsConfigured(stored) };
 }

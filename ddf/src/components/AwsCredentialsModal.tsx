@@ -1,6 +1,12 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { CredentialMode, StoredCredentials } from "../hooks/useAwsCredentials";
+import type {
+  AwsStoredCredentials,
+  AzureStoredCredentials,
+  CloudProvider,
+  CredentialMode,
+  GcpStoredCredentials,
+} from "../hooks/useAwsCredentials";
 
 const AWS_REGIONS = [
   "us-east-1",
@@ -51,13 +57,65 @@ type AwsEnvSource = {
   envFileExists: boolean;
 };
 
+const GCP_REGIONS = [
+  "europe-west1",
+  "europe-west2",
+  "europe-west3",
+  "europe-west4",
+  "europe-southwest1",
+  "us-central1",
+  "us-east1",
+  "us-east4",
+  "us-west1",
+  "us-west2",
+  "asia-east1",
+  "asia-northeast1",
+  "asia-southeast1",
+];
+
+const AZURE_REGIONS = [
+  "westeurope",
+  "northeurope",
+  "uksouth",
+  "ukwest",
+  "francecentral",
+  "germanywestcentral",
+  "spaincentral",
+  "eastus",
+  "eastus2",
+  "westus",
+  "westus2",
+  "centralus",
+  "japaneast",
+  "southeastasia",
+];
+
+type StoredAny = AwsStoredCredentials | GcpStoredCredentials | AzureStoredCredentials;
+
 type Props = {
-  initial: StoredCredentials;
-  onSave: (credentials: StoredCredentials) => void;
+  provider?: CloudProvider;
+  initial: StoredAny;
+  onSave: (credentials: StoredAny) => void;
   onClose: () => void;
 };
 
-export default function AwsCredentialsModal({ initial, onSave, onClose }: Props) {
+const PROVIDER_TITLE: Record<CloudProvider, string> = {
+  aws: "Credenciales AWS",
+  gcp: "Credenciales Google Cloud",
+  azure: "Credenciales Microsoft Azure",
+};
+
+export default function AwsCredentialsModal({ provider = "aws", initial, onSave, onClose }: Props) {
+  if (provider === "gcp") {
+    return <GcpCredentialsForm initial={initial as GcpStoredCredentials} onSave={onSave as (c: GcpStoredCredentials) => void} onClose={onClose} />;
+  }
+  if (provider === "azure") {
+    return <AzureCredentialsForm initial={initial as AzureStoredCredentials} onSave={onSave as (c: AzureStoredCredentials) => void} onClose={onClose} />;
+  }
+  return <AwsCredentialsForm initial={initial as AwsStoredCredentials} onSave={onSave as (c: AwsStoredCredentials) => void} onClose={onClose} />;
+}
+
+function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCredentials; onSave: (c: AwsStoredCredentials) => void; onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<CredentialMode>(initial.mode ?? "manual");
 
   // Manual tab state
@@ -243,7 +301,7 @@ export default function AwsCredentialsModal({ initial, onSave, onClose }: Props)
     >
       <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] p-6 flex flex-col gap-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-white text-base font-semibold">Credenciales AWS</h2>
+          <h2 className="text-white text-base font-semibold">{PROVIDER_TITLE.aws}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -555,5 +613,288 @@ function EnvRow({ name, value }: { name: string; value: string | null }) {
         {value ?? "no establecida"}
       </span>
     </div>
+  );
+}
+
+function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
+  title: string;
+  accent: "blue" | "sky";
+  onClose: () => void;
+  children: React.ReactNode;
+  canSave: boolean;
+  onSave: () => void;
+}) {
+  const saveBtnClass = accent === "blue"
+    ? "bg-blue-600 hover:bg-blue-500"
+    : "bg-sky-600 hover:bg-sky-500";
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] p-6 flex flex-col gap-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-white text-base font-semibold">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-gray-400 hover:text-white text-xl leading-none"
+          >
+            ×
+          </button>
+        </div>
+        {children}
+        <div className="flex justify-end gap-2 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-1.5 rounded text-sm text-gray-300 hover:text-white hover:bg-gray-700"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!canSave}
+            className={`px-4 py-1.5 rounded text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed font-medium ${saveBtnClass}`}
+          >
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCredentials; onSave: (c: GcpStoredCredentials) => void; onClose: () => void }) {
+  const [serviceAccountJson, setServiceAccountJson] = useState(initial.serviceAccountJson ?? "");
+  const [serviceAccountFilePath, setServiceAccountFilePath] = useState(initial.serviceAccountFilePath ?? "");
+  const [projectId, setProjectId] = useState(initial.projectId ?? "");
+  const [region, setRegion] = useState(initial.region || "europe-west1");
+  const [showJson, setShowJson] = useState(false);
+
+  const trimmedJson = serviceAccountJson.trim();
+  const trimmedPath = serviceAccountFilePath.trim();
+  const trimmedProject = projectId.trim();
+
+  let jsonError: string | null = null;
+  if (trimmedJson) {
+    try {
+      const parsed = JSON.parse(trimmedJson);
+      if (typeof parsed !== "object" || parsed === null || !("client_email" in parsed) || !("private_key" in parsed)) {
+        jsonError = "El JSON no parece una service account válida (faltan client_email/private_key).";
+      }
+    } catch {
+      jsonError = "JSON inválido.";
+    }
+  }
+
+  const canSave = trimmedProject !== "" && (trimmedJson !== "" || trimmedPath !== "") && !jsonError;
+
+  const handleSave = () => {
+    if (!canSave) return;
+    onSave({
+      mode: "manual",
+      serviceAccountJson: trimmedJson || undefined,
+      serviceAccountFilePath: trimmedPath || undefined,
+      projectId: trimmedProject,
+      region,
+    });
+    onClose();
+  };
+
+  return (
+    <ModalShell title={PROVIDER_TITLE.gcp} accent="blue" onClose={onClose} onSave={handleSave} canSave={canSave}>
+      <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
+        <p>Se guardan solo en tu equipo (localStorage).</p>
+        <ol className="mt-2 list-decimal pl-4 text-gray-400 space-y-1">
+          <li>Crea una Service Account en IAM con permisos para Terraform.</li>
+          <li>Descarga su clave en formato JSON.</li>
+          <li>Pega el contenido del JSON o indica la ruta al archivo.</li>
+        </ol>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Project ID</label>
+        <input
+          type="text"
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          placeholder="my-gcp-project-123456"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          autoComplete="off"
+          spellCheck={false}
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Ruta a service account JSON (opcional)</label>
+        <input
+          type="text"
+          value={serviceAccountFilePath}
+          onChange={(e) => setServiceAccountFilePath(e.target.value)}
+          placeholder="/ruta/a/service-account.json"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-xs font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          spellCheck={false}
+        />
+        <span className="text-[10px] text-gray-500">Si pegas el JSON abajo, no necesitas ruta.</span>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Service Account JSON</label>
+        <div className="relative">
+          <textarea
+            value={showJson ? serviceAccountJson : serviceAccountJson ? "•".repeat(Math.min(serviceAccountJson.length, 200)) : ""}
+            onChange={(e) => { if (showJson) setServiceAccountJson(e.target.value); }}
+            placeholder='{"type":"service_account","project_id":"...","private_key":"-----BEGIN..."}'
+            rows={5}
+            className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-12 text-white text-[11px] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full resize-none"
+            spellCheck={false}
+            readOnly={!showJson}
+          />
+          <button
+            type="button"
+            onClick={() => setShowJson((v) => !v)}
+            className="absolute right-2 top-2 text-gray-400 hover:text-white text-xs"
+          >
+            {showJson ? "ocultar" : "ver/editar"}
+          </button>
+        </div>
+        {jsonError && <span className="text-[11px] text-amber-300">{jsonError}</span>}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Region</label>
+        <select
+          value={region}
+          onChange={(e) => setRegion(e.target.value)}
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+        >
+          {GCP_REGIONS.map((r) => (
+            <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
+          ))}
+        </select>
+      </div>
+    </ModalShell>
+  );
+}
+
+function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStoredCredentials; onSave: (c: AzureStoredCredentials) => void; onClose: () => void }) {
+  const [subscriptionId, setSubscriptionId] = useState(initial.subscriptionId ?? "");
+  const [tenantId, setTenantId] = useState(initial.tenantId ?? "");
+  const [clientId, setClientId] = useState(initial.clientId ?? "");
+  const [clientSecret, setClientSecret] = useState(initial.clientSecret ?? "");
+  const [region, setRegion] = useState(initial.region || "westeurope");
+  const [showSecret, setShowSecret] = useState(false);
+
+  const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const subError = subscriptionId.trim() && !uuidRe.test(subscriptionId.trim()) ? "Debe ser un UUID." : null;
+  const tenantError = tenantId.trim() && !uuidRe.test(tenantId.trim()) ? "Debe ser un UUID." : null;
+  const clientError = clientId.trim() && !uuidRe.test(clientId.trim()) ? "Debe ser un UUID." : null;
+
+  const canSave =
+    subscriptionId.trim() !== "" && !subError &&
+    tenantId.trim() !== "" && !tenantError &&
+    clientId.trim() !== "" && !clientError &&
+    clientSecret.trim() !== "";
+
+  const handleSave = () => {
+    if (!canSave) return;
+    onSave({
+      mode: "manual",
+      subscriptionId: subscriptionId.trim(),
+      tenantId: tenantId.trim(),
+      clientId: clientId.trim(),
+      clientSecret: clientSecret.trim(),
+      region,
+    });
+    onClose();
+  };
+
+  return (
+    <ModalShell title={PROVIDER_TITLE.azure} accent="sky" onClose={onClose} onSave={handleSave} canSave={canSave}>
+      <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
+        <p>Se guardan solo en tu equipo (localStorage).</p>
+        <ol className="mt-2 list-decimal pl-4 text-gray-400 space-y-1">
+          <li>Crea un Service Principal en Azure AD.</li>
+          <li>Asigna roles sobre la Subscription que vas a desplegar.</li>
+          <li>Copia subscription/tenant/client ID + secret.</li>
+        </ol>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Subscription ID</label>
+        <input
+          type="text"
+          value={subscriptionId}
+          onChange={(e) => setSubscriptionId(e.target.value)}
+          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          spellCheck={false}
+        />
+        {subError && <span className="text-[11px] text-amber-300">{subError}</span>}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Tenant ID</label>
+        <input
+          type="text"
+          value={tenantId}
+          onChange={(e) => setTenantId(e.target.value)}
+          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          spellCheck={false}
+        />
+        {tenantError && <span className="text-[11px] text-amber-300">{tenantError}</span>}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Client ID</label>
+        <input
+          type="text"
+          value={clientId}
+          onChange={(e) => setClientId(e.target.value)}
+          placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          spellCheck={false}
+        />
+        {clientError && <span className="text-[11px] text-amber-300">{clientError}</span>}
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Client Secret</label>
+        <div className="relative">
+          <input
+            type={showSecret ? "text" : "password"}
+            value={clientSecret}
+            onChange={(e) => setClientSecret(e.target.value)}
+            placeholder="•••••••"
+            className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 w-full"
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <button
+            type="button"
+            onClick={() => setShowSecret((v) => !v)}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs"
+          >
+            {showSecret ? "ocultar" : "ver"}
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-gray-300 text-xs font-medium">Region</label>
+        <select
+          value={region}
+          onChange={(e) => setRegion(e.target.value)}
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-sky-500"
+        >
+          {AZURE_REGIONS.map((r) => (
+            <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
+          ))}
+        </select>
+      </div>
+    </ModalShell>
   );
 }

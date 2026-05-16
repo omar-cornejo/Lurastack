@@ -1,10 +1,38 @@
 import type { AwsCredentials } from "../hooks/useAwsCredentials";
 
+type CloudProvider = "aws" | "gcp" | "azure";
+
+const PROVIDER_BADGE: Record<CloudProvider, { label: string; tooltipConfigured: string; tooltipUnconfigured: string; configuredClass: string; dotConfiguredClass: string }> = {
+  aws: {
+    label: "AWS",
+    tooltipConfigured: "Credenciales AWS configuradas",
+    tooltipUnconfigured: "Configurar credenciales AWS",
+    configuredClass: "border-orange-500 text-orange-300 hover:bg-orange-900/30",
+    dotConfiguredClass: "bg-orange-400",
+  },
+  gcp: {
+    label: "GCP",
+    tooltipConfigured: "Credenciales GCP configuradas",
+    tooltipUnconfigured: "Configurar credenciales GCP",
+    configuredClass: "border-blue-500 text-blue-300 hover:bg-blue-900/30",
+    dotConfiguredClass: "bg-blue-400",
+  },
+  azure: {
+    label: "Azure",
+    tooltipConfigured: "Credenciales Azure configuradas",
+    tooltipUnconfigured: "Configurar credenciales Azure",
+    configuredClass: "border-sky-500 text-sky-300 hover:bg-sky-900/30",
+    dotConfiguredClass: "bg-sky-400",
+  },
+};
+
 type HeaderProps = {
   onClearCanvas: () => void;
   activeSection: "canvas" | "code" | "diff" | "cloud";
   onSectionChange?: (section: "canvas" | "code" | "diff" | "cloud") => void;
   awsCredentials?: AwsCredentials;
+  cloudProvider?: CloudProvider;
+  credentialsConfigured?: boolean;
   awsConfigured?: boolean;
   onOpenAwsConfig?: () => void;
   onPlan?: () => void;
@@ -23,6 +51,8 @@ export default function Header({
   onClearCanvas,
   activeSection,
   onSectionChange,
+  cloudProvider = "aws",
+  credentialsConfigured,
   awsConfigured = false,
   onOpenAwsConfig,
   onPlan,
@@ -36,6 +66,8 @@ export default function Header({
   onCancelDestroy,
   isDeploying = false,
 }: HeaderProps) {
+  const isConfigured = credentialsConfigured ?? awsConfigured;
+  const badge = PROVIDER_BADGE[cloudProvider];
   return (
     <header className="bg-gray-800 text-white p-2 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -89,29 +121,29 @@ export default function Header({
       </div>
 
       <nav className="flex items-center gap-2">
-        {/* AWS credentials button */}
+        {/* Provider credentials button */}
         <button
           type="button"
           onClick={onOpenAwsConfig}
-          title={awsConfigured ? "Credenciales AWS configuradas" : "Configurar credenciales AWS"}
+          title={isConfigured ? badge.tooltipConfigured : badge.tooltipUnconfigured}
           className={`flex items-center gap-1.5 rounded px-3 py-1 text-sm font-medium border ${
-            awsConfigured
-              ? "border-orange-500 text-orange-300 hover:bg-orange-900/30"
+            isConfigured
+              ? badge.configuredClass
               : "border-gray-500 text-gray-300 hover:bg-gray-700"
           }`}
         >
           <span
-            className={`inline-block w-2 h-2 rounded-full ${awsConfigured ? "bg-orange-400" : "bg-gray-500"}`}
+            className={`inline-block w-2 h-2 rounded-full ${isConfigured ? badge.dotConfiguredClass : "bg-gray-500"}`}
           />
-          AWS
+          {badge.label}
         </button>
 
         {/* Plan button */}
         <button
           type="button"
           onClick={onPlan}
-          disabled={isDeploying || !awsConfigured}
-          title={!awsConfigured ? "Configura las credenciales AWS primero" : "Ejecutar terraform plan"}
+          disabled={isDeploying || !isConfigured}
+          title={!isConfigured ? `Configura las credenciales ${badge.label} primero` : "Ejecutar terraform plan"}
           className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isDeploying ? "..." : "Plan"}
@@ -121,12 +153,12 @@ export default function Header({
         <button
           type="button"
           onClick={isApplyConfirming ? onConfirmApply : onApply}
-          disabled={!isApplyConfirming && (isDeploying || !awsConfigured)}
+          disabled={!isApplyConfirming && (isDeploying || !isConfigured)}
           title={
             isApplyConfirming
               ? "Confirmar: enviar 'yes' a terraform apply"
-              : !awsConfigured
-              ? "Configura las credenciales AWS primero"
+              : !isConfigured
+              ? `Configura las credenciales ${badge.label} primero`
               : "Ejecutar terraform apply"
           }
           className={`rounded px-3 py-1 text-sm font-medium border transition-colors ${
@@ -152,12 +184,12 @@ export default function Header({
         <button
           type="button"
           onClick={isDestroyConfirming ? onConfirmDestroy : onDestroy}
-          disabled={!isDestroyConfirming && (isDeploying || !awsConfigured)}
+          disabled={!isDestroyConfirming && (isDeploying || !isConfigured)}
           title={
             isDestroyConfirming
               ? "Confirmar: enviar 'yes' a terraform destroy"
-              : !awsConfigured
-              ? "Configura las credenciales AWS primero"
+              : !isConfigured
+              ? `Configura las credenciales ${badge.label} primero`
               : "Ejecutar terraform destroy"
           }
           className={`rounded px-3 py-1 text-sm font-medium border transition-colors ${

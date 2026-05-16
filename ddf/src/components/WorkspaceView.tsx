@@ -56,7 +56,7 @@ import {
 import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
-import { useAwsCredentials } from "../hooks/useAwsCredentials";
+import { useProviderCredentials } from "../hooks/useAwsCredentials";
 import { sileo } from "sileo";
 import { importHclBlocksToResources } from "../commands/hclImporter";
 
@@ -171,7 +171,12 @@ export default function WorkspaceView({
   const hclPersistenceDisabledRef = useRef(false);
   const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
   const lastPopoutHeartbeatRef = useRef<number>(0);
-  const { stored: awsCredentials, save: saveAwsCredentials, isConfigured: awsConfigured } = useAwsCredentials();
+  const {
+    stored: providerCredentials,
+    save: saveProviderCredentials,
+    isConfigured: providerConfigured,
+    aws: awsCredentials,
+  } = useProviderCredentials(cloudProvider);
   const [planChanges, setPlanChanges] = useState<Map<string, ResourcePlanChange>>(new Map());
   const planBufferRef = useRef("");
   const planCurrentAddressRef = useRef<string | null>(null);
@@ -1479,8 +1484,9 @@ export default function WorkspaceView({
     <div className="flex flex-col flex-1 overflow-hidden">
       {showAwsConfig && (
         <AwsCredentialsModal
-          initial={awsCredentials}
-          onSave={saveAwsCredentials}
+          provider={cloudProvider}
+          initial={providerCredentials}
+          onSave={saveProviderCredentials}
           onClose={() => setShowAwsConfig(false)}
         />
       )}
@@ -1488,7 +1494,8 @@ export default function WorkspaceView({
         onClearCanvas={clearCanvas}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
-        awsConfigured={awsConfigured}
+        cloudProvider={cloudProvider}
+        credentialsConfigured={providerConfigured}
         onOpenAwsConfig={() => setShowAwsConfig(true)}
         onPlan={() => { setActiveSection("diff"); void runTerraformAction("terraform_plan"); }}
         onApply={() => triggerDeployAction("terraform_apply")}
