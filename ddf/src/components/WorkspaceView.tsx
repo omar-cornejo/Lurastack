@@ -1675,6 +1675,7 @@ export default function WorkspaceView({
           resources={project.resources}
           schemas={NODE_SCHEMAS}
           mode={activeSection === "code" ? "code" : "canvas"}
+          hideMapper={activeSection === "diff" || activeSection === "cloud"}
           logs={codeLogs}
           projectDir={projectDir}
           viewId={viewId}

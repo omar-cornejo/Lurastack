@@ -31,6 +31,7 @@ type BottomPanelProps = {
   leftOffset?: number;
   terminalEnvVars?: Record<string, string>;
   isTerraformRunning?: boolean;
+  hideMapper?: boolean;
 };
 
 type BottomPanelTab = "terminal" | "mapper" | "logs";
@@ -61,8 +62,9 @@ export default function BottomPanel({
   leftOffset = 0,
   terminalEnvVars,
   isTerraformRunning = false,
+  hideMapper = false,
 }: BottomPanelProps) {
-  const showMapperTab = mode === "canvas";
+  const showMapperTab = (mode === "canvas" || mode === "code") && !hideMapper;
   const [open, setOpen] = useState(true);
   const [height, setHeight] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
@@ -91,6 +93,12 @@ export default function BottomPanel({
     isTerraformRunningRef.current = isTerraformRunning;
   }, [isTerraformRunning]);
 
+  useEffect(() => {
+    if (!showMapperTab && activeTab === "mapper") {
+      setActiveTab(suppressTerminal ? "logs" : "terminal");
+    }
+  }, [showMapperTab, activeTab, suppressTerminal]);
+
   const envVarsKey = useMemo(() => {
     if (!terminalEnvVars) return "";
     return Object.keys(terminalEnvVars)
@@ -103,12 +111,6 @@ export default function BottomPanel({
     () => [...logs].sort((left, right) => right.timestamp.localeCompare(left.timestamp)),
     [logs],
   );
-
-  useEffect(() => {
-    if (mode === "code" && activeTab === "mapper") {
-      setActiveTab("logs");
-    }
-  }, [activeTab, mode]);
 
   useEffect(() => {
     if (suppressTerminal && activeTab === "terminal") {
