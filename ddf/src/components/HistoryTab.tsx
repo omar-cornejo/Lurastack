@@ -22,6 +22,21 @@ function relativeTime(iso: string): string {
   return `hace ${days} d`;
 }
 
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (dayKey(iso) === dayKey(today.toISOString())) return "Hoy";
+  if (dayKey(iso) === dayKey(yesterday.toISOString())) return "Ayer";
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+}
+
 function actionIcon(action: HistoryAction): string {
   switch (action) {
     case "terraform_plan": return "mdi:magnify";
@@ -42,14 +57,14 @@ function actionLabel(action: HistoryAction): string {
   }
 }
 
-function actionColor(action: HistoryAction, success: boolean): string {
-  if (!success) return "text-red-500";
+function actionColor(action: HistoryAction, success: boolean): { icon: string; label: string } {
+  if (!success) return { icon: "text-red-600", label: "text-slate-800" };
   switch (action) {
-    case "terraform_apply": return "text-emerald-600";
-    case "terraform_destroy": return "text-red-500";
-    case "terraform_plan":
-    case "terraform_plan_destroy": return "text-slate-500";
-    case "local-edit": return "text-indigo-500";
+    case "terraform_apply": return { icon: "text-emerald-600", label: "text-slate-800" };
+    case "terraform_destroy": return { icon: "text-red-600", label: "text-slate-800" };
+    case "terraform_plan": return { icon: "text-sky-600", label: "text-slate-800" };
+    case "terraform_plan_destroy": return { icon: "text-amber-600", label: "text-slate-800" };
+    case "local-edit": return { icon: "text-indigo-600", label: "text-slate-800" };
   }
 }
 
@@ -61,9 +76,9 @@ function SummaryChip({ summary }: { summary: { created: number; changed: number;
   if (parts.length === 0) return null;
   return (
     <span className="inline-flex gap-1 text-[10px] font-mono">
-      {summary.created > 0 && <span className="text-emerald-600">+{summary.created}</span>}
-      {summary.changed > 0 && <span className="text-amber-600">~{summary.changed}</span>}
-      {summary.destroyed > 0 && <span className="text-red-500">-{summary.destroyed}</span>}
+      {summary.created > 0 && <span className="text-emerald-700">+{summary.created}</span>}
+      {summary.changed > 0 && <span className="text-amber-700">~{summary.changed}</span>}
+      {summary.destroyed > 0 && <span className="text-red-700">-{summary.destroyed}</span>}
     </span>
   );
 }
@@ -123,7 +138,7 @@ export default function HistoryTab({
     : entries.filter((e) => e.viewId === currentViewId);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full w-full min-w-0 overflow-hidden pl-1.5">
       {/* Header / filter toggle */}
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
         <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
@@ -143,7 +158,7 @@ export default function HistoryTab({
       </div>
 
       {/* Entry list */}
-      <div className="flex-1 overflow-y-auto" style={{ scrollbarWidth: "thin", scrollbarColor: "#e2e8f0 transparent" }}>
+      <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: "thin", scrollbarColor: "#e2e8f0 transparent" }}>
         {filtered.length === 0 && (
           <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
@@ -157,24 +172,35 @@ export default function HistoryTab({
           </div>
         )}
 
-        {filtered.map((entry) => {
+        {filtered.map((entry, index) => {
           const isExpanded = expandedId === entry.id;
           const color = actionColor(entry.action, entry.success);
+          const prevEntry = index > 0 ? filtered[index - 1] : null;
+          const showDayDivider = !prevEntry || dayKey(prevEntry.timestamp) !== dayKey(entry.timestamp);
 
           return (
-            <div key={entry.id} className="border-b border-slate-100 last:border-b-0">
+            <div key={entry.id}>
+            {/* Day divider */}
+            {showDayDivider && (
+              <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-1.5">
+                <span className="inline-block max-w-full truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  {dayLabel(entry.timestamp)}
+                </span>
+              </div>
+            )}
+            <div className="border-b border-slate-100 last:border-b-0">
               {/* Row */}
               <button
                 type="button"
-                className="flex w-full items-start gap-2.5 px-3 py-2.5 text-left hover:bg-slate-50 transition-colors"
+                className="flex w-full items-start gap-2.5 bg-slate-50 px-3 py-2.5 text-left"
                 onClick={() => void handleExpand(entry.id)}
               >
-                <div className={`mt-0.5 shrink-0 ${color}`}>
+                <div className={`mt-0.5 shrink-0 ${color.icon}`}>
                   <Icon icon={actionIcon(entry.action)} width={15} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[12px] font-semibold ${color}`}>
+                    <span className={`text-[12px] font-medium ${color.label}`}>
                       {actionLabel(entry.action)}
                     </span>
                     {!entry.success && (
@@ -230,20 +256,20 @@ export default function HistoryTab({
                             {expandedEntry.changes.map((change) => (
                               <div
                                 key={change.address}
-                                className="flex items-center gap-2 text-[11px]"
+                                className="flex min-w-0 items-center gap-2 text-[11px]"
                               >
                                 <span
-                                  className={
+                                  className={`shrink-0 ${
                                     change.action === "create"
                                       ? "text-emerald-600 font-bold"
                                       : change.action === "destroy"
                                         ? "text-red-500 font-bold"
                                         : "text-amber-600 font-bold"
-                                  }
+                                  }`}
                                 >
                                   {change.action === "create" ? "+" : change.action === "destroy" ? "-" : "~"}
                                 </span>
-                                <span className="font-mono text-slate-700 truncate">{change.address}</span>
+                                <span className="min-w-0 flex-1 truncate font-mono text-slate-700">{change.address}</span>
                               </div>
                             ))}
                           </div>
@@ -290,6 +316,7 @@ export default function HistoryTab({
                   )}
                 </div>
               )}
+            </div>
             </div>
           );
         })}

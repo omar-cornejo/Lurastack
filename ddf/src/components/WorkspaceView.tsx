@@ -454,62 +454,62 @@ export default function WorkspaceView({
     };
   }, [broadcastBottomPanelState, viewId]);
 
-  // ── Local-edit history coalescing ────────────────────────────────────────────
-  const localEditSessionStartRef = useRef<import("../types/project").DdfViewSnapshot | null>(null);
-  const localEditPendingRef = useRef<import("../types/project").DdfViewSnapshot | null>(null);
-  const localEditLastAtRef = useRef<number>(0);
-  const localEditIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const LOCAL_EDIT_IDLE_MS = 5 * 60 * 1000;
+  // ── Local-edit history: atomic per-change tracking ───────────────────────────
+  // Tracks the last snapshot committed to history. Any meaningful change
+  // (resource add/remove, attribute change, edge add/remove) produces ONE entry.
+  // Pure node-position drags are ignored to avoid spam during canvas dragging.
+  const lastCommittedSnapshotRef = useRef<import("../types/project").DdfViewSnapshot | null>(null);
 
-  const isViewSnapshotEmpty = (snap: import("../types/project").DdfViewSnapshot) =>
-    snap.resources.length === 0 && snap.nodes.length === 0 && snap.edges.length === 0;
+  const computeLocalEditDiff = (
+    before: import("../types/project").DdfViewSnapshot,
+    after: import("../types/project").DdfViewSnapshot,
+  ): {
+    changes: Array<{ address: string; action: "create" | "change" | "destroy" }>;
+    summary: { created: number; changed: number; destroyed: number };
+  } => {
+    const beforeRes = new Map(before.resources.map((r) => [`${r.type}.${r.name}`, r]));
+    const afterRes = new Map(after.resources.map((r) => [`${r.type}.${r.name}`, r]));
+    const changes: Array<{ address: string; action: "create" | "change" | "destroy" }> = [];
+    let created = 0, changed = 0, destroyed = 0;
 
-  const snapshotsAreSame = (
-    a: import("../types/project").DdfViewSnapshot,
-    b: import("../types/project").DdfViewSnapshot,
-  ) =>
-    JSON.stringify({ r: a.resources, n: a.nodes.map(n => n.id), e: a.edges.map(e => e.id) }) ===
-    JSON.stringify({ r: b.resources, n: b.nodes.map(n => n.id), e: b.edges.map(e => e.id) });
-
-  const commitLocalEditSession = useCallback(() => {
-    if (!projectDir) return;
-    const start = localEditSessionStartRef.current;
-    const pending = localEditPendingRef.current;
-    if (!start || !pending) return;
-    if (localEditIdleTimerRef.current) {
-      clearTimeout(localEditIdleTimerRef.current);
-      localEditIdleTimerRef.current = null;
+    // Resources added / modified
+    for (const [key, afterR] of afterRes) {
+      const beforeR = beforeRes.get(key);
+      if (!beforeR) {
+        changes.push({ address: key, action: "create" });
+        created++;
+      } else if (JSON.stringify(beforeR.config) !== JSON.stringify(afterR.config)) {
+        changes.push({ address: key, action: "change" });
+        changed++;
+      }
     }
-    localEditSessionStartRef.current = null;
-    localEditPendingRef.current = null;
+    // Resources removed
+    for (const key of beforeRes.keys()) {
+      if (!afterRes.has(key)) {
+        changes.push({ address: key, action: "destroy" });
+        destroyed++;
+      }
+    }
 
-    if (snapshotsAreSame(start, pending) || isViewSnapshotEmpty(start)) return;
+    // Edges added / removed (identified by source→target pair, ignoring id changes)
+    const edgeKey = (e: { source: string; target: string }) => `${e.source}→${e.target}`;
+    const beforeEdges = new Set(before.edges.map(edgeKey));
+    const afterEdges = new Set(after.edges.map(edgeKey));
+    for (const key of afterEdges) {
+      if (!beforeEdges.has(key)) {
+        changes.push({ address: `edge: ${key}`, action: "create" });
+        created++;
+      }
+    }
+    for (const key of beforeEdges) {
+      if (!afterEdges.has(key)) {
+        changes.push({ address: `edge: ${key}`, action: "destroy" });
+        destroyed++;
+      }
+    }
 
-    const rDelta = pending.resources.length - start.resources.length;
-    const nDelta = pending.nodes.length - start.nodes.length;
-    const eDelta = pending.edges.length - start.edges.length;
-    const parts: string[] = [];
-    if (rDelta !== 0) parts.push(`${rDelta > 0 ? "+" : ""}${rDelta} recursos`);
-    if (nDelta !== 0) parts.push(`${nDelta > 0 ? "+" : ""}${nDelta} nodos`);
-    if (eDelta !== 0) parts.push(`${eDelta > 0 ? "+" : ""}${eDelta} conexiones`);
-    const message = parts.join(", ") || "cambios locales";
-
-    const entry: HistoryEntry = {
-      id: crypto.randomUUID(),
-      timestamp: new Date().toISOString(),
-      action: "local-edit",
-      success: true,
-      viewId,
-      viewName,
-      summary: { created: 0, changed: 0, destroyed: 0 },
-      message,
-      snapshotBefore: start,
-      snapshotAfter: pending,
-    };
-    void appendHistoryEntry(projectDir, entry).then(() => {
-      setHistoryRefreshSignal((s) => s + 1);
-    });
-  }, [projectDir, viewId, viewName]);
+    return { changes, summary: { created, changed, destroyed } };
+  };
 
   const handleRestoreFromHistory = useCallback(
     (snapshot: import("../types/project").DdfViewSnapshot) => {
@@ -518,11 +518,14 @@ export default function WorkspaceView({
       setProject((prev) => ({ ...prev, resources: snapshot.resources }));
       setCodeFiles(snapshot.codeFiles ?? []);
       setIsDivergent(true);
+      // Treat restored state as the new baseline so we don't emit a giant
+      // local-edit entry that "reverts" everything from the previous state.
+      lastCommittedSnapshotRef.current = snapshot;
     },
     [setNodes, setEdges],
   );
 
-  // Report state changes for project save / autosave
+  // Report state changes for project save / autosave + atomic local-edit history
   useEffect(() => {
     if (!onStateChange) return;
     const timeout = setTimeout(() => {
@@ -536,17 +539,45 @@ export default function WorkspaceView({
       };
       onStateChange(viewId, snap);
 
-      // Local-edit session tracking
-      if (!localEditSessionStartRef.current) {
-        localEditSessionStartRef.current = snap;
+      // First snapshot in this session: just establish the baseline, no entry.
+      if (!lastCommittedSnapshotRef.current) {
+        lastCommittedSnapshotRef.current = snap;
+        return;
       }
-      localEditPendingRef.current = snap;
-      localEditLastAtRef.current = Date.now();
 
-      if (localEditIdleTimerRef.current) clearTimeout(localEditIdleTimerRef.current);
-      localEditIdleTimerRef.current = setTimeout(() => {
-        commitLocalEditSession();
-      }, LOCAL_EDIT_IDLE_MS);
+      if (!projectDir) return;
+
+      const previous = lastCommittedSnapshotRef.current;
+      const { changes, summary } = computeLocalEditDiff(previous, snap);
+
+      // No meaningful change (e.g. pure node drag) → don't write history.
+      if (changes.length === 0) return;
+
+      // Compose human-readable message
+      const parts: string[] = [];
+      if (summary.created !== 0) parts.push(`+${summary.created}`);
+      if (summary.changed !== 0) parts.push(`~${summary.changed}`);
+      if (summary.destroyed !== 0) parts.push(`-${summary.destroyed}`);
+      const message = parts.join(" ") || "cambio local";
+
+      const entry: HistoryEntry = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        action: "local-edit",
+        success: true,
+        viewId,
+        viewName,
+        summary,
+        changes,
+        message,
+        snapshotBefore: previous,
+        snapshotAfter: snap,
+      };
+
+      lastCommittedSnapshotRef.current = snap;
+      void appendHistoryEntry(projectDir, entry).then(() => {
+        setHistoryRefreshSignal((s) => s + 1);
+      });
     }, 800);
     return () => clearTimeout(timeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1543,9 +1574,6 @@ export default function WorkspaceView({
     ) => {
       if (!projectDir || !isTauriRuntime) return;
 
-      // Commit any pending local-edit session before a terraform action
-      commitLocalEditSession();
-
       const snapshotBefore = captureViewSnapshot();
       setPlanChanges(new Map());
       setIsDeploying(true);
@@ -1623,7 +1651,7 @@ export default function WorkspaceView({
         }
       }
     },
-    [projectDir, isTauriRuntime, awsCredentials, refreshCloudState, captureViewSnapshot, viewId, viewName, commitLocalEditSession],
+    [projectDir, isTauriRuntime, awsCredentials, refreshCloudState, captureViewSnapshot, viewId, viewName],
   );
 
   const confirmTerraformAction = useCallback(
@@ -1694,7 +1722,10 @@ export default function WorkspaceView({
 
             <main className="relative flex flex-1 min-h-0 overflow-hidden bg-white">
               {activeSection === "cloud" && (
-                <div className="pointer-events-none absolute left-1/2 top-3 z-20 -translate-x-1/2">
+                <div
+                  className="pointer-events-none absolute bottom-3 z-20 transition-[left] duration-200"
+                  style={{ left: `${leftPanelWidth + 12}px` }}
+                >
                   <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 shadow-md backdrop-blur">
                     <span
                       className={`inline-block h-2 w-2 rounded-full ${

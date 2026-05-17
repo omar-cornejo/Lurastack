@@ -20,7 +20,8 @@ import {
 import HistoryTab from "./HistoryTab";
 import type { DdfViewSnapshot } from "../types/project";
 
-type RightPanelTab = "info" | "hcl" | "history";
+type RightPanelTab = "info" | "hcl";
+type RightPanelMode = "inspector" | "history";
 
 type PropertySection = {
   sectionKey: string;
@@ -477,6 +478,7 @@ export const RightPanel = ({
   const [width, setWidth] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
   const [activeTab, setActiveTab] = useState<RightPanelTab>("info");
+  const [activeMode, setActiveMode] = useState<RightPanelMode>("inspector");
   const [hclDraft, setHclDraft] = useState("");
   const [attributeSearch, setAttributeSearch] = useState("");
   const [attributeStateFilters, setAttributeStateFilters] = useState<
@@ -851,6 +853,52 @@ export const RightPanel = ({
       </button>
 
       <div className="overflow-hidden flex flex-col h-full w-full min-w-0">
+          {/* Mode switch: Inspector vs Historial */}
+          <div className="shrink-0 flex border-b border-slate-200 bg-white">
+            {(["inspector", "history"] as RightPanelMode[]).map((mode) => {
+              const isActive = activeMode === mode;
+              const label = mode === "inspector" ? "Inspector" : "Historial";
+              const icon = mode === "inspector" ? "mdi:inspector" : "mdi:history";
+              return (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setActiveMode(mode)}
+                  className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-[11px] font-medium transition-colors ${
+                    isActive
+                      ? "border-slate-900 text-slate-900"
+                      : "border-transparent text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  <Icon icon={icon} width={13} />
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* History mode: full-height history view */}
+          {activeMode === "history" && (
+            <div className="flex-1 min-w-0 w-full overflow-hidden bg-slate-50/60">
+              {projectDir && currentViewId ? (
+                <HistoryTab
+                  projectDir={projectDir}
+                  currentViewId={currentViewId}
+                  refreshSignal={historyRefreshSignal ?? 0}
+                  onRestore={onRestoreFromHistory ?? (() => {})}
+                />
+              ) : (
+                <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
+                    <Icon icon="mdi:history" className="text-slate-400" width={20} />
+                  </div>
+                  <p className="text-[12px] text-slate-500">Abre un proyecto para ver el historial.</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeMode === "inspector" && (<>
           {/* Header */}
           <div className="shrink-0 border-b border-slate-200 bg-white">
             <div className="flex items-center gap-3 px-4 pt-3.5 pb-3">
@@ -923,7 +971,7 @@ export const RightPanel = ({
 
             {/* Tabs */}
             <div className="flex border-t border-slate-100 px-3">
-              {(["info", "hcl", ...(diffMode ? (["history"] as RightPanelTab[]) : [])] as RightPanelTab[]).map((tab) => (
+              {(["info", "hcl"] as RightPanelTab[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -934,26 +982,13 @@ export const RightPanel = ({
                       : "border-transparent text-slate-400 hover:text-slate-700"
                   }`}
                 >
-                  {tab === "info" ? "Info" : tab === "hcl" ? "HCL" : "Historial"}
+                  {tab === "info" ? "Info" : "HCL"}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* History tab — full-height, self-scrolling */}
-          {activeTab === "history" && projectDir && currentViewId && (
-            <div className="flex-1 overflow-hidden bg-slate-50/60">
-              <HistoryTab
-                projectDir={projectDir}
-                currentViewId={currentViewId}
-                refreshSignal={historyRefreshSignal}
-                onRestore={onRestoreFromHistory ?? (() => {})}
-              />
-            </div>
-          )}
-
           {/* Scrollable content */}
-          {activeTab !== "history" && (
           <div
             id="right-panel-content"
             className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50/60 py-3"
@@ -1654,7 +1689,7 @@ export const RightPanel = ({
               </div>
             )}
           </div>
-          )}
+          </>)}
         </div>
     </aside>
   );
