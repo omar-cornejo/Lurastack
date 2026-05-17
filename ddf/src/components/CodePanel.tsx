@@ -583,6 +583,12 @@ export default function CodePanel({
       setMainTfDraft(mainTfContent);
     }
   }, [mainTfContent]);
+  // Keep stable refs so unmount cleanup can read latest values without stale closures.
+  const mainTfDraftRef = useRef(mainTfDraft);
+  mainTfDraftRef.current = mainTfDraft;
+  const onMainTfBlocksChangeRef = useRef(onMainTfBlocksChange);
+  onMainTfBlocksChangeRef.current = onMainTfBlocksChange;
+
   // Handle toggling free edit mode
   useEffect(() => {
     if (isFreeEditMode) {
@@ -601,6 +607,21 @@ export default function CodePanel({
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFreeEditMode]);
+
+  // Flush free-mode draft when the user navigates away (CodePanel unmounts).
+  // Uses refs so the cleanup captures the latest draft and callback.
+  useEffect(() => {
+    return () => {
+      if (isFreeEditModeRef.current && manualSegmentsRef.current) {
+        const parsedBlocks = parseMainTfBlocks(mainTfDraftRef.current);
+        if (parsedBlocks.length > 0 && onMainTfBlocksChangeRef.current) {
+          onMainTfBlocksChangeRef.current(parsedBlocks, true);
+        }
+        manualSegmentsRef.current = null;
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
   const loadFileIntoEditor = async (relativePath: string) => {
