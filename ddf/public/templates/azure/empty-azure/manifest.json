@@ -1,0 +1,9 @@
+{
+  "id": "azure/empty-azure",
+  "name": "Azure — Empty project",
+  "description": "Proyecto en blanco con un view inicial preparado para Azure.",
+  "provider": "azure",
+  "resourceCount": 0,
+  "tags": ["starter", "blank"],
+  "icon": "mdi:microsoft-azure"
+}

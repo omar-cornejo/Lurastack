@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "templates:index": "node scripts/build-templates-index.js",
+    "predev": "npm run templates:index",
+    "prebuild": "npm run templates:index",
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",

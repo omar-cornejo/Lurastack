@@ -1,0 +1,41 @@
+{
+  "version": "1",
+  "templates": [
+    {
+      "id": "aws/empty-aws",
+      "name": "AWS — Empty project",
+      "description": "Proyecto en blanco con un view inicial preparado para AWS.",
+      "provider": "aws",
+      "resourceCount": 0,
+      "tags": [
+        "starter",
+        "blank"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
+      "id": "azure/empty-azure",
+      "name": "Azure — Empty project",
+      "description": "Proyecto en blanco con un view inicial preparado para Azure.",
+      "provider": "azure",
+      "resourceCount": 0,
+      "tags": [
+        "starter",
+        "blank"
+      ],
+      "icon": "mdi:microsoft-azure"
+    },
+    {
+      "id": "gcp/empty-gcp",
+      "name": "GCP — Empty project",
+      "description": "Proyecto en blanco con un view inicial preparado para GCP.",
+      "provider": "gcp",
+      "resourceCount": 0,
+      "tags": [
+        "starter",
+        "blank"
+      ],
+      "icon": "mdi:google-cloud"
+    }
+  ]
+}
