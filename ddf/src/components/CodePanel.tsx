@@ -11,10 +11,7 @@ import {
   formatTypeLabel,
   getInspectorPropertiesForSchema,
 } from "../commands/schemaInspector";
-import {
-  extractManualSegments,
-  mergeWithManualCode,
-} from "../utils/hclParser";
+import { extractManualSegments } from "../utils/hclParser";
 
 type CodePanelProps = {
   resources: TerraformResource[];
@@ -24,9 +21,13 @@ type CodePanelProps = {
   projectDir?: string;
   initialCustomFiles?: DdfCodeFile[];
   onCustomFilesChange?: (files: DdfCodeFile[]) => void;
-  onMainTfBlocksChange?: (blocks: ParsedMainTfBlock[]) => void;
+  onMainTfBlocksChange?: (blocks: ParsedMainTfBlock[], overrideCanvas?: boolean) => void;
   onValidationLogs: (entries: BottomPanelLogEntry[]) => void;
   onOpenLogsPanel: () => void;
+  mainTfDraft?: string;
+  onMainTfDraftChange?: (draft: string) => void;
+  isFreeEditMode?: boolean;
+  onFreeEditModeChange?: (value: boolean) => void;
 };
 
 type ParsedMainTfBlock = {
@@ -303,6 +304,10 @@ export default function CodePanel({
   onMainTfBlocksChange,
   onValidationLogs,
   onOpenLogsPanel,
+  mainTfDraft: mainTfDraftProp,
+  onMainTfDraftChange,
+  isFreeEditMode: isFreeEditModeProp,
+  onFreeEditModeChange,
 }: CodePanelProps) {
   const [activeFilePath, setActiveFilePath] = useState<string>("main.tf");
   const [fileTree, setFileTree] = useState<ExplorerNode[]>([]);
@@ -317,8 +322,12 @@ export default function CodePanel({
   const [renameValue, setRenameValue] = useState("");
   const [pendingDelete, setPendingDelete] = useState<PendingDeleteTarget | null>(null);
   const [isValidatingTerraform, setIsValidatingTerraform] = useState(false);
-  const [mainTfDraft, setMainTfDraft] = useState("");
-  const [isFreeEditMode, setIsFreeEditMode] = useState(false);
+  const [mainTfDraftLocal, setMainTfDraftLocal] = useState("");
+  const [isFreeEditModeLocal, setIsFreeEditModeLocal] = useState(false);
+  const mainTfDraft = mainTfDraftProp !== undefined ? mainTfDraftProp : mainTfDraftLocal;
+  const setMainTfDraft = onMainTfDraftChange ?? setMainTfDraftLocal;
+  const isFreeEditMode = isFreeEditModeProp !== undefined ? isFreeEditModeProp : isFreeEditModeLocal;
+  const setIsFreeEditMode = onFreeEditModeChange ?? setIsFreeEditModeLocal;
   const codeEditorRef = useRef<HTMLTextAreaElement | null>(null);
   const lineGutterRef = useRef<HTMLDivElement | null>(null);
   const saveTimeoutRef = useRef<number | null>(null);
@@ -574,18 +583,24 @@ export default function CodePanel({
       setMainTfDraft(mainTfContent);
     }
   }, [mainTfContent]);
-  // Handle manual code preservation when toggling free edit mode
+  // Handle toggling free edit mode
   useEffect(() => {
     if (isFreeEditMode) {
-      // User entering free edit mode: cache current manual segments
+      // Entering free edit mode: cache current manual segments
       manualSegmentsRef.current = extractManualSegments(mainTfDraft, "");
-    } else if (manualSegmentsRef.current && mainTfContent !== mainTfDraft) {
-      // User exiting free edit mode with changes: preserve manual segments in generated HCL
-      const preservedHcl = mergeWithManualCode(mainTfContent, manualSegmentsRef.current);
-      setMainTfDraft(preservedHcl);
-      manualSegmentsRef.current = null; // Clear cache after merge
+    } else if (manualSegmentsRef.current) {
+      // Exiting free edit mode: flush the edited draft into resources so the
+      // regenerated HCL reflects whatever the user typed (including canvas resources).
+      const parsedBlocks = parseMainTfBlocks(mainTfDraft);
+      if (parsedBlocks.length > 0 && onMainTfBlocksChange) {
+        // Skip is NOT set here: we want the subsequent mainTfContent effect to
+        // regenerate the draft from resources (so known attributes appear correctly).
+        onMainTfBlocksChange(parsedBlocks, true);
+      }
+      manualSegmentsRef.current = null;
     }
-  }, [isFreeEditMode, mainTfContent]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFreeEditMode]);
 
 
   const loadFileIntoEditor = async (relativePath: string) => {
@@ -1012,19 +1027,20 @@ export default function CodePanel({
     if (!isFreeEditMode && !canEditOnlyInAttributeValues(mainTfDraft, next)) {
       return;
     }
-    if (onMainTfBlocksChange) {
-      // The resource update will cause mainTfContent to regenerate; skip
-      // resetting the draft from that regenerated content so the user's
-      // in-progress edit is preserved.
+    if (!isFreeEditMode && onMainTfBlocksChange) {
+      // Attribute mode: sync resources on every keystroke. Skip the next
+      // mainTfContent reset so the user's in-progress edit is preserved.
       skipNextMainTfResetRef.current = true;
-      onMainTfBlocksChange(parseMainTfBlocks(next));
+      onMainTfBlocksChange(parseMainTfBlocks(next), false);
     }
+    // In free edit mode we only update the draft; resource sync happens on
+    // toggle-exit so we don't create duplicate resources on every keystroke.
     setMainTfDraft(isFreeEditMode ? next : pruneEmptyAttributeAssignments(next));
   };
 
   const regenerateMainTfFromCanvas = () => {
     setMainTfDraft(mainTfContent);
-    onMainTfBlocksChange?.(parseMainTfBlocks(mainTfContent));
+    onMainTfBlocksChange?.(parseMainTfBlocks(mainTfContent), false);
     setActiveFilePath("main.tf");
     setFocusedNodePath("main.tf");
     setIsFreeEditMode(false);
@@ -1244,7 +1260,7 @@ export default function CodePanel({
 
                 <button
                   type="button"
-                  onClick={() => setIsFreeEditMode((current) => !current)}
+                  onClick={() => setIsFreeEditMode(!isFreeEditMode)}
                   className={`rounded border px-2 py-1 text-xs ${
                     isFreeEditMode
                       ? "border-emerald-500 text-emerald-200 hover:bg-emerald-700/20"

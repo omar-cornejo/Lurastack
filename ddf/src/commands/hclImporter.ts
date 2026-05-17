@@ -36,6 +36,7 @@ export type HclImportInput = {
   schemas: TerraformNodeSchema[];
   ignoreOrigins?: ResourceOrigin[];
   currentNodeIndex?: number;
+  overrideCanvas?: boolean;
 };
 
 /**
@@ -52,6 +53,7 @@ export function importHclBlocksToResources(
     schemas,
     ignoreOrigins = [],
     currentNodeIndex = 0,
+    overrideCanvas = false,
   } = input;
 
   const newResources: TerraformResource[] = [];
@@ -113,38 +115,53 @@ export function importHclBlocksToResources(
     if (existingResource) {
       const existingOrigin = existingResource.origin ?? "canvas";
 
-      // Aplicar regla de precedencia
-      if (ignoreOrigins.includes(existingOrigin)) {
-        conflicts.push({
-          resourceKey: key,
-          existingOrigin,
-          importedOrigin,
-        });
-        warnings.push({
-          resourceKey: key,
-          reason: `Conflicto: recurso de tipo "${existingOrigin}" existente. El bloque HCL será ignorado.`,
-        });
-        continue;
-      }
+      if (!overrideCanvas) {
+        // Aplicar regla de precedencia
+        if (ignoreOrigins.includes(existingOrigin)) {
+          conflicts.push({
+            resourceKey: key,
+            existingOrigin,
+            importedOrigin,
+          });
+          warnings.push({
+            resourceKey: key,
+            reason: `Conflicto: recurso de tipo "${existingOrigin}" existente. El bloque HCL será ignorado.`,
+          });
+          continue;
+        }
 
-      // Si el recurso existente es "canvas" y estamos importando, emitir conflicto
-      if (existingOrigin === "canvas") {
-        conflicts.push({
-          resourceKey: key,
-          existingOrigin,
-          importedOrigin,
-        });
-        warnings.push({
-          resourceKey: key,
-          reason: `El recurso fue creado en canvas. Los cambios en HCL no se aplicarán para evitar conflictos.`,
-        });
-        continue;
+        // Si el recurso existente es "canvas" y estamos importando, emitir conflicto
+        if (existingOrigin === "canvas") {
+          conflicts.push({
+            resourceKey: key,
+            existingOrigin,
+            importedOrigin,
+          });
+          warnings.push({
+            resourceKey: key,
+            reason: `El recurso fue creado en canvas. Los cambios en HCL no se aplicarán para evitar conflictos.`,
+          });
+          continue;
+        }
       }
 
       // Actualizar atributos del recurso existente
       updatedResourceIds.add(existingResource.id);
       existingResource.config.attributes = { ...block.attributes };
       existingResource.kind = block.kind;
+
+      // Warn about attributes that are not in the schema
+      const knownKeys = new Set(schema.properties.map((p) => p.name));
+      const unknownKeys = Object.keys(block.attributes).filter((k) => {
+        const topLevel = k.split(".")[0];
+        return topLevel !== undefined && !knownKeys.has(topLevel);
+      });
+      if (unknownKeys.length > 0) {
+        warnings.push({
+          resourceKey: key,
+          reason: `Atributo(s) desconocido(s) en el schema: ${unknownKeys.join(", ")}. Se guardarán en el HCL pero no aparecerán en el inspector.`,
+        });
+      }
 
       // Buscar si hay nodo correspondiente y marcarlo como actualizado
       const nodeForResource = existingNodes.find(
@@ -162,6 +179,20 @@ export function importHclBlocksToResources(
       );
       newResource.config.attributes = { ...block.attributes };
       newResource.kind = block.kind;
+
+      // Warn about unknown attributes for new resources too
+      const knownKeysNew = new Set(schema.properties.map((p) => p.name));
+      const unknownKeysNew = Object.keys(block.attributes).filter((k) => {
+        const topLevel = k.split(".")[0];
+        return topLevel !== undefined && !knownKeysNew.has(topLevel);
+      });
+      if (unknownKeysNew.length > 0) {
+        warnings.push({
+          resourceKey: key,
+          reason: `Atributo(s) desconocido(s) en el schema: ${unknownKeysNew.join(", ")}. Se guardarán en el HCL pero no aparecerán en el inspector.`,
+        });
+      }
+
       newResources.push(newResource);
 
       // Crear nodo para el nuevo recurso

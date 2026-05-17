@@ -17,8 +17,10 @@ import {
   getValuePlaceholder,
   type InspectorProperty,
 } from "../commands/schemaInspector";
+import HistoryTab from "./HistoryTab";
+import type { DdfViewSnapshot } from "../types/project";
 
-type RightPanelTab = "info" | "hcl";
+type RightPanelTab = "info" | "hcl" | "history";
 
 type PropertySection = {
   sectionKey: string;
@@ -49,6 +51,10 @@ type RightPanelProps = {
   cloudStateLoading?: boolean;
   onOverlayWidthChange?: (width: number) => void;
   onOverlayResizingChange?: (isResizing: boolean) => void;
+  projectDir?: string;
+  currentViewId?: string;
+  historyRefreshSignal?: number;
+  onRestoreFromHistory?: (snapshot: DdfViewSnapshot, entryId: string) => void;
 };
 
 type DiffAttributeStatus = "create" | "change" | "destroy" | "unchanged";
@@ -462,6 +468,10 @@ export const RightPanel = ({
   cloudStateLoading = false,
   onOverlayWidthChange,
   onOverlayResizingChange,
+  projectDir,
+  currentViewId,
+  historyRefreshSignal = 0,
+  onRestoreFromHistory,
 }: RightPanelProps) => {
   const [visible, setVisible] = useState(false);
   const [width, setWidth] = useState(288);
@@ -913,7 +923,7 @@ export const RightPanel = ({
 
             {/* Tabs */}
             <div className="flex border-t border-slate-100 px-3">
-              {(["info", "hcl"] as RightPanelTab[]).map((tab) => (
+              {(["info", "hcl", ...(diffMode ? (["history"] as RightPanelTab[]) : [])] as RightPanelTab[]).map((tab) => (
                 <button
                   key={tab}
                   type="button"
@@ -924,13 +934,26 @@ export const RightPanel = ({
                       : "border-transparent text-slate-400 hover:text-slate-700"
                   }`}
                 >
-                  {tab === "info" ? "Info" : "HCL"}
+                  {tab === "info" ? "Info" : tab === "hcl" ? "HCL" : "Historial"}
                 </button>
               ))}
             </div>
           </div>
 
+          {/* History tab — full-height, self-scrolling */}
+          {activeTab === "history" && projectDir && currentViewId && (
+            <div className="flex-1 overflow-hidden bg-slate-50/60">
+              <HistoryTab
+                projectDir={projectDir}
+                currentViewId={currentViewId}
+                refreshSignal={historyRefreshSignal}
+                onRestore={onRestoreFromHistory ?? (() => {})}
+              />
+            </div>
+          )}
+
           {/* Scrollable content */}
+          {activeTab !== "history" && (
           <div
             id="right-panel-content"
             className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50/60 py-3"
@@ -1631,6 +1654,7 @@ export const RightPanel = ({
               </div>
             )}
           </div>
+          )}
         </div>
     </aside>
   );

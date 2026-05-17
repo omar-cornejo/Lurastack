@@ -59,6 +59,9 @@ import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../com
 import { useProviderCredentials } from "../hooks/useAwsCredentials";
 import { sileo } from "sileo";
 import { importHclBlocksToResources } from "../commands/hclImporter";
+import { appendHistoryEntry, summarizePlanChanges } from "../commands/historyManager";
+import type { HistoryEntry } from "../types/history";
+import DivergenceBanner from "./DivergenceBanner";
 
 const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
 const POPOUT_HEARTBEAT_TTL_MS = 900;
@@ -154,6 +157,8 @@ export default function WorkspaceView({
     resources: initialState?.resources ?? [],
   });
   const [codeFiles, setCodeFiles] = useState<DdfCodeFile[]>(initialState?.codeFiles ?? []);
+  const [codePanelMainTfDraft, setCodePanelMainTfDraft] = useState<string | undefined>(undefined);
+  const [codePanelFreeEditMode, setCodePanelFreeEditMode] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [codeLogs, setCodeLogs] = useState<BottomPanelLogEntry[]>([]);
   const [bottomOpenSignal, setBottomOpenSignal] = useState(0);
@@ -163,6 +168,9 @@ export default function WorkspaceView({
   const [pendingDeployConfirmation, setPendingDeployConfirmation] = useState<
     "terraform_apply" | "terraform_destroy" | null
   >(null);
+  const [historyRefreshSignal, setHistoryRefreshSignal] = useState(0);
+  const [isDivergent, setIsDivergent] = useState(false);
+  const planChangesRef = useRef<Map<string, ResourcePlanChange>>(new Map());
   const [showAwsConfig, setShowAwsConfig] = useState(false);
   const [rightPanelOverlayOffset, setRightPanelOverlayOffset] = useState(0);
   const [isRightPanelOverlayResizing, setIsRightPanelOverlayResizing] = useState(false);
@@ -227,11 +235,21 @@ export default function WorkspaceView({
   edgesRef.current = edges;
   projectRef.current = project;
   activeSectionRef.current = activeSection;
+  planChangesRef.current = planChanges;
 
   const getCurrentSnapshot = useCallback(
     () => ({ nodes: nodesRef.current, edges: edgesRef.current, project: projectRef.current }),
     [],
   );
+
+  const captureViewSnapshot = useCallback((): import("../types/project").DdfViewSnapshot => ({
+    id: viewId,
+    name: viewName,
+    resources: projectRef.current.resources,
+    nodes: snapshotNodes(nodesRef.current),
+    edges: snapshotEdges(edgesRef.current),
+    codeFiles,
+  }), [viewId, viewName, codeFiles]);
 
   const restoreSnapshot = useCallback(
     (snapshot: { nodes: typeof nodes; edges: typeof edges; project: TerraformProject }) => {
@@ -436,18 +454,99 @@ export default function WorkspaceView({
     };
   }, [broadcastBottomPanelState, viewId]);
 
+  // ── Local-edit history coalescing ────────────────────────────────────────────
+  const localEditSessionStartRef = useRef<import("../types/project").DdfViewSnapshot | null>(null);
+  const localEditPendingRef = useRef<import("../types/project").DdfViewSnapshot | null>(null);
+  const localEditLastAtRef = useRef<number>(0);
+  const localEditIdleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const LOCAL_EDIT_IDLE_MS = 5 * 60 * 1000;
+
+  const isViewSnapshotEmpty = (snap: import("../types/project").DdfViewSnapshot) =>
+    snap.resources.length === 0 && snap.nodes.length === 0 && snap.edges.length === 0;
+
+  const snapshotsAreSame = (
+    a: import("../types/project").DdfViewSnapshot,
+    b: import("../types/project").DdfViewSnapshot,
+  ) =>
+    JSON.stringify({ r: a.resources, n: a.nodes.map(n => n.id), e: a.edges.map(e => e.id) }) ===
+    JSON.stringify({ r: b.resources, n: b.nodes.map(n => n.id), e: b.edges.map(e => e.id) });
+
+  const commitLocalEditSession = useCallback(() => {
+    if (!projectDir) return;
+    const start = localEditSessionStartRef.current;
+    const pending = localEditPendingRef.current;
+    if (!start || !pending) return;
+    if (localEditIdleTimerRef.current) {
+      clearTimeout(localEditIdleTimerRef.current);
+      localEditIdleTimerRef.current = null;
+    }
+    localEditSessionStartRef.current = null;
+    localEditPendingRef.current = null;
+
+    if (snapshotsAreSame(start, pending) || isViewSnapshotEmpty(start)) return;
+
+    const rDelta = pending.resources.length - start.resources.length;
+    const nDelta = pending.nodes.length - start.nodes.length;
+    const eDelta = pending.edges.length - start.edges.length;
+    const parts: string[] = [];
+    if (rDelta !== 0) parts.push(`${rDelta > 0 ? "+" : ""}${rDelta} recursos`);
+    if (nDelta !== 0) parts.push(`${nDelta > 0 ? "+" : ""}${nDelta} nodos`);
+    if (eDelta !== 0) parts.push(`${eDelta > 0 ? "+" : ""}${eDelta} conexiones`);
+    const message = parts.join(", ") || "cambios locales";
+
+    const entry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      action: "local-edit",
+      success: true,
+      viewId,
+      viewName,
+      summary: { created: 0, changed: 0, destroyed: 0 },
+      message,
+      snapshotBefore: start,
+      snapshotAfter: pending,
+    };
+    void appendHistoryEntry(projectDir, entry).then(() => {
+      setHistoryRefreshSignal((s) => s + 1);
+    });
+  }, [projectDir, viewId, viewName]);
+
+  const handleRestoreFromHistory = useCallback(
+    (snapshot: import("../types/project").DdfViewSnapshot) => {
+      setNodes(restoreNodes(snapshot.nodes));
+      setEdges(restoreEdges(snapshot.edges));
+      setProject((prev) => ({ ...prev, resources: snapshot.resources }));
+      setCodeFiles(snapshot.codeFiles ?? []);
+      setIsDivergent(true);
+    },
+    [setNodes, setEdges],
+  );
+
   // Report state changes for project save / autosave
   useEffect(() => {
     if (!onStateChange) return;
     const timeout = setTimeout(() => {
-      onStateChange(viewId, {
+      const snap: import("../types/project").DdfViewSnapshot = {
         id: viewId,
         name: viewName,
         resources: project.resources,
         nodes: snapshotNodes(nodes),
         edges: snapshotEdges(edges),
         codeFiles,
-      });
+      };
+      onStateChange(viewId, snap);
+
+      // Local-edit session tracking
+      if (!localEditSessionStartRef.current) {
+        localEditSessionStartRef.current = snap;
+      }
+      localEditPendingRef.current = snap;
+      localEditLastAtRef.current = Date.now();
+
+      if (localEditIdleTimerRef.current) clearTimeout(localEditIdleTimerRef.current);
+      localEditIdleTimerRef.current = setTimeout(() => {
+        commitLocalEditSession();
+      }, LOCAL_EDIT_IDLE_MS);
     }, 800);
     return () => clearTimeout(timeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1188,7 +1287,7 @@ export default function WorkspaceView({
       type: string;
       name: string;
       attributes: Record<string, unknown>;
-    }>) => {
+    }>, overrideCanvas = false) => {
       if (!blocks.length) return;
 
       // Usar el importador para procesar los bloques
@@ -1197,7 +1296,8 @@ export default function WorkspaceView({
         existingResources: project.resources,
         existingNodes: nodes,
         schemas: NODE_SCHEMAS,
-        ignoreOrigins: ["canvas"], // No reimportar recursos del canvas
+        ignoreOrigins: overrideCanvas ? [] : ["canvas"],
+        overrideCanvas,
         currentNodeIndex: nodes.length,
       });
 
@@ -1442,6 +1542,11 @@ export default function WorkspaceView({
       action: "terraform_plan" | "terraform_plan_destroy" | "terraform_apply" | "terraform_destroy",
     ) => {
       if (!projectDir || !isTauriRuntime) return;
+
+      // Commit any pending local-edit session before a terraform action
+      commitLocalEditSession();
+
+      const snapshotBefore = captureViewSnapshot();
       setPlanChanges(new Map());
       setIsDeploying(true);
       if (action === "terraform_apply") {
@@ -1451,8 +1556,9 @@ export default function WorkspaceView({
       }
       setBottomPreferredTab("terminal");
       setBottomOpenSignal((s) => s + 1);
+      let ok = false;
       try {
-        const ok = await invoke<boolean>(action, {
+        ok = await invoke<boolean>(action, {
           projectDir,
           files: [],
           awsCredentials: {
@@ -1482,7 +1588,8 @@ export default function WorkspaceView({
           if (msg) sileo.error({ title: msg.title, description: msg.description });
         }
         if (action === "terraform_apply" || action === "terraform_destroy") {
-          void refreshCloudState();
+          await refreshCloudState();
+          if (ok) setIsDivergent(false);
         }
       } catch (error) {
         console.error(`${action} error:`, error);
@@ -1490,9 +1597,33 @@ export default function WorkspaceView({
       } finally {
         setIsDeploying(false);
         setPendingDeployConfirmation(null);
+
+        // Record history entry — wait a tick so planChangesRef has settled from the streaming effect
+        if (projectDir) {
+          setTimeout(() => {
+            const snapshotAfter = captureViewSnapshot();
+            const { summary, changes } = summarizePlanChanges(planChangesRef.current);
+            const isPlanAction = action === "terraform_plan" || action === "terraform_plan_destroy";
+            const entry: HistoryEntry = {
+              id: crypto.randomUUID(),
+              timestamp: new Date().toISOString(),
+              action,
+              success: ok,
+              viewId,
+              viewName,
+              summary,
+              changes: changes.length > 0 ? changes : undefined,
+              snapshotBefore,
+              snapshotAfter: isPlanAction ? snapshotBefore : snapshotAfter,
+            };
+            void appendHistoryEntry(projectDir, entry).then(() => {
+              setHistoryRefreshSignal((s) => s + 1);
+            });
+          }, 300);
+        }
       }
     },
-    [projectDir, isTauriRuntime, awsCredentials, refreshCloudState],
+    [projectDir, isTauriRuntime, awsCredentials, refreshCloudState, captureViewSnapshot, viewId, viewName, commitLocalEditSession],
   );
 
   const confirmTerraformAction = useCallback(
@@ -1542,6 +1673,12 @@ export default function WorkspaceView({
         onConfirmDestroy={() => void confirmTerraformAction(true)}
         onCancelDestroy={() => void confirmTerraformAction(false)}
         isDeploying={isDeploying}
+      />
+
+      <DivergenceBanner
+        visible={isDivergent}
+        onApply={() => triggerDeployAction("terraform_apply")}
+        onDismiss={() => setIsDivergent(false)}
       />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
@@ -1642,6 +1779,10 @@ export default function WorkspaceView({
               cloudState={cloudState}
               cloudStateAvailable={cloudStateAvailable}
               cloudStateLoading={cloudStateLoading}
+              projectDir={projectDir}
+              currentViewId={viewId}
+              historyRefreshSignal={historyRefreshSignal}
+              onRestoreFromHistory={handleRestoreFromHistory}
             />
           </div>
         )}
@@ -1661,6 +1802,10 @@ export default function WorkspaceView({
                 onMainTfBlocksChange={syncResourcesFromMainTfBlocks}
                 onValidationLogs={appendCodeValidationLogs}
                 onOpenLogsPanel={() => { setBottomPreferredTab("logs"); setBottomOpenSignal((s) => s + 1); }}
+                mainTfDraft={codePanelMainTfDraft}
+                onMainTfDraftChange={setCodePanelMainTfDraft}
+                isFreeEditMode={codePanelFreeEditMode}
+                onFreeEditModeChange={setCodePanelFreeEditMode}
               />
             </div>
           </main>
