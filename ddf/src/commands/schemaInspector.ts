@@ -10,7 +10,10 @@ export type InspectorProperty = {
   rawType?: unknown;
 };
 
-const schemaModules = import.meta.glob("../schemas/aws/**/*.json", { eager: true });
+const schemaModules = import.meta.glob(
+  "../schemas/{aws,gcp,azure}/**/*.json",
+  { eager: true },
+);
 
 const normalizeSchemaPath = (path: string) =>
   path
