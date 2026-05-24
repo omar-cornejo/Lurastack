@@ -12,11 +12,13 @@ import {
   getInspectorPropertiesForSchema,
 } from "../commands/schemaInspector";
 import { extractManualSegments } from "../utils/hclParser";
+import { PROVIDER_CONFIG, type CloudProvider } from "../models/providerConfig";
+import { buildMultiProviderHcl } from "../models/hclEmitter";
 
 type CodePanelProps = {
   resources: TerraformResource[];
   schemas: TerraformNodeSchema[];
-  cloudProvider: "aws" | "gcp" | "azure";
+  cloudProvider: CloudProvider;
   region: string;
   projectDir?: string;
   initialCustomFiles?: DdfCodeFile[];
@@ -78,12 +80,6 @@ type PendingDeleteTarget = {
   isDirectory: boolean;
 };
 
-type HclBlockNode = {
-  attributes: Record<string, unknown>;
-  blocks: Record<string, HclBlockNode>;
-};
-
-const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
 const INVALID_HCL_VALUE = Symbol("invalid-hcl-value");
 
 
@@ -568,10 +564,15 @@ export default function CodePanel({
   const auxiliaryContent = openFileContents[activeFilePath] ?? "";
   const lineCount = Math.max(1, auxiliaryContent.split("\n").length);
 
-  const mainTfContent = useMemo(
-    () => buildMainTerraformFile(resources, cloudProvider, _region),
-    [resources, cloudProvider, _region],
-  );
+  const mainTfContent = useMemo(() => {
+    const settings = {
+      aws: { region: PROVIDER_CONFIG.aws.defaultRegion },
+      gcp: { region: PROVIDER_CONFIG.gcp.defaultRegion },
+      azure: { region: PROVIDER_CONFIG.azure.defaultRegion },
+    };
+    settings[cloudProvider] = { region: _region };
+    return buildMultiProviderHcl({ provider: "", resources }, settings, cloudProvider);
+  }, [resources, cloudProvider, _region]);
   const mainTfLineCount = Math.max(1, mainTfDraft.split("\n").length);
 
   useEffect(() => {
@@ -1378,174 +1379,3 @@ export default function CodePanel({
   );
 }
 
-const toHclLiteral = (value: unknown): string => {
-  if (value === null || value === undefined) return "null";
-  if (typeof value === "boolean" || typeof value === "number") return String(value);
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "[]";
-    if (value.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))) {
-      const entries = (value as Array<Record<string, unknown>>).map((item) => {
-        const fields = Object.entries(item)
-          .filter(([, v]) => v !== undefined)
-          .map(([k, v]) => `      ${k} = ${toHclLiteral(v)}`)
-          .join("\n");
-        return `    {\n${fields}\n    }`;
-      });
-      return `[\n${entries.join(",\n")}\n  ]`;
-    }
-    return `[${value.map(toHclLiteral).join(", ")}]`;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return '""';
-    if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
-    if (
-      trimmed === "true" ||
-      trimmed === "false" ||
-      /^-?\d+(\.\d+)?$/.test(trimmed) ||
-      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
-      (trimmed.startsWith("{") && trimmed.endsWith("}"))
-    ) {
-      return trimmed;
-    }
-    return JSON.stringify(value);
-  }
-  return JSON.stringify(String(value));
-};
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isMeaningfulValue = (value: unknown): boolean => {
-  if (value === undefined || value === null) return false;
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return false;
-    if (trimmed === "[" || trimmed === "]" || trimmed === "{" || trimmed === "}") return false;
-    return true;
-  }
-  if (Array.isArray(value)) {
-    if (!value.length) return false;
-    if (value.every((item) => isPlainObject(item))) {
-      return value.some((item) => Object.values(item).some((nested) => isMeaningfulValue(nested)));
-    }
-    return value.some((item) => isMeaningfulValue(item));
-  }
-  if (isPlainObject(value)) {
-    return Object.values(value).some((nested) => isMeaningfulValue(nested));
-  }
-  return true;
-};
-
-
-const buildResourceHcl = (resource: TerraformResource): string => {
-  const blockKind = resource.kind ?? "resource";
-  const attrs = resource.config.attributes ?? {};
-  const root: HclBlockNode = { attributes: {}, blocks: {} };
-
-  Object.entries(attrs).forEach(([rawKey, rawValue]) => {
-    if (!isMeaningfulValue(rawValue)) return;
-
-    const pathParts = rawKey.split(".").filter(Boolean);
-    if (!pathParts.length) return;
-
-    if (pathParts.length === 1) {
-      root.attributes[pathParts[0]] = rawValue;
-      return;
-    }
-
-    let cursor = root;
-    for (const blockName of pathParts.slice(0, -1)) {
-      if (!cursor.blocks[blockName]) {
-        cursor.blocks[blockName] = { attributes: {}, blocks: {} };
-      }
-      cursor = cursor.blocks[blockName];
-    }
-
-    cursor.attributes[pathParts[pathParts.length - 1]] = rawValue;
-  });
-
-  const renderAssignment = (key: string, value: unknown, indent: string): string => {
-    if (key === "protocol" && typeof value === "number" && value === -1) {
-      return `${indent}${key} = "-1"\n`;
-    }
-    return `${indent}${key} = ${toHclLiteral(value)}\n`;
-  };
-
-  const renderObjectBlock = (blockName: string, value: Record<string, unknown>, indent: string): string => {
-    const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
-    if (!entries.length) return "";
-
-    let lines = `${indent}${blockName} {\n`;
-    entries.forEach(([k, v]) => {
-      lines += renderAssignment(k, v, `${indent}  `);
-    });
-    lines += `${indent}}\n`;
-    return lines;
-  };
-
-  const renderNode = (node: HclBlockNode, indent: string): string => {
-    let lines = "";
-
-    Object.entries(node.attributes).forEach(([key, value]) => {
-      if (!isMeaningfulValue(value)) return;
-
-      if (Array.isArray(value) && value.every((item) => isPlainObject(item))) {
-        value.forEach((item) => {
-          const rendered = renderObjectBlock(key, item as Record<string, unknown>, indent);
-          if (rendered) lines += rendered;
-        });
-        return;
-      }
-
-      lines += renderAssignment(key, value, indent);
-    });
-
-    Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
-      const inner = renderNode(blockNode, `${indent}  `);
-      if (!inner.trim()) return;
-      lines += `${indent}${blockName} {\n`;
-      lines += inner;
-      lines += `${indent}}\n`;
-    });
-
-    return lines;
-  };
-
-  const body = renderNode(root, "  ");
-  return `${blockKind} "${resource.type}" "${resource.name}" {\n${body}}`;
-};
-
-const buildMainTerraformFile = (
-  resources: TerraformResource[],
-  cloudProvider: "aws" | "gcp" | "azure",
-  region: string,
-) => {
-    const providerConfig: Record<string, { name: string; source: string; version: string }> = {
-      aws: { name: "aws", source: "hashicorp/aws", version: "~> 5.0" },
-      gcp: { name: "google", source: "hashicorp/google", version: "~> 5.0" },
-      azure: { name: "azurerm", source: "hashicorp/azurerm", version: "~> 3.0" },
-    };
-    const config = providerConfig[cloudProvider];
-
-  let hcl = "terraform {\n";
-  hcl += "  required_providers {\n";
-  hcl += `    ${config.name} = {\n`;
-  hcl += `      source  = \"${config.source}\"\n`;
-  hcl += `      version = \"${config.version}\"\n`;
-  hcl += "    }\n";
-  hcl += "  }\n";
-  hcl += "}\n\n";
-  hcl += `provider \"${config.name}\" {\n`;
-  hcl += `  region = \"${region}\"\n`;
-  hcl += "}\n\n";
-
-  resources.forEach((resource) => {
-    const block = buildResourceHcl(resource);
-    hcl += block;
-    hcl += "\n\n";
-  });
-
-  return hcl.trimEnd() + "\n";
-};

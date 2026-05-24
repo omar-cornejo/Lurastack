@@ -56,7 +56,14 @@ import {
 import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
-import { useProviderCredentials } from "../hooks/useAwsCredentials";
+import { useProviderCredentials, buildEnvForProvider } from "../hooks/useAwsCredentials";
+import {
+  detectProvidersInUse,
+  mergeProviderSettings,
+  type CloudProvider,
+  type ProviderSettings,
+} from "../models/providerConfig";
+import { buildMultiProviderHcl } from "../models/hclEmitter";
 import { sileo } from "sileo";
 import { importHclBlocksToResources } from "../commands/hclImporter";
 import { appendHistoryEntry, summarizePlanChanges } from "../commands/historyManager";
@@ -76,22 +83,6 @@ type WorkspaceViewProps = {
   onStateChange?: (viewId: string, snapshot: DdfViewSnapshot) => void;
 };
 
-type HclBlockNode = {
-  attributes: Record<string, unknown>;
-  blocks: Record<string, HclBlockNode>;
-};
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isMeaningfulValue = (value: unknown): boolean => {
-  if (value === undefined || value === null) return false;
-  if (typeof value === "string") return value.trim().length > 0;
-  if (Array.isArray(value)) return value.length > 0;
-  if (isPlainObject(value)) return Object.keys(value).length > 0;
-  return true;
-};
-
 type CanvasViewportBounds = {
   minX: number;
   maxX: number;
@@ -107,35 +98,22 @@ export default function WorkspaceView({
   initialState,
   onStateChange,
 }: WorkspaceViewProps) {
-  const TERRAFORM_REF_PATTERN = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
-
-  const PROVIDER_CONFIG = {
-    aws: {
-      source: "hashicorp/aws",
-      version: "~> 5.0",
-      defaultRegion: "eu-south-2",
-    },
-    gcp: {
-      source: "hashicorp/google",
-      version: "~> 5.0",
-      defaultRegion: "europe-west1",
-    },
-    azure: {
-      source: "hashicorp/azurerm",
-      version: "~> 3.0",
-      defaultRegion: "westeurope",
-    },
-  } as const;
-
   const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff" | "cloud">("canvas");
-  const [cloudProvider, setCloudProvider] = useState<"aws" | "gcp" | "azure">("aws");
-  const [providerRegion, setProviderRegion] = useState<string>(PROVIDER_CONFIG.aws.defaultRegion);
-  const [nodeSchemas, setNodeSchemas] = useState<TerraformNodeSchema[]>(() => getSchemasForProvider("aws"));
+  const [cloudProvider, setCloudProvider] = useState<CloudProvider>(
+    () => initialState?.activeProvider ?? "aws",
+  );
+  const [providerSettings, _setProviderSettings] = useState<ProviderSettings>(() =>
+    mergeProviderSettings(initialState?.providerSettings),
+  );
+  const [nodeSchemas, setNodeSchemas] = useState<TerraformNodeSchema[]>(
+    () => getSchemasForProvider(initialState?.activeProvider ?? "aws"),
+  );
 
   useEffect(() => {
-    setProviderRegion(PROVIDER_CONFIG[cloudProvider].defaultRegion);
     setNodeSchemas(getSchemasForProvider(cloudProvider));
   }, [cloudProvider]);
+
+  const providerRegion = providerSettings[cloudProvider].region;
 
 
   const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>(
@@ -188,36 +166,28 @@ export default function WorkspaceView({
     azure: azureCredentials,
   } = useProviderCredentials(cloudProvider);
 
+  const providersInUse = useMemo(
+    () => detectProvidersInUse(project.resources, cloudProvider),
+    [project.resources, cloudProvider],
+  );
+
   const terminalEnvVars = useMemo<Record<string, string>>(() => {
     const env: Record<string, string> = {};
-    if (cloudProvider === "aws") {
-      if (awsCredentials.accessKeyId) env.AWS_ACCESS_KEY_ID = awsCredentials.accessKeyId;
-      if (awsCredentials.secretAccessKey) env.AWS_SECRET_ACCESS_KEY = awsCredentials.secretAccessKey;
-      if (awsCredentials.sessionToken) env.AWS_SESSION_TOKEN = awsCredentials.sessionToken;
-      if (awsCredentials.region) {
-        env.AWS_DEFAULT_REGION = awsCredentials.region;
-        env.AWS_REGION = awsCredentials.region;
-      }
-    } else if (cloudProvider === "gcp") {
-      if (gcpCredentials.projectId) {
-        env.GOOGLE_PROJECT = gcpCredentials.projectId;
-        env.GOOGLE_CLOUD_PROJECT = gcpCredentials.projectId;
-      }
-      if (gcpCredentials.region) env.GOOGLE_REGION = gcpCredentials.region;
-      if (gcpCredentials.serviceAccountFilePath) {
-        env.GOOGLE_APPLICATION_CREDENTIALS = gcpCredentials.serviceAccountFilePath;
-      } else if (gcpCredentials.serviceAccountJson) {
-        env.GOOGLE_CREDENTIALS = gcpCredentials.serviceAccountJson;
-      }
-    } else if (cloudProvider === "azure") {
-      if (azureCredentials.subscriptionId) env.ARM_SUBSCRIPTION_ID = azureCredentials.subscriptionId;
-      if (azureCredentials.tenantId) env.ARM_TENANT_ID = azureCredentials.tenantId;
-      if (azureCredentials.clientId) env.ARM_CLIENT_ID = azureCredentials.clientId;
-      if (azureCredentials.clientSecret) env.ARM_CLIENT_SECRET = azureCredentials.clientSecret;
-      if (azureCredentials.region) env.ARM_LOCATION = azureCredentials.region;
+    for (const p of providersInUse) {
+      Object.assign(env, buildEnvForProvider(p, { awsCredentials, gcpCredentials, azureCredentials }));
     }
     return env;
-  }, [cloudProvider, awsCredentials, gcpCredentials, azureCredentials]);
+  }, [providersInUse, awsCredentials, gcpCredentials, azureCredentials]);
+
+  // Same env vars but excluding AWS_* keys: those go separately via the
+  // awsCredentials param of terraform_* commands. Avoids redundant payload.
+  const extraEnvForTerraform = useMemo<Record<string, string>>(() => {
+    const env: Record<string, string> = {};
+    for (const [k, v] of Object.entries(terminalEnvVars)) {
+      if (!k.startsWith("AWS_")) env[k] = v;
+    }
+    return env;
+  }, [terminalEnvVars]);
   const [planChanges, setPlanChanges] = useState<Map<string, ResourcePlanChange>>(new Map());
   const planBufferRef = useRef("");
   const planCurrentAddressRef = useRef<string | null>(null);
@@ -249,7 +219,9 @@ export default function WorkspaceView({
     nodes: snapshotNodes(nodesRef.current),
     edges: snapshotEdges(edgesRef.current),
     codeFiles,
-  }), [viewId, viewName, codeFiles]);
+    activeProvider: cloudProvider,
+    providerSettings,
+  }), [viewId, viewName, codeFiles, cloudProvider, providerSettings]);
 
   const restoreSnapshot = useCallback(
     (snapshot: { nodes: typeof nodes; edges: typeof edges; project: TerraformProject }) => {
@@ -880,143 +852,11 @@ export default function WorkspaceView({
     [setNodes, pushSnapshot, getCurrentSnapshot],
   );
 
-  const terraformResourceToHCL = (r: TerraformResource): string => {
-    const toHclLiteral = (value: unknown): string => {
-      if (Array.isArray(value)) {
-        if (value.length === 0) return "[]";
-        return `[${value.map((item) => toHclLiteral(item)).join(", ")}]`;
-      }
-
-      if (isPlainObject(value)) {
-        const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
-        if (!entries.length) return "{}";
-        return `{ ${entries.map(([k, v]) => `${k} = ${toHclLiteral(v)}`).join(", ")} }`;
-      }
-
-      if (typeof value === "boolean" || typeof value === "number") {
-        return String(value);
-      }
-
-      if (typeof value === "string") {
-        const trimmed = value.trim();
-        if (!trimmed) return '""';
-
-        if (
-          TERRAFORM_REF_PATTERN.test(trimmed) ||
-          trimmed.startsWith("var.") ||
-          trimmed === "true" ||
-          trimmed === "false" ||
-          /^-?\d+(\.\d+)?$/.test(trimmed) ||
-          (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-          (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
-          (trimmed.startsWith("{") && trimmed.endsWith("}"))
-        ) {
-          return trimmed;
-        }
-
-        return `"${value.replace(/"/g, '\\"')}"`;
-      }
-
-      if (value === null || value === undefined) return '""';
-      return `"${String(value).replace(/"/g, '\\"')}"`;
-    };
-
-    const root: HclBlockNode = { attributes: {}, blocks: {} };
-    Object.entries(r.config.attributes ?? {}).forEach(([rawKey, rawValue]) => {
-      if (rawValue === undefined || rawValue === null) return;
-      if (typeof rawValue === "string" && rawValue.trim() === "") return;
-
-      const pathParts = rawKey.split(".").filter(Boolean);
-      if (!pathParts.length) return;
-
-      if (pathParts.length === 1) {
-        root.attributes[pathParts[0]] = rawValue;
-        return;
-      }
-
-      let cursor = root;
-      for (const blockName of pathParts.slice(0, -1)) {
-        if (!cursor.blocks[blockName]) {
-          cursor.blocks[blockName] = { attributes: {}, blocks: {} };
-        }
-        cursor = cursor.blocks[blockName];
-      }
-
-      const attrName = pathParts[pathParts.length - 1];
-      cursor.attributes[attrName] = rawValue;
-    });
-
-    const renderAssignment = (key: string, value: unknown, indent: string): string => {
-      if (key === "protocol" && typeof value === "number" && value === -1) {
-        return `${indent}${key} = "-1"\n`;
-      }
-      return `${indent}${key} = ${toHclLiteral(value)}\n`;
-    };
-
-    const renderObjectBlock = (blockName: string, value: Record<string, unknown>, indent: string): string => {
-      const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
-      if (!entries.length) return "";
-
-      let lines = `${indent}${blockName} {\n`;
-      entries.forEach(([key, item]) => {
-        lines += renderAssignment(key, item, `${indent}  `);
-      });
-      lines += `${indent}}\n`;
-      return lines;
-    };
-
-    const renderNode = (node: HclBlockNode, indent: string): string => {
-      let lines = "";
-
-      Object.entries(node.attributes).forEach(([key, value]) => {
-        if (!isMeaningfulValue(value)) return;
-
-        if (Array.isArray(value) && value.every((item) => isPlainObject(item))) {
-          value.forEach((item) => {
-            lines += renderObjectBlock(key, item, indent);
-          });
-          return;
-        }
-
-        lines += renderAssignment(key, value, indent);
-      });
-
-      Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
-        lines += `${indent}${blockName} {\n`;
-        lines += renderNode(blockNode, `${indent}  `);
-        lines += `${indent}}\n`;
-      });
-
-      return lines;
-    };
-
-    const blockKind = r.kind ?? "resource";
-    const body = renderNode(root, "  ");
-    return `${blockKind} "${r.type}" "${r.name}" {\n${body}}\n`;
-  };
-
-  const buildGlobalHcl = useCallback((proj: TerraformProject) => {
-    const providerConfig = PROVIDER_CONFIG[cloudProvider];
-    
-    let hcl = `terraform {\n`;
-    hcl += `  required_providers {\n`;
-    hcl += `    ${cloudProvider} = {\n`;
-    hcl += `      source  = "${providerConfig.source}"\n`;
-    hcl += `      version = "${providerConfig.version}"\n`;
-    hcl += `    }\n`;
-    hcl += `  }\n`;
-    hcl += `}\n\n`;
-    hcl += `provider "${cloudProvider}" {\n`;
-    hcl += `  region = "${providerRegion}"\n`;
-    hcl += `}\n\n`;
-
-    proj.resources.forEach((r) => {
-      const block = terraformResourceToHCL(r);
-      hcl += block + "\n";
-    });
-
-    return hcl;
-  }, [cloudProvider, providerRegion, PROVIDER_CONFIG]);
+  const buildGlobalHcl = useCallback(
+    (proj: TerraformProject) =>
+      buildMultiProviderHcl(proj, providerSettings, cloudProvider),
+    [cloudProvider, providerSettings],
+  );
 
   const saveProjectToHCL = async (proj: TerraformProject) => {
     if (hclPersistenceDisabledRef.current) return;
@@ -1512,6 +1352,7 @@ export default function WorkspaceView({
           sessionToken: awsCredentials.sessionToken,
           region: awsCredentials.region,
         },
+        extraEnv: extraEnvForTerraform,
       });
       const next = new Map<string, Record<string, unknown>>();
       result.resources.forEach((resource) => {
@@ -1532,7 +1373,7 @@ export default function WorkspaceView({
     } finally {
       setCloudStateLoading(false);
     }
-  }, [projectDir, isTauriRuntime, awsCredentials]);
+  }, [projectDir, isTauriRuntime, awsCredentials, extraEnvForTerraform]);
 
   useEffect(() => {
     if (activeSection !== "cloud" || !projectDir || !isTauriRuntime) return;
@@ -1595,6 +1436,7 @@ export default function WorkspaceView({
             sessionToken: awsCredentials.sessionToken,
             region: awsCredentials.region,
           },
+          extraEnv: extraEnvForTerraform,
         });
         const successMessages: Record<string, { title: string; description: string }> = {
           terraform_plan: { title: "Plan completado", description: "Revisa los cambios en el panel diff." },
@@ -1651,7 +1493,7 @@ export default function WorkspaceView({
         }
       }
     },
-    [projectDir, isTauriRuntime, awsCredentials, refreshCloudState, captureViewSnapshot, viewId, viewName],
+    [projectDir, isTauriRuntime, awsCredentials, extraEnvForTerraform, refreshCloudState, captureViewSnapshot, viewId, viewName],
   );
 
   const confirmTerraformAction = useCallback(

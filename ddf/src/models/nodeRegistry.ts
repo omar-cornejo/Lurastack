@@ -5,6 +5,9 @@ export type TerraformNodeProperty = {
   computed?: boolean;
 };
 
+import { resolveTerraformIcon } from "./iconRegistry";
+import { PROVIDER_PREFIXES, type CloudProvider } from "./providerConfig";
+
 export type TerraformNodeSchema = {
   id: string;
   label: string;
@@ -17,12 +20,8 @@ export type TerraformNodeSchema = {
   searchTerms?: string[];
   sourceSchemaPath: string;
   sourceTemplatePath: string;
-  provider: "aws" | "gcp" | "azure";
+  provider: CloudProvider;
 };
-
-import { resolveTerraformIcon } from "./iconRegistry";
-
-type CloudProvider = "aws" | "gcp" | "azure";
 
 const resourceSchemaModules: Record<CloudProvider, Record<string, { default: unknown }>> = {
   aws: import.meta.glob<{ default: unknown }>("../schemas/aws/resources/*.json", { eager: true }),
@@ -46,12 +45,6 @@ const dataTemplates: Record<CloudProvider, Record<string, string>> = {
   aws: import.meta.glob<string>("../schemas/aws/templates/data_sources/*.tf.tpl", { eager: true, query: "?raw", import: "default" }),
   gcp: import.meta.glob<string>("../schemas/gcp/templates/data_sources/*.tf.tpl", { eager: true, query: "?raw", import: "default" }),
   azure: import.meta.glob<string>("../schemas/azure/templates/data_sources/*.tf.tpl", { eager: true, query: "?raw", import: "default" }),
-};
-
-const PROVIDER_PREFIXES: Record<CloudProvider, string> = {
-  aws: "aws_",
-  gcp: "google_",
-  azure: "azurerm_",
 };
 
 function normalizeType(raw: unknown): string {

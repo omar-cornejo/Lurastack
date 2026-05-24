@@ -1,5 +1,6 @@
 import type { TerraformResource } from "../models/terraform";
 import type { CanvasTerraformNodeData, CanvasEdgeData } from "../canvas/types";
+import type { CloudProvider, ProviderSettings } from "../models/providerConfig";
 
 export type DdfSerializedNode = {
   id: string;
@@ -36,6 +37,8 @@ export type DdfViewSnapshot = {
   nodes: DdfSerializedNode[];
   edges: DdfSerializedEdge[];
   codeFiles?: DdfCodeFile[];
+  activeProvider?: CloudProvider;
+  providerSettings?: Partial<ProviderSettings>;
 };
 
 export type DdfProject = {

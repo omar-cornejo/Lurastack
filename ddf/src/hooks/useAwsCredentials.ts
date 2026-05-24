@@ -199,6 +199,47 @@ export function useProviderCredentials(provider: CloudProvider) {
   return { stored, save, isConfigured, aws, gcp, azure };
 }
 
+export function buildEnvForProvider(
+  provider: CloudProvider,
+  creds: {
+    awsCredentials: AwsStoredCredentials;
+    gcpCredentials: GcpStoredCredentials;
+    azureCredentials: AzureStoredCredentials;
+  },
+): Record<string, string> {
+  const env: Record<string, string> = {};
+  if (provider === "aws") {
+    const { awsCredentials } = creds;
+    if (awsCredentials.accessKeyId) env.AWS_ACCESS_KEY_ID = awsCredentials.accessKeyId;
+    if (awsCredentials.secretAccessKey) env.AWS_SECRET_ACCESS_KEY = awsCredentials.secretAccessKey;
+    if (awsCredentials.sessionToken) env.AWS_SESSION_TOKEN = awsCredentials.sessionToken;
+    if (awsCredentials.region) {
+      env.AWS_DEFAULT_REGION = awsCredentials.region;
+      env.AWS_REGION = awsCredentials.region;
+    }
+  } else if (provider === "gcp") {
+    const { gcpCredentials } = creds;
+    if (gcpCredentials.projectId) {
+      env.GOOGLE_PROJECT = gcpCredentials.projectId;
+      env.GOOGLE_CLOUD_PROJECT = gcpCredentials.projectId;
+    }
+    if (gcpCredentials.region) env.GOOGLE_REGION = gcpCredentials.region;
+    if (gcpCredentials.serviceAccountFilePath) {
+      env.GOOGLE_APPLICATION_CREDENTIALS = gcpCredentials.serviceAccountFilePath;
+    } else if (gcpCredentials.serviceAccountJson) {
+      env.GOOGLE_CREDENTIALS = gcpCredentials.serviceAccountJson;
+    }
+  } else if (provider === "azure") {
+    const { azureCredentials } = creds;
+    if (azureCredentials.subscriptionId) env.ARM_SUBSCRIPTION_ID = azureCredentials.subscriptionId;
+    if (azureCredentials.tenantId) env.ARM_TENANT_ID = azureCredentials.tenantId;
+    if (azureCredentials.clientId) env.ARM_CLIENT_ID = azureCredentials.clientId;
+    if (azureCredentials.clientSecret) env.ARM_CLIENT_SECRET = azureCredentials.clientSecret;
+    if (azureCredentials.region) env.ARM_LOCATION = azureCredentials.region;
+  }
+  return env;
+}
+
 // Backwards-compatible hook (returns AWS only) for callers that still rely on it
 export function useAwsCredentials() {
   const [stored, setStored] = useState<AwsStoredCredentials>(loadAwsFromStorage);

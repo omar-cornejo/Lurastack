@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs,
     io::{BufRead, BufReader, Read, Write},
     path::PathBuf,
@@ -82,6 +83,7 @@ fn terraform_init_for_deploy(
     window: &tauri::Window,
     project_dir_path: &PathBuf,
     aws_credentials: &AwsCredentials,
+    extra_env: Option<&HashMap<String, String>>,
 ) -> Result<(), String> {
     emit_output(window, "\r\n\x1b[36m→ terraform init\x1b[0m\r\n");
 
@@ -90,7 +92,15 @@ fn terraform_init_for_deploy(
         .arg("init")
         .arg("-input=false")
         .arg("-no-color")
-        .current_dir(project_dir_path)
+        .current_dir(project_dir_path);
+
+    if let Some(env) = extra_env {
+        for (k, v) in env {
+            command.env(k, v);
+        }
+    }
+
+    command
         .env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
         .env("AWS_SECRET_ACCESS_KEY", &aws_credentials.secret_access_key)
         .env("AWS_DEFAULT_REGION", &aws_credentials.region)
@@ -157,13 +167,21 @@ fn run_terraform_streaming(
     project_dir_path: &PathBuf,
     aws_credentials: &AwsCredentials,
     pid_arc: Option<&Arc<Mutex<Option<u32>>>>,
+    extra_env: Option<&HashMap<String, String>>,
 ) -> Result<bool, String> {
     let mut cmd = Command::new("terraform");
     for arg in args {
         cmd.arg(arg);
     }
-    cmd.current_dir(project_dir_path)
-        .env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
+    cmd.current_dir(project_dir_path);
+
+    if let Some(env) = extra_env {
+        for (k, v) in env {
+            cmd.env(k, v);
+        }
+    }
+
+    cmd.env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
         .env("AWS_SECRET_ACCESS_KEY", &aws_credentials.secret_access_key)
         .env("AWS_DEFAULT_REGION", &aws_credentials.region)
         .env("TF_IN_AUTOMATION", "1")
@@ -236,13 +254,21 @@ fn run_terraform_interactive_inner(
     aws_credentials: &AwsCredentials,
     stdin_arc: &Arc<Mutex<Option<ChildStdin>>>,
     pid_arc: &Arc<Mutex<Option<u32>>>,
+    extra_env: Option<&HashMap<String, String>>,
 ) -> Result<bool, String> {
     let mut cmd = Command::new("terraform");
     for arg in args {
         cmd.arg(arg);
     }
-    cmd.current_dir(project_dir_path)
-        .env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
+    cmd.current_dir(project_dir_path);
+
+    if let Some(env) = extra_env {
+        for (k, v) in env {
+            cmd.env(k, v);
+        }
+    }
+
+    cmd.env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
         .env("AWS_SECRET_ACCESS_KEY", &aws_credentials.secret_access_key)
         .env("AWS_DEFAULT_REGION", &aws_credentials.region)
         .stdin(Stdio::piped())
@@ -354,6 +380,7 @@ pub async fn terraform_plan(
     project_dir: String,
     files: Vec<TerraformSourceFile>,
     aws_credentials: AwsCredentials,
+    extra_env: Option<HashMap<String, String>>,
     state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
     let pid_arc = state.current_pid.clone();
@@ -372,7 +399,7 @@ pub async fn terraform_plan(
 
         emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║     terraform plan           ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
 
-        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
+        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials, extra_env.as_ref())?;
 
         emit_output(&window, "\r\n\x1b[36m→ terraform plan\x1b[0m\r\n");
         let success = run_terraform_streaming(
@@ -381,6 +408,7 @@ pub async fn terraform_plan(
             &project_dir_path,
             &aws_credentials,
             Some(&pid_arc),
+            extra_env.as_ref(),
         )?;
 
         if success {
@@ -400,6 +428,7 @@ pub async fn terraform_plan_destroy(
     project_dir: String,
     files: Vec<TerraformSourceFile>,
     aws_credentials: AwsCredentials,
+    extra_env: Option<HashMap<String, String>>,
     state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
     let pid_arc = state.current_pid.clone();
@@ -418,7 +447,7 @@ pub async fn terraform_plan_destroy(
 
         emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║   terraform plan -destroy    ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
 
-        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
+        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials, extra_env.as_ref())?;
 
         emit_output(&window, "\r\n\x1b[36m→ terraform plan -destroy\x1b[0m\r\n");
         let success = run_terraform_streaming(
@@ -427,6 +456,7 @@ pub async fn terraform_plan_destroy(
             &project_dir_path,
             &aws_credentials,
             Some(&pid_arc),
+            extra_env.as_ref(),
         )?;
 
         if success {
@@ -446,6 +476,7 @@ pub async fn terraform_apply(
     project_dir: String,
     files: Vec<TerraformSourceFile>,
     aws_credentials: AwsCredentials,
+    extra_env: Option<HashMap<String, String>>,
     state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
     let stdin_arc = state.stdin.clone();
@@ -465,7 +496,7 @@ pub async fn terraform_apply(
 
         emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║     terraform apply          ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
 
-        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
+        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials, extra_env.as_ref())?;
 
         emit_output(&window, "\r\n\x1b[36m→ terraform apply\x1b[0m\r\n");
         let success = run_terraform_interactive_inner(
@@ -475,6 +506,7 @@ pub async fn terraform_apply(
             &aws_credentials,
             &stdin_arc,
             &pid_arc,
+            extra_env.as_ref(),
         )?;
 
         if success {
@@ -494,6 +526,7 @@ pub async fn terraform_destroy(
     project_dir: String,
     files: Vec<TerraformSourceFile>,
     aws_credentials: AwsCredentials,
+    extra_env: Option<HashMap<String, String>>,
     state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
     let stdin_arc = state.stdin.clone();
@@ -513,7 +546,7 @@ pub async fn terraform_destroy(
 
         emit_output(&window, "\x1b[1m\x1b[35m╔══════════════════════════════╗\r\n║    terraform destroy         ║\r\n╚══════════════════════════════╝\x1b[0m\r\n");
 
-        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials)?;
+        terraform_init_for_deploy(&window, &project_dir_path, &aws_credentials, extra_env.as_ref())?;
 
         emit_output(&window, "\r\n\x1b[36m→ terraform destroy\x1b[0m\r\n");
         let success = run_terraform_interactive_inner(
@@ -523,6 +556,7 @@ pub async fn terraform_destroy(
             &aws_credentials,
             &stdin_arc,
             &pid_arc,
+            extra_env.as_ref(),
         )?;
 
         if success {
@@ -619,6 +653,7 @@ pub async fn terraform_show(
     project_dir: String,
     files: Vec<TerraformSourceFile>,
     aws_credentials: AwsCredentials,
+    extra_env: Option<HashMap<String, String>>,
 ) -> Result<TerraformShowResult, String> {
     tauri::async_runtime::spawn_blocking(move || {
         if project_dir.trim().is_empty() {
@@ -647,8 +682,15 @@ pub async fn terraform_show(
         cmd.arg("show")
             .arg("-json")
             .arg("-no-color")
-            .current_dir(&project_dir_path)
-            .env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
+            .current_dir(&project_dir_path);
+
+        if let Some(env) = extra_env.as_ref() {
+            for (k, v) in env {
+                cmd.env(k, v);
+            }
+        }
+
+        cmd.env("AWS_ACCESS_KEY_ID", &aws_credentials.access_key_id)
             .env("AWS_SECRET_ACCESS_KEY", &aws_credentials.secret_access_key)
             .env("AWS_DEFAULT_REGION", &aws_credentials.region)
             .stdout(Stdio::piped())
