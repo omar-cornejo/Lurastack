@@ -6,6 +6,8 @@ export const HIERARCHICAL_CONTAINER_SCHEMA_IDS = new Set([
   "aws_subnet",
   "aws_vpc",
   "aws_region",
+  "google_compute_network",
+  "google_compute_subnetwork",
 ]);
 
 export const ZONE_CONTAINER_SCHEMA_IDS = new Set([
