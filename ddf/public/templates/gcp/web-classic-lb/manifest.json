@@ -1,0 +1,13 @@
+{
+  "id": "gcp/web-classic-lb",
+  "name": "GCP — Classic web (LB + MIG + Cloud SQL)",
+  "description": "MIG detrás de Backend Service + Cloud SQL.",
+  "provider": "gcp",
+  "resourceCount": 10,
+  "tags": [
+    "web",
+    "load-balancer",
+    "database"
+  ],
+  "icon": "mdi:google-cloud"
+}

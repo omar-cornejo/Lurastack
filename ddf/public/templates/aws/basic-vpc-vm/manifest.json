@@ -1,0 +1,13 @@
+{
+  "id": "aws/basic-vpc-vm",
+  "name": "AWS — Basic VPC + EC2",
+  "description": "VPC con subnet pública, un EC2 y security group.",
+  "provider": "aws",
+  "resourceCount": 7,
+  "tags": [
+    "starter",
+    "networking",
+    "compute"
+  ],
+  "icon": "mdi:aws"
+}

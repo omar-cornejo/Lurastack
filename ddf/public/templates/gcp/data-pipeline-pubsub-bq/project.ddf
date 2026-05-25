@@ -1,0 +1,329 @@
+{
+  "version": "1",
+  "meta": {
+    "name": "GCP — Data pipeline (Pub/Sub + Functions + BigQuery)",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "settings": {
+    "autosave": false
+  },
+  "activeViewId": "view-050d1c63-2b76-4a6d-8748-b8cc235433bc",
+  "views": [
+    {
+      "id": "view-050d1c63-2b76-4a6d-8748-b8cc235433bc",
+      "name": "View 1",
+      "activeProvider": "gcp",
+      "resources": [
+        {
+          "id": "46a3fc9d-a7a9-494a-8d50-92830438aad5",
+          "kind": "resource",
+          "type": "google_pubsub_topic",
+          "name": "ingest",
+          "schemaId": "google_pubsub_topic",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_pubsub_topic                                 │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_pubsub_topic\" \"this\" {\n\n  name                       = \"\"     # string | required | Name of the topic.\n  id                         = \"\"     # string | optional+computed\n  kms_key_name               = \"\"     # string | optional | The resource name of the Cloud KMS CryptoKey to be used to p…\n  labels                     = {}     # map(string) | optional | A set of key/value label pairs to assign to this Topic.   **…\n  message_retention_duration = \"\"     # string | optional | Indicates the minimum duration to retain a message after it …\n  project                    = \"\"     # string | optional+computed\n\n  # effective_labels           = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…\n  # terraform_labels           = {}     # map(string) | computed | The combination of labels configured directly on the resourc…\n\n  ingestion_data_source_settings { # list [0..1]\n\n    aws_kinesis { # list [0..1]\n      aws_role_arn        = \"\"     # string | required | AWS role ARN to be used for Federated Identity authenticatio…\n      consumer_arn        = \"\"     # string | required | The Kinesis consumer ARN to used for ingestion in Enhanced F…\n      gcp_service_account = \"\"     # string | required | The GCP service account to be used for Federated Identity au…\n      stream_arn          = \"\"     # string | required | The Kinesis stream ARN to ingest data from.\n\n    }\n\n  }\n\n  message_storage_policy { # list [0..1]\n    allowed_persistence_regions = []     # list(string) | required | A list of IDs of GCP regions where messages that are publish…\n\n  }\n\n  schema_settings { # list [0..1]\n    schema   = \"\"     # string | required | The name of the schema that messages published should be val…\n    encoding = \"\"     # string | optional | The encoding of messages validated against schema. Default v…\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-data-ingest"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 0,
+            "icon": "/icons/gcp_integration.svg"
+          }
+        },
+        {
+          "id": "fd92bfa6-a027-4391-b962-1ba46e561a59",
+          "kind": "resource",
+          "type": "google_storage_bucket",
+          "name": "raw",
+          "schemaId": "google_storage_bucket",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_storage_bucket                               │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_storage_bucket\" \"this\" {\n\n  location                    = \"\"     # string | required | The Google Cloud Storage location\n  name                        = \"\"     # string | required | The name of the bucket.\n  default_event_based_hold    = false  # bool | optional | Whether or not to automatically apply an eventBasedHold to n…\n  enable_object_retention     = false  # bool | optional | Enables each object in the bucket to have its own retention …\n  force_destroy               = false  # bool | optional | When deleting a bucket, this boolean option will delete all …\n  id                          = \"\"     # string | optional+computed\n  labels                      = {}     # map(string) | optional | A set of key/value label pairs to assign to the bucket.\n  project                     = \"\"     # string | optional+computed | The ID of the project in which the resource belongs. If it i…\n  public_access_prevention    = \"\"     # string | optional+computed | Prevents public access to a bucket.\n  requester_pays              = false  # bool | optional | Enables Requester Pays on a storage bucket.\n  rpo                         = \"\"     # string | optional+computed | Specifies the RPO setting of bucket. If set 'ASYNC_TURBO', T…\n  storage_class               = \"\"     # string | optional | The Storage Class of the new bucket. Supported values includ…\n  uniform_bucket_level_access = false  # bool | optional+computed | Enables uniform bucket-level access on a bucket.\n\n  # effective_labels            = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…\n  # project_number              = 0      # number | computed | The project number of the project in which the resource belo…\n  # self_link                   = \"\"     # string | computed | The URI of the created resource.\n  # terraform_labels            = {}     # map(string) | computed | The combination of labels configured directly on the resourc…\n  # url                         = \"\"     # string | computed | The base URL of the bucket, in the format gs://<bucket-name>…\n\n  autoclass { # list [0..1]\n    enabled                = false  # bool | required | While set to true, autoclass automatically transitions objec…\n    terminal_storage_class = \"\"     # string | optional+computed | The storage class that objects in the bucket eventually tran…\n\n  }\n\n  cors { # list\n    max_age_seconds = 0      # number | optional | The value, in seconds, to return in the Access-Control-Max-A…\n    method          = []     # list(string) | optional | The list of HTTP methods on which to include CORS response h…\n    origin          = []     # list(string) | optional | The list of Origins eligible to receive CORS response header…\n    response_header = []     # list(string) | optional | The list of HTTP headers other than the simple response head…\n\n  }\n\n  custom_placement_config { # list [0..1]\n    data_locations = []     # set(string) | required | The list of individual regions that comprise a dual-region b…\n\n  }\n\n  encryption { # list [0..1]\n    default_kms_key_name = \"\"     # string | required | A Cloud KMS key that will be used to encrypt objects inserte…\n\n  }\n\n  lifecycle_rule { # list [0..100]\n\n    action { # set [1..1]\n      type          = \"\"     # string | required | The type of the action of this Lifecycle Rule. Supported val…\n      storage_class = \"\"     # string | optional | The target Storage Class of objects affected by this Lifecyc…\n\n    }\n\n    condition { # set [1..1]\n      age                                     = 0      # number | optional | Minimum age of an object in days to satisfy this condition.\n      created_before                          = \"\"     # string | optional | Creation date of an object in RFC 3339 (e.g. 2017-06-13) to …\n      custom_time_before                      = \"\"     # string | optional | Creation date of an object in RFC 3339 (e.g. 2017-06-13) to …\n      days_since_custom_time                  = 0      # number | optional | Number of days elapsed since the user-specified timestamp se…\n      days_since_noncurrent_time              = 0      # number | optional | Number of days elapsed since the noncurrent timestamp of an …\n      matches_prefix                          = []     # list(string) | optional | One or more matching name prefixes to satisfy this condition…\n      matches_storage_class                   = []     # list(string) | optional | Storage Class of objects to satisfy this condition. Supporte…\n      matches_suffix                          = []     # list(string) | optional | One or more matching name suffixes to satisfy this condition…\n      no_age                                  = false  # bool | optional+DEPRECATED | While set true, age value will be omitted.Required to set tr…\n      noncurrent_time_before                  = \"\"     # string | optional | Creation date of an object in RFC 3339 (e.g. 2017-06-13) to …\n      num_newer_versions                      = 0      # number | optional | Relevant only for versioned objects. The number of newer ver…\n      send_age_if_zero                        = false  # bool | optional | While set true, age value will be sent in the request even f…\n      send_days_since_custom_time_if_zero     = false  # bool | optional | While set true, days_since_custom_time value will be sent in…\n      send_days_since_noncurrent_time_if_zero = false  # bool | optional | While set true, days_since_noncurrent_time value will be sen…\n      send_num_newer_versions_if_zero         = false  # bool | optional | While set true, num_newer_versions value will be sent in the…\n      with_state                              = \"\"     # string | optional+computed | Match to live and/or archived objects. Unversioned buckets h…\n\n    }\n\n  }\n\n  logging { # list [0..1]\n    log_bucket        = \"\"     # string | required | The bucket that will receive log objects.\n    log_object_prefix = \"\"     # string | optional+computed | The object prefix for log objects. If it's not provided, by …\n\n  }\n\n  retention_policy { # list [0..1]\n    retention_period = 0      # number | required | The period of time, in seconds, that objects in the bucket m…\n    is_locked        = false  # bool | optional | If set to true, the bucket will be locked and permanently re…\n\n  }\n\n  soft_delete_policy { # list [0..1]\n    retention_duration_seconds = 0      # number | optional | The duration in seconds that soft-deleted objects in the buc…\n\n    # effective_time             = \"\"     # string | computed | Server-determined value that indicates the time from which t…\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    read   = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n  versioning { # list [0..1]\n    enabled = false  # bool | required | While set to true, versioning is fully enabled for this buck…\n\n  }\n\n  website { # list [0..1]\n    main_page_suffix = \"\"     # string | optional | Behaves as the bucket's directory index where missing object…\n    not_found_page   = \"\"     # string | optional | The custom object to return when a requested resource is not…\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-data-raw",
+              "location": "US"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 0,
+            "icon": "/icons/gcp_cloud_storage.svg"
+          }
+        },
+        {
+          "id": "561510a2-5184-406b-bab9-0d038874e0a3",
+          "kind": "resource",
+          "type": "google_storage_bucket",
+          "name": "source",
+          "schemaId": "google_storage_bucket",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_storage_bucket                               │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_storage_bucket\" \"this\" {\n\n  location                    = \"\"     # string | required | The Google Cloud Storage location\n  name                        = \"\"     # string | required | The name of the bucket.\n  default_event_based_hold    = false  # bool | optional | Whether or not to automatically apply an eventBasedHold to n…\n  enable_object_retention     = false  # bool | optional | Enables each object in the bucket to have its own retention …\n  force_destroy               = false  # bool | optional | When deleting a bucket, this boolean option will delete all …\n  id                          = \"\"     # string | optional+computed\n  labels                      = {}     # map(string) | optional | A set of key/value label pairs to assign to the bucket.\n  project                     = \"\"     # string | optional+computed | The ID of the project in which the resource belongs. If it i…\n  public_access_prevention    = \"\"     # string | optional+computed | Prevents public access to a bucket.\n  requester_pays              = false  # bool | optional | Enables Requester Pays on a storage bucket.\n  rpo                         = \"\"     # string | optional+computed | Specifies the RPO setting of bucket. If set 'ASYNC_TURBO', T…\n  storage_class               = \"\"     # string | optional | The Storage Class of the new bucket. Supported values includ…\n  uniform_bucket_level_access = false  # bool | optional+computed | Enables uniform bucket-level access on a bucket.\n\n  # effective_labels            = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…\n  # project_number              = 0      # number | computed | The project number of the project in which the resource belo…\n  # self_link                   = \"\"     # string | computed | The URI of the created resource.\n  # terraform_labels            = {}     # map(string) | computed | The combination of labels configured directly on the resourc…\n  # url                         = \"\"     # string | computed | The base URL of the bucket, in the format gs://<bucket-name>…\n\n  autoclass { # list [0..1]\n    enabled                = false  # bool | required | While set to true, autoclass automatically transitions objec…\n    terminal_storage_class = \"\"     # string | optional+computed | The storage class that objects in the bucket eventually tran…\n\n  }\n\n  cors { # list\n    max_age_seconds = 0      # number | optional | The value, in seconds, to return in the Access-Control-Max-A…\n    method          = []     # list(string) | optional | The list of HTTP methods on which to include CORS response h…\n    origin          = []     # list(string) | optional | The list of Origins eligible to receive CORS response header…\n    response_header = []     # list(string) | optional | The list of HTTP headers other than the simple response head…\n\n  }\n\n  custom_placement_config { # list [0..1]\n    data_locations = []     # set(string) | required | The list of individual regions that comprise a dual-region b…\n\n  }\n\n  encryption { # list [0..1]\n    default_kms_key_name = \"\"     # string | required | A Cloud KMS key that will be used to encrypt objects inserte…\n\n  }\n\n  lifecycle_rule { # list [0..100]\n\n    action { # set [1..1]\n      type          = \"\"     # string | required | The type of the action of this Lifecycle Rule. Supported val…\n      storage_class = \"\"     # string | optional | The target Storage Class of objects affected by this Lifecyc…\n\n    }\n\n    condition { # set [1..1]\n      age                                     = 0      # number | optional | Minimum age of an object in days to satisfy this condition.\n      created_before                          = \"\"     # string | optional | Creation date of an object in RFC 3339 (e.g. 2017-06-13) to …\n      custom_time_before                      = \"\"     # string | optional | Creation date of an object in RFC 3339 (e.g. 2017-06-13) to …\n      days_since_custom_time                  = 0      # number | optional | Number of days elapsed since the user-specified timestamp se…\n      days_since_noncurrent_time              = 0      # number | optional | Number of days elapsed since the noncurrent timestamp of an …\n      matches_prefix                          = []     # list(string) | optional | One or more matching name prefixes to satisfy this condition…\n      matches_storage_class                   = []     # list(string) | optional | Storage Class of objects to satisfy this condition. Supporte…\n      matches_suffix                          = []     # list(string) | optional | One or more matching name suffixes to satisfy this condition…\n      no_age                                  = false  # bool | optional+DEPRECATED | While set true, age value will be omitted.Required to set tr…\n      noncurrent_time_before                  = \"\"     # string | optional | Creation date of an object in RFC 3339 (e.g. 2017-06-13) to …\n      num_newer_versions                      = 0      # number | optional | Relevant only for versioned objects. The number of newer ver…\n      send_age_if_zero                        = false  # bool | optional | While set true, age value will be sent in the request even f…\n      send_days_since_custom_time_if_zero     = false  # bool | optional | While set true, days_since_custom_time value will be sent in…\n      send_days_since_noncurrent_time_if_zero = false  # bool | optional | While set true, days_since_noncurrent_time value will be sen…\n      send_num_newer_versions_if_zero         = false  # bool | optional | While set true, num_newer_versions value will be sent in the…\n      with_state                              = \"\"     # string | optional+computed | Match to live and/or archived objects. Unversioned buckets h…\n\n    }\n\n  }\n\n  logging { # list [0..1]\n    log_bucket        = \"\"     # string | required | The bucket that will receive log objects.\n    log_object_prefix = \"\"     # string | optional+computed | The object prefix for log objects. If it's not provided, by …\n\n  }\n\n  retention_policy { # list [0..1]\n    retention_period = 0      # number | required | The period of time, in seconds, that objects in the bucket m…\n    is_locked        = false  # bool | optional | If set to true, the bucket will be locked and permanently re…\n\n  }\n\n  soft_delete_policy { # list [0..1]\n    retention_duration_seconds = 0      # number | optional | The duration in seconds that soft-deleted objects in the buc…\n\n    # effective_time             = \"\"     # string | computed | Server-determined value that indicates the time from which t…\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    read   = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n  versioning { # list [0..1]\n    enabled = false  # bool | required | While set to true, versioning is fully enabled for this buck…\n\n  }\n\n  website { # list [0..1]\n    main_page_suffix = \"\"     # string | optional | Behaves as the bucket's directory index where missing object…\n    not_found_page   = \"\"     # string | optional | The custom object to return when a requested resource is not…\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-data-fn-source",
+              "location": "US"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 0,
+            "icon": "/icons/gcp_cloud_storage.svg"
+          }
+        },
+        {
+          "id": "0b8de94a-3f4f-476f-951c-21becf6dc5c3",
+          "kind": "resource",
+          "type": "google_bigquery_dataset",
+          "name": "warehouse",
+          "schemaId": "google_bigquery_dataset",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_bigquery_dataset                             │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_bigquery_dataset\" \"this\" {\n\n  dataset_id                      = \"\"     # string | required | A unique ID for this dataset, without the project name. The …\n  default_collation               = \"\"     # string | optional+computed | Defines the default collation specification of future tables…\n  default_partition_expiration_ms = 0      # number | optional | The default partition expiration for all partitioned tables …\n  default_table_expiration_ms     = 0      # number | optional | The default lifetime of all tables in the dataset, in millis…\n  delete_contents_on_destroy      = false  # bool | optional | If set to 'true', delete all the tables in the dataset when …\n  description                     = \"\"     # string | optional | A user-friendly description of the dataset\n  friendly_name                   = \"\"     # string | optional | A descriptive name for the dataset\n  id                              = \"\"     # string | optional+computed\n  is_case_insensitive             = false  # bool | optional+computed | TRUE if the dataset and its table names are case-insensitive…\n  labels                          = {}     # map(string) | optional | The labels associated with this dataset. You can use these t…\n  location                        = \"\"     # string | optional | The geographic location where the dataset should reside. See…\n  max_time_travel_hours           = \"\"     # string | optional+computed | Defines the time travel window in hours. The value can be fr…\n  project                         = \"\"     # string | optional+computed\n  resource_tags                   = {}     # map(string) | optional | The tags attached to this table. Tag keys are globally uniqu…\n  storage_billing_model           = \"\"     # string | optional+computed | Specifies the storage billing model for the dataset. Set thi…\n\n  # creation_time                   = 0      # number | computed | The time when this dataset was created, in milliseconds sinc…\n  # effective_labels                = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…\n  # etag                            = \"\"     # string | computed | A hash of the resource.\n  # last_modified_time              = 0      # number | computed | The date when this dataset or any of its tables was last mod…\n  # self_link                       = \"\"     # string | computed\n  # terraform_labels                = {}     # map(string) | computed | The combination of labels configured directly on the resourc…\n\n  access { # set\n    domain         = \"\"     # string | optional | A domain to grant access to. Any users signed in with the do…\n    group_by_email = \"\"     # string | optional | An email address of a Google Group to grant access to.\n    iam_member     = \"\"     # string | optional | Some other type of member that appears in the IAM Policy but…\n    role           = \"\"     # string | optional | Describes the rights granted to the user specified by the ot…\n    special_group  = \"\"     # string | optional | A special group to grant access to. Possible values include:…\n    user_by_email  = \"\"     # string | optional | An email address of a user to grant access to. For example: …\n\n    dataset { # list [0..1]\n      target_types = []     # list(string) | required | Which resources in the dataset this entry applies to. Curren…\n\n      dataset { # list [1..1]\n        dataset_id = \"\"     # string | required | The ID of the dataset containing this table.\n        project_id = \"\"     # string | required | The ID of the project containing this table.\n\n      }\n\n    }\n\n    routine { # list [0..1]\n      dataset_id = \"\"     # string | required | The ID of the dataset containing this table.\n      project_id = \"\"     # string | required | The ID of the project containing this table.\n      routine_id = \"\"     # string | required | The ID of the routine. The ID must contain only letters (a-z…\n\n    }\n\n    view { # list [0..1]\n      dataset_id = \"\"     # string | required | The ID of the dataset containing this table.\n      project_id = \"\"     # string | required | The ID of the project containing this table.\n      table_id   = \"\"     # string | required | The ID of the table. The ID must contain only letters (a-z, …\n\n    }\n\n  }\n\n  default_encryption_configuration { # list [0..1]\n    kms_key_name = \"\"     # string | required | Describes the Cloud KMS encryption key that will be used to …\n\n  }\n\n  external_dataset_reference { # list [0..1]\n    connection      = \"\"     # string | required | The connection id that is used to access the externalSource.…\n    external_source = \"\"     # string | required | External source that backs this dataset.\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "dataset_id": "ddf_data_warehouse",
+              "location": "US"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 840,
+            "y": 0,
+            "icon": "/icons/gcp_bigquery.svg"
+          }
+        },
+        {
+          "id": "3c2f40de-bb3c-4b50-945d-503363a09336",
+          "kind": "resource",
+          "type": "google_bigquery_table",
+          "name": "events",
+          "schemaId": "google_bigquery_table",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_bigquery_table                               │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_bigquery_table\" \"this\" {\n\n  dataset_id                      = \"\"     # string | required | The dataset ID to create the table in. Changing this forces …\n  table_id                        = \"\"     # string | required | A unique ID for the resource. Changing this forces a new res…\n  allow_resource_tags_on_deletion = false  # bool | optional+DEPRECATED | **Deprecated** Whether or not to allow table deletion when t…\n  clustering                      = []     # list(string) | optional | Specifies column names to use for data clustering. Up to fou…\n  deletion_protection             = false  # bool | optional | Whether Terraform will be prevented from destroying the inst…\n  description                     = \"\"     # string | optional | The field description.\n  expiration_time                 = 0      # number | optional+computed | The time when this table expires, in milliseconds since the …\n  friendly_name                   = \"\"     # string | optional | A descriptive name for the table.\n  id                              = \"\"     # string | optional+computed\n  labels                          = {}     # map(string) | optional | A mapping of labels to assign to the resource.  \t\t\t\t**Note**…\n  max_staleness                   = \"\"     # string | optional | The maximum staleness of data that could be returned when th…\n  project                         = \"\"     # string | optional+computed | The ID of the project in which the resource belongs.\n  require_partition_filter        = false  # bool | optional | If set to true, queries over this table require a partition …\n  resource_tags                   = {}     # map(string) | optional | The tags attached to this table. Tag keys are globally uniqu…\n  schema                          = \"\"     # string | optional+computed | A JSON schema for the table.\n\n  # creation_time                   = 0      # number | computed | The time when this table was created, in milliseconds since …\n  # effective_labels                = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…\n  # etag                            = \"\"     # string | computed | A hash of the resource.\n  # last_modified_time              = 0      # number | computed | The time when this table was last modified, in milliseconds …\n  # location                        = \"\"     # string | computed | The geographic location where the table resides. This value …\n  # num_bytes                       = 0      # number | computed | The geographic location where the table resides. This value …\n  # num_long_term_bytes             = 0      # number | computed | The number of bytes in the table that are considered \"long-t…\n  # num_rows                        = 0      # number | computed | The number of rows of data in this table, excluding any data…\n  # self_link                       = \"\"     # string | computed | The URI of the created resource.\n  # terraform_labels                = {}     # map(string) | computed | The combination of labels configured directly on the resourc…\n  # type                            = \"\"     # string | computed | Describes the table type.\n\n  encryption_configuration { # list [0..1]\n    kms_key_name    = \"\"     # string | required | The self link or full name of a key which should be used to …\n\n    # kms_key_version = \"\"     # string | computed | The self link or full name of the kms key version used to en…\n\n  }\n\n  external_data_configuration { # list [0..1]\n    autodetect                = false  # bool | required | Let BigQuery try to autodetect the schema and format of the …\n    source_uris               = []     # list(string) | required | A list of the fully-qualified URIs that point to your data i…\n    compression               = \"\"     # string | optional | The compression type of the data source. Valid values are \"N…\n    connection_id             = \"\"     # string | optional | The connection specifying the credentials to be used to read…\n    file_set_spec_type        = \"\"     # string | optional | Specifies how source URIs are interpreted for constructing t…\n    ignore_unknown_values     = false  # bool | optional | Indicates if BigQuery should allow extra values that are not…\n    json_extension            = \"\"     # string | optional | Load option to be used together with sourceFormat newline-de…\n    max_bad_records           = 0      # number | optional | The maximum number of bad records that BigQuery can ignore w…\n    metadata_cache_mode       = \"\"     # string | optional | Metadata Cache Mode for the table. Set this to enable cachin…\n    object_metadata           = \"\"     # string | optional | Object Metadata is used to create Object Tables. Object Tabl…\n    reference_file_schema_uri = \"\"     # string | optional | When creating an external table, the user can provide a refe…\n    schema                    = \"\"     # string | optional+computed | A JSON schema for the external table. Schema is required for…\n    source_format             = \"\"     # string | optional | Please see sourceFormat under ExternalDataConfiguration in B…\n\n    avro_options { # list [0..1]\n      use_avro_logical_types = false  # bool | required | If sourceFormat is set to \"AVRO\", indicates whether to inter…\n\n    }\n\n    bigtable_options { # list [0..1]\n      ignore_unspecified_column_families = false  # bool | optional | If field is true, then the column families that are not spec…\n      output_column_families_as_json     = false  # bool | optional | If field is true, then each column family will be read as a …\n      read_rowkey_as_string              = false  # bool | optional | If field is true, then the rowkey column families will be re…\n\n      column_family { # list\n        encoding         = \"\"     # string | optional | The encoding of the values when the type is not STRING. Acce…\n        family_id        = \"\"     # string | optional | Identifier of the column family.\n        only_read_latest = false  # bool | optional | If this is set only the latest version of value are exposed …\n        type             = \"\"     # string | optional | The type to convert the value in cells of this column family…\n\n        column { # list\n          encoding          = \"\"     # string | optional | The encoding of the values when the type is not STRING. Acce…\n          field_name        = \"\"     # string | optional | If the qualifier is not a valid BigQuery field identifier i.…\n          only_read_latest  = false  # bool | optional | If this is set, only the latest version of value in this col…\n          qualifier_encoded = \"\"     # string | optional | Qualifier of the column. Columns in the parent column family…\n          qualifier_string  = \"\"     # string | optional | Qualifier string.\n          type              = \"\"     # string | optional | The type to convert the value in cells of this column. The v…\n\n        }\n\n      }\n\n    }\n\n    csv_options { # list [0..1]\n      quote                 = \"\"     # string | required | The value that is used to quote data sections in a CSV file.…\n      allow_jagged_rows     = false  # bool | optional | Indicates if BigQuery should accept rows that are missing tr…\n      allow_quoted_newlines = false  # bool | optional | Indicates if BigQuery should allow quoted data sections that…\n      encoding              = \"\"     # string | optional | The character encoding of the data. The supported values are…\n      field_delimiter       = \"\"     # string | optional | The separator for fields in a CSV file.\n      skip_leading_rows     = 0      # number | optional | The number of rows at the top of a CSV file that BigQuery wi…\n\n    }\n\n    google_sheets_options { # list [0..1]\n      range             = \"\"     # string | optional | Range of a sheet to query from. Only used when non-empty. At…\n      skip_leading_rows = 0      # number | optional | The number of rows at the top of the sheet that BigQuery wil…\n\n    }\n\n    hive_partitioning_options { # list [0..1]\n      mode                     = \"\"     # string | optional | When set, what mode of hive partitioning to use when reading…\n      require_partition_filter = false  # bool | optional | If set to true, queries over this table require a partition …\n      source_uri_prefix        = \"\"     # string | optional | When hive partition detection is requested, a common for all…\n\n    }\n\n    json_options { # list [0..1]\n      encoding = \"\"     # string | optional | The character encoding of the data. The supported values are…\n\n    }\n\n    parquet_options { # list [0..1]\n      enable_list_inference = false  # bool | optional | Indicates whether to use schema inference specifically for P…\n      enum_as_string        = false  # bool | optional | Indicates whether to infer Parquet ENUM logical type as STRI…\n\n    }\n\n  }\n\n  materialized_view { # list [0..1]\n    query                            = \"\"     # string | required | A query whose result is persisted.\n    allow_non_incremental_definition = false  # bool | optional | Allow non incremental materialized view definition. The defa…\n    enable_refresh                   = false  # bool | optional | Specifies if BigQuery should automatically refresh materiali…\n    refresh_interval_ms              = 0      # number | optional | Specifies maximum frequency at which this materialized view …\n\n  }\n\n  range_partitioning { # list [0..1]\n    field = \"\"     # string | required | The field used to determine how to create a range-based part…\n\n    range { # list [1..1]\n      end      = 0      # number | required | End of the range partitioning, exclusive.\n      interval = 0      # number | required | The width of each range within the partition.\n      start    = 0      # number | required | Start of the range partitioning, inclusive.\n\n    }\n\n  }\n\n  table_constraints { # list [0..1]\n\n    foreign_keys { # list\n      name = \"\"     # string | optional | Set only if the foreign key constraint is named.\n\n      column_references { # list [1..1]\n        referenced_column  = \"\"     # string | required | The column in the primary key that are referenced by the ref…\n        referencing_column = \"\"     # string | required | The column that composes the foreign key.\n\n      }\n\n      referenced_table { # list [1..1]\n        dataset_id = \"\"     # string | required | The ID of the dataset containing this table.\n        project_id = \"\"     # string | required | The ID of the project containing this table.\n        table_id   = \"\"     # string | required | The ID of the table. The ID must contain only letters (a-z, …\n\n      }\n\n    }\n\n    primary_key { # list [0..1]\n      columns = []     # list(string) | required | The columns that are composed of the primary key constraint.\n\n    }\n\n  }\n\n  table_replication_info { # list [0..1]\n    source_dataset_id       = \"\"     # string | required | The ID of the source dataset.\n    source_project_id       = \"\"     # string | required | The ID of the source project.\n    source_table_id         = \"\"     # string | required | The ID of the source materialized view.\n    replication_interval_ms = 0      # number | optional | The interval at which the source materialized view is polled…\n\n  }\n\n  time_partitioning { # list [0..1]\n    type                     = \"\"     # string | required | The supported types are DAY, HOUR, MONTH, and YEAR, which wi…\n    expiration_ms            = 0      # number | optional+computed | Number of milliseconds for which to keep the storage for a p…\n    field                    = \"\"     # string | optional | The field used to determine how to create a time-based parti…\n    require_partition_filter = false  # bool | optional+DEPRECATED | If set to true, queries over this table require a partition …\n\n  }\n\n  view { # list [0..1]\n    query          = \"\"     # string | required | A query that BigQuery executes when the view is referenced.\n    use_legacy_sql = false  # bool | optional | Specifies whether to use BigQuery's legacy SQL for this view…\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "dataset_id": "google_bigquery_dataset.warehouse.dataset_id",
+              "table_id": "events",
+              "deletion_protection": false
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 200,
+            "icon": "/icons/gcp_bigquery.svg"
+          }
+        },
+        {
+          "id": "a87c2f3f-103c-4513-82d9-b82617f31d60",
+          "kind": "resource",
+          "type": "google_service_account",
+          "name": "fn",
+          "schemaId": "google_service_account",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_service_account                              │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_service_account\" \"this\" {\n\n  account_id                   = \"\"     # string | required | The account id that is used to generate the service account …\n  create_ignore_already_exists = false  # bool | optional | If set to true, skip service account creation if a service a…\n  description                  = \"\"     # string | optional | A text description of the service account. Must be less than…\n  disabled                     = false  # bool | optional | Whether the service account is disabled. Defaults to false\n  display_name                 = \"\"     # string | optional | The display name for the service account. Can be updated wit…\n  id                           = \"\"     # string | optional+computed\n  project                      = \"\"     # string | optional+computed | The ID of the project that the service account will be creat…\n\n  # email                        = \"\"     # string | computed | The e-mail address of the service account. This value should…\n  # member                       = \"\"     # string | computed | The Identity of the service account in the form 'serviceAcco…\n  # name                         = \"\"     # string | computed | The fully-qualified name of the service account.\n  # unique_id                    = \"\"     # string | computed | The unique id of the service account.\n\n  timeouts { # single\n    create = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "account_id": "ddf-data-fn",
+              "display_name": "DDF Data Function SA"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 200,
+            "icon": "/icons/gcp_security_identity.svg"
+          }
+        },
+        {
+          "id": "25cea5c1-1dfa-43a6-baa4-0e8a91bc1f4f",
+          "kind": "resource",
+          "type": "google_cloudfunctions2_function",
+          "name": "worker",
+          "schemaId": "google_cloudfunctions2_function",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_cloudfunctions2_function                     │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_cloudfunctions2_function\" \"this\" {\n\n  location         = \"\"     # string | required | The location of this cloud function.\n  name             = \"\"     # string | required | A user-defined name of the function. Function names must be …\n  description      = \"\"     # string | optional | User-provided description of a function.\n  id               = \"\"     # string | optional+computed\n  kms_key_name     = \"\"     # string | optional | Resource name of a KMS crypto key (managed by the user) used…\n  labels           = {}     # map(string) | optional | A set of key/value label pairs associated with this Cloud Fu…\n  project          = \"\"     # string | optional+computed\n\n  # effective_labels = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…\n  # environment      = \"\"     # string | computed | The environment the function is hosted on.\n  # state            = \"\"     # string | computed | Describes the current state of the function.\n  # terraform_labels = {}     # map(string) | computed | The combination of labels configured directly on the resourc…\n  # update_time      = \"\"     # string | computed | The last update timestamp of a Cloud Function.\n  # url              = \"\"     # string | computed | Output only. The deployed url for the function.\n\n  build_config { # list [0..1]\n    docker_repository     = \"\"     # string | optional+computed | User managed repository created in Artifact Registry optiona…\n    entry_point           = \"\"     # string | optional | The name of the function (as defined in source code) that wi…\n    environment_variables = {}     # map(string) | optional+computed | User-provided build-time environment variables for the funct…\n    runtime               = \"\"     # string | optional | The runtime in which to run the function. Required when depl…\n    service_account       = \"\"     # string | optional+computed | The fully-qualified name of the service account to be used f…\n    worker_pool           = \"\"     # string | optional | Name of the Cloud Build Custom Worker Pool that should be us…\n\n    # build                 = \"\"     # string | computed | The Cloud Build name of the latest successful deployment of …\n\n    automatic_update_policy {} # list [0..1]\n\n    on_deploy_update_policy { # list [0..1]\n\n      # runtime_version = \"\"     # string | computed | The runtime version which was used during latest function de…\n\n    }\n\n    source { # list [0..1]\n\n      repo_source { # list [0..1]\n        branch_name  = \"\"     # string | optional | Regex matching branches to build.\n        commit_sha   = \"\"     # string | optional | Regex matching tags to build.\n        dir          = \"\"     # string | optional | Directory, relative to the source root, in which to run the …\n        invert_regex = false  # bool | optional | Only trigger a build if the revision regex does NOT match th…\n        project_id   = \"\"     # string | optional | ID of the project that owns the Cloud Source Repository. If …\n        repo_name    = \"\"     # string | optional | Name of the Cloud Source Repository.\n        tag_name     = \"\"     # string | optional | Regex matching tags to build.\n\n      }\n\n      storage_source { # list [0..1]\n        bucket     = \"\"     # string | optional | Google Cloud Storage bucket containing the source\n        generation = 0      # number | optional+computed | Google Cloud Storage generation for the object. If the gener…\n        object     = \"\"     # string | optional | Google Cloud Storage object containing the source.\n\n      }\n\n    }\n\n  }\n\n  event_trigger { # list [0..1]\n    event_type            = \"\"     # string | optional | Required. The type of event to observe.\n    pubsub_topic          = \"\"     # string | optional+computed | The name of a Pub/Sub topic in the same project that will be…\n    retry_policy          = \"\"     # string | optional | Describes the retry policy in case of function's execution f…\n    service_account_email = \"\"     # string | optional+computed | Optional. The email of the trigger's service account. The se…\n    trigger_region        = \"\"     # string | optional+computed | The region that the trigger will be in. The trigger will onl…\n\n    # trigger               = \"\"     # string | computed | Output only. The resource name of the Eventarc trigger.\n\n    event_filters { # set\n      attribute = \"\"     # string | required | 'Required. The name of a CloudEvents attribute. Currently, o…\n      value     = \"\"     # string | required | Required. The value for the attribute. If the operator field…\n      operator  = \"\"     # string | optional | Optional. The operator used for matching the events with the…\n\n    }\n\n  }\n\n  service_config { # list [0..1]\n    all_traffic_on_latest_revision   = false  # bool | optional | Whether 100% of traffic is routed to the latest revision. De…\n    available_cpu                    = \"\"     # string | optional+computed | The number of CPUs used in a single container instance. Defa…\n    available_memory                 = \"\"     # string | optional+computed | The amount of memory available for a function. Defaults to 2…\n    environment_variables            = {}     # map(string) | optional+computed | Environment variables that shall be available during functio…\n    ingress_settings                 = \"\"     # string | optional | Available ingress settings. Defaults to \"ALLOW_ALL\" if unspe…\n    max_instance_count               = 0      # number | optional+computed | The limit on the maximum number of function instances that m…\n    max_instance_request_concurrency = 0      # number | optional+computed | Sets the maximum number of concurrent requests that each ins…\n    min_instance_count               = 0      # number | optional | The limit on the minimum number of function instances that m…\n    service                          = \"\"     # string | optional+computed | Name of the service associated with a Function.\n    service_account_email            = \"\"     # string | optional+computed | The email of the service account for this function.\n    timeout_seconds                  = 0      # number | optional+computed | The function execution timeout. Execution is considered fail…\n    vpc_connector                    = \"\"     # string | optional | The Serverless VPC Access connector that this cloud function…\n    vpc_connector_egress_settings    = \"\"     # string | optional | Available egress settings. Possible values: [\"VPC_CONNECTOR_…\n\n    # gcf_uri                          = \"\"     # string | computed | URIs of the Service deployed\n    # uri                              = \"\"     # string | computed | URI of the Service deployed.\n\n    secret_environment_variables { # list\n      key        = \"\"     # string | required | Name of the environment variable.\n      project_id = \"\"     # string | required | Project identifier (preferrably project number but can also …\n      secret     = \"\"     # string | required | Name of the secret in secret manager (not the full resource …\n      version    = \"\"     # string | required | Version of the secret (version number or the string 'latest'…\n\n    }\n\n    secret_volumes { # list\n      mount_path = \"\"     # string | required | The path within the container to mount the secret volume. Fo…\n      project_id = \"\"     # string | required | Project identifier (preferrably project number but can also …\n      secret     = \"\"     # string | required | Name of the secret in secret manager (not the full resource …\n\n      versions { # list\n        path    = \"\"     # string | required | Relative path of the file under the mount path where the sec…\n        version = \"\"     # string | required | Version of the secret (version number or the string 'latest'…\n\n      }\n\n    }\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-data-worker",
+              "location": "us-central1"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 200,
+            "icon": "/icons/gcp_serverless.svg"
+          }
+        },
+        {
+          "id": "6ca72fe1-e5be-4d12-882f-dc6058d63298",
+          "kind": "resource",
+          "type": "google_pubsub_subscription",
+          "name": "audit",
+          "schemaId": "google_pubsub_subscription",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_pubsub_subscription                          │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_pubsub_subscription\" \"this\" {\n\n  name                         = \"\"     # string | required | Name of the subscription.\n  topic                        = \"\"     # string | required | A reference to a Topic resource, of the form projects/{proje…\n  ack_deadline_seconds         = 0      # number | optional+computed | This value is the maximum time after a subscriber receives a…\n  enable_exactly_once_delivery = false  # bool | optional | If 'true', Pub/Sub provides the following guarantees for the…\n  enable_message_ordering      = false  # bool | optional | If 'true', messages published with the same orderingKey in P…\n  filter                       = \"\"     # string | optional | The subscription only delivers the messages that match the f…\n  id                           = \"\"     # string | optional+computed\n  labels                       = {}     # map(string) | optional | A set of key/value label pairs to assign to this Subscriptio…\n  message_retention_duration   = \"\"     # string | optional | How long to retain unacknowledged messages in the subscripti…\n  project                      = \"\"     # string | optional+computed\n  retain_acked_messages        = false  # bool | optional | Indicates whether to retain acknowledged messages. If 'true'…\n\n  # effective_labels             = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…\n  # terraform_labels             = {}     # map(string) | computed | The combination of labels configured directly on the resourc…\n\n  bigquery_config { # list [0..1]\n    table                 = \"\"     # string | required | The name of the table to which to write data, of the form {p…\n    drop_unknown_fields   = false  # bool | optional | When true and use_topic_schema or use_table_schema is true, …\n    service_account_email = \"\"     # string | optional | The service account to use to write to BigQuery. If not spec…\n    use_table_schema      = false  # bool | optional | When true, use the BigQuery table's schema as the columns to…\n    use_topic_schema      = false  # bool | optional | When true, use the topic's schema as the columns to write to…\n    write_metadata        = false  # bool | optional | When true, write the subscription name, messageId, publishTi…\n\n  }\n\n  cloud_storage_config { # list [0..1]\n    bucket                   = \"\"     # string | required | User-provided name for the Cloud Storage bucket. The bucket …\n    filename_datetime_format = \"\"     # string | optional | User-provided format string specifying how to represent date…\n    filename_prefix          = \"\"     # string | optional | User-provided prefix for Cloud Storage filename.\n    filename_suffix          = \"\"     # string | optional | User-provided suffix for Cloud Storage filename. Must not en…\n    max_bytes                = 0      # number | optional | The maximum bytes that can be written to a Cloud Storage fil…\n    max_duration             = \"\"     # string | optional | The maximum duration that can elapse before a new Cloud Stor…\n    service_account_email    = \"\"     # string | optional | The service account to use to write to Cloud Storage. If not…\n\n    # state                    = \"\"     # string | computed | An output-only field that indicates whether or not the subsc…\n\n    avro_config { # list [0..1]\n      write_metadata = false  # bool | optional | When true, write the subscription name, messageId, publishTi…\n\n    }\n\n  }\n\n  dead_letter_policy { # list [0..1]\n    dead_letter_topic     = \"\"     # string | optional | The name of the topic to which dead letter messages should b…\n    max_delivery_attempts = 0      # number | optional | The maximum number of delivery attempts for any message. The…\n\n  }\n\n  expiration_policy { # list [0..1]\n    ttl = \"\"     # string | required | Specifies the \"time-to-live\" duration for an associated reso…\n\n  }\n\n  push_config { # list [0..1]\n    push_endpoint = \"\"     # string | required | A URL locating the endpoint to which messages should be push…\n    attributes    = {}     # map(string) | optional | Endpoint configuration attributes.  Every endpoint has a set…\n\n    no_wrapper { # list [0..1]\n      write_metadata = false  # bool | required | When true, writes the Pub/Sub message metadata to 'x-goog-pu…\n\n    }\n\n    oidc_token { # list [0..1]\n      service_account_email = \"\"     # string | required | Service account email to be used for generating the OIDC tok…\n      audience              = \"\"     # string | optional | Audience to be used when generating OIDC token. The audience…\n\n    }\n\n  }\n\n  retry_policy { # list [0..1]\n    maximum_backoff = \"\"     # string | optional+computed | The maximum delay between consecutive deliveries of a given …\n    minimum_backoff = \"\"     # string | optional+computed | The minimum delay between consecutive deliveries of a given …\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-data-audit-sub",
+              "topic": "google_pubsub_topic.ingest.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 840,
+            "y": 200,
+            "icon": "/icons/gcp_integration.svg"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "id": "node-46a3fc9d-a7a9-494a-8d50-92830438aad5",
+          "type": "terraformResource",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "resourceId": "46a3fc9d-a7a9-494a-8d50-92830438aad5",
+            "schemaId": "google_pubsub_topic",
+            "label": "ingest",
+            "icon": "/icons/gcp_integration.svg",
+            "terraformType": "google_pubsub_topic",
+            "terraformKind": "resource",
+            "isContainer": false
+          }
+        },
+        {
+          "id": "node-fd92bfa6-a027-4391-b962-1ba46e561a59",
+          "type": "terraformResource",
+          "position": {
+            "x": 280,
+            "y": 0
+          },
+          "data": {
+            "resourceId": "fd92bfa6-a027-4391-b962-1ba46e561a59",
+            "schemaId": "google_storage_bucket",
+            "label": "raw",
+            "icon": "/icons/gcp_cloud_storage.svg",
+            "terraformType": "google_storage_bucket",
+            "terraformKind": "resource",
+            "isContainer": false
+          }
+        },
+        {
+          "id": "node-561510a2-5184-406b-bab9-0d038874e0a3",
+          "type": "terraformResource",
+          "position": {
+            "x": 560,
+            "y": 0
+          },
+          "data": {
+            "resourceId": "561510a2-5184-406b-bab9-0d038874e0a3",
+            "schemaId": "google_storage_bucket",
+            "label": "source",
+            "icon": "/icons/gcp_cloud_storage.svg",
+            "terraformType": "google_storage_bucket",
+            "terraformKind": "resource",
+            "isContainer": false
+          }
+        },
+        {
+          "id": "node-0b8de94a-3f4f-476f-951c-21becf6dc5c3",
+          "type": "terraformResource",
+          "position": {
+            "x": 840,
+            "y": 0
+          },
+          "data": {
+            "resourceId": "0b8de94a-3f4f-476f-951c-21becf6dc5c3",
+            "schemaId": "google_bigquery_dataset",
+            "label": "warehouse",
+            "icon": "/icons/gcp_bigquery.svg",
+            "terraformType": "google_bigquery_dataset",
+            "terraformKind": "resource",
+            "isContainer": false
+          }
+        },
+        {
+          "id": "node-3c2f40de-bb3c-4b50-945d-503363a09336",
+          "type": "terraformResource",
+          "position": {
+            "x": 0,
+            "y": 200
+          },
+          "data": {
+            "resourceId": "3c2f40de-bb3c-4b50-945d-503363a09336",
+            "schemaId": "google_bigquery_table",
+            "label": "events",
+            "icon": "/icons/gcp_bigquery.svg",
+            "terraformType": "google_bigquery_table",
+            "terraformKind": "resource",
+            "isContainer": false
+          }
+        },
+        {
+          "id": "node-a87c2f3f-103c-4513-82d9-b82617f31d60",
+          "type": "terraformResource",
+          "position": {
+            "x": 280,
+            "y": 200
+          },
+          "data": {
+            "resourceId": "a87c2f3f-103c-4513-82d9-b82617f31d60",
+            "schemaId": "google_service_account",
+            "label": "fn",
+            "icon": "/icons/gcp_security_identity.svg",
+            "terraformType": "google_service_account",
+            "terraformKind": "resource",
+            "isContainer": false
+          }
+        },
+        {
+          "id": "node-25cea5c1-1dfa-43a6-baa4-0e8a91bc1f4f",
+          "type": "terraformResource",
+          "position": {
+            "x": 560,
+            "y": 200
+          },
+          "data": {
+            "resourceId": "25cea5c1-1dfa-43a6-baa4-0e8a91bc1f4f",
+            "schemaId": "google_cloudfunctions2_function",
+            "label": "worker",
+            "icon": "/icons/gcp_serverless.svg",
+            "terraformType": "google_cloudfunctions2_function",
+            "terraformKind": "resource",
+            "isContainer": false
+          }
+        },
+        {
+          "id": "node-6ca72fe1-e5be-4d12-882f-dc6058d63298",
+          "type": "terraformResource",
+          "position": {
+            "x": 840,
+            "y": 200
+          },
+          "data": {
+            "resourceId": "6ca72fe1-e5be-4d12-882f-dc6058d63298",
+            "schemaId": "google_pubsub_subscription",
+            "label": "audit",
+            "icon": "/icons/gcp_integration.svg",
+            "terraformType": "google_pubsub_subscription",
+            "terraformKind": "resource",
+            "isContainer": false
+          }
+        }
+      ],
+      "edges": [],
+      "codeFiles": []
+    }
+  ]
+}

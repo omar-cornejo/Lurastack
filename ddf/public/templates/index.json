@@ -2,6 +2,44 @@
   "version": "1",
   "templates": [
     {
+      "id": "aws/basic-vpc-vm",
+      "name": "AWS — Basic VPC + EC2",
+      "description": "VPC con subnet pública, un EC2 y security group.",
+      "provider": "aws",
+      "resourceCount": 7,
+      "tags": [
+        "starter",
+        "networking",
+        "compute"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
+      "id": "aws/web-classic-lb",
+      "name": "AWS — Classic web (ALB + ASG + RDS)",
+      "description": "ALB + Auto Scaling Group sobre subnets privadas + Aurora.",
+      "provider": "aws",
+      "resourceCount": 15,
+      "tags": [
+        "web",
+        "load-balancer",
+        "database"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
+      "id": "aws/data-pipeline-sqs-lambda",
+      "name": "AWS — Data pipeline (SQS + Lambda + DynamoDB)",
+      "description": "Cola SQS consumida por Lambda hacia DynamoDB+S3.",
+      "provider": "aws",
+      "resourceCount": 7,
+      "tags": [
+        "data",
+        "queue"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
       "id": "aws/empty-aws",
       "name": "AWS — Empty project",
       "description": "Proyecto en blanco con un view inicial preparado para AWS.",
@@ -10,6 +48,18 @@
       "tags": [
         "starter",
         "blank"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
+      "id": "aws/serverless-lambda-s3-dynamo",
+      "name": "AWS — Serverless (Lambda + S3 + DynamoDB)",
+      "description": "S3 dispara Lambda que escribe en DynamoDB.",
+      "provider": "aws",
+      "resourceCount": 7,
+      "tags": [
+        "serverless",
+        "event-driven"
       ],
       "icon": "mdi:aws"
     },
@@ -26,6 +76,44 @@
       "icon": "mdi:microsoft-azure"
     },
     {
+      "id": "gcp/basic-network-vm",
+      "name": "GCP — Basic VPC + VM",
+      "description": "VPC custom + subnet + firewall + Compute Engine.",
+      "provider": "gcp",
+      "resourceCount": 4,
+      "tags": [
+        "starter",
+        "networking",
+        "compute"
+      ],
+      "icon": "mdi:google-cloud"
+    },
+    {
+      "id": "gcp/web-classic-lb",
+      "name": "GCP — Classic web (LB + MIG + Cloud SQL)",
+      "description": "MIG detrás de Backend Service + Cloud SQL.",
+      "provider": "gcp",
+      "resourceCount": 10,
+      "tags": [
+        "web",
+        "load-balancer",
+        "database"
+      ],
+      "icon": "mdi:google-cloud"
+    },
+    {
+      "id": "gcp/data-pipeline-pubsub-bq",
+      "name": "GCP — Data pipeline (Pub/Sub + Functions + BigQuery)",
+      "description": "Tema Pub/Sub procesado por Function hacia BigQuery.",
+      "provider": "gcp",
+      "resourceCount": 8,
+      "tags": [
+        "data",
+        "pubsub"
+      ],
+      "icon": "mdi:google-cloud"
+    },
+    {
       "id": "gcp/empty-gcp",
       "name": "GCP — Empty project",
       "description": "Proyecto en blanco con un view inicial preparado para GCP.",
@@ -34,6 +122,18 @@
       "tags": [
         "starter",
         "blank"
+      ],
+      "icon": "mdi:google-cloud"
+    },
+    {
+      "id": "gcp/serverless-functions-storage-bq",
+      "name": "GCP — Serverless (Functions + Storage + BigQuery)",
+      "description": "Cloud Function gatillada por Storage, datos a BigQuery.",
+      "provider": "gcp",
+      "resourceCount": 6,
+      "tags": [
+        "serverless",
+        "event-driven"
       ],
       "icon": "mdi:google-cloud"
     }

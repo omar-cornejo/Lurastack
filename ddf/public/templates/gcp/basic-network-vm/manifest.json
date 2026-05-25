@@ -1,0 +1,13 @@
+{
+  "id": "gcp/basic-network-vm",
+  "name": "GCP — Basic VPC + VM",
+  "description": "VPC custom + subnet + firewall + Compute Engine.",
+  "provider": "gcp",
+  "resourceCount": 4,
+  "tags": [
+    "starter",
+    "networking",
+    "compute"
+  ],
+  "icon": "mdi:google-cloud"
+}

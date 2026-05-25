@@ -1,0 +1,13 @@
+{
+  "id": "aws/web-classic-lb",
+  "name": "AWS — Classic web (ALB + ASG + RDS)",
+  "description": "ALB + Auto Scaling Group sobre subnets privadas + Aurora.",
+  "provider": "aws",
+  "resourceCount": 15,
+  "tags": [
+    "web",
+    "load-balancer",
+    "database"
+  ],
+  "icon": "mdi:aws"
+}

@@ -1,8 +1,10 @@
 import { writeTextFile, mkdir } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { TemplateIndex, TemplateManifest } from "../types/templates";
-import type { DdfProject } from "../types/project";
-import { projectNameToSlug } from "./projectManager";
+import type { DdfProject, DdfViewSnapshot } from "../types/project";
+import { projectNameToSlug, getViewDir } from "./projectManager";
+import { buildMultiProviderHcl } from "../models/hclEmitter";
+import { mergeProviderSettings, getProviderFromResourceType, type CloudProvider } from "../models/providerConfig";
 
 const isTauri = () =>
   typeof window !== "undefined" &&
@@ -79,5 +81,39 @@ export async function createProjectFromTemplate(
   }
 
   await writeTextFile(absolutePath, JSON.stringify(project, null, 2));
+
+  // Pre-render main.tf for each view so terraform plan works immediately,
+  // without depending on the UI opening and rewriting it (which can lose
+  // dotted-key nested-block attributes during the load→save round-trip).
+  const projectRoot = absolutePath.substring(0, absolutePath.lastIndexOf("/"));
+  for (const view of project.views) {
+    await writeViewMainTf(projectRoot, view);
+  }
+
   return absolutePath;
+}
+
+async function writeViewMainTf(projectRoot: string, view: DdfViewSnapshot): Promise<void> {
+  if (!view.resources || view.resources.length === 0) return;
+  const providerSettings = mergeProviderSettings(view.providerSettings);
+  const activeProvider: CloudProvider =
+    view.activeProvider ?? inferProviderFromResources(view.resources) ?? "aws";
+  const hcl = buildMultiProviderHcl(
+    { provider: activeProvider, resources: view.resources },
+    providerSettings,
+    activeProvider,
+  );
+  // The app derives view folders from view.name via viewNameToFolderName,
+  // not view.id — must match or the file ends up orphaned.
+  const viewDir = getViewDir(projectRoot, view.name);
+  await mkdir(viewDir, { recursive: true });
+  await writeTextFile(`${viewDir}/main.tf`, hcl);
+}
+
+function inferProviderFromResources(resources: DdfViewSnapshot["resources"]): CloudProvider | null {
+  for (const r of resources) {
+    const p = getProviderFromResourceType(r.type);
+    if (p) return p;
+  }
+  return null;
 }

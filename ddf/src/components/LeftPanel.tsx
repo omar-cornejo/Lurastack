@@ -9,6 +9,12 @@ import {
 } from "react";
 import { Icon } from '@iconify/react';
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
+import {
+  CATEGORY_ORDER,
+  CATEGORY_LABELS,
+  getCategoryForType,
+  type ServiceCategory,
+} from "../models/categoryRegistry";
 import { NODE_DRAG_MIME, serializeDraggedNode } from "../commands/nodeDragPayload";
 import {
   clearActiveLeftPanelDrag,
@@ -194,20 +200,30 @@ export const LeftPanel = ({
   }, [schemas, search]);
 
   const groupedNodes = useMemo(() => {
-    const groups: Record<TerraformNodeSchema["schemaGroup"], TerraformNodeSchema[]> = {
-      resources: [],
-      data_sources: [],
-      ephemeral_resources: [],
-      functions: [],
-      provider: [],
+    const empty = (): Record<ServiceCategory, TerraformNodeSchema[]> => ({
+      compute: [], networking: [], storage: [], database: [], security: [],
+      serverless: [], integration: [], observability: [], other: [],
+    });
+    const groups: Record<
+      TerraformNodeSchema["schemaGroup"],
+      Record<ServiceCategory, TerraformNodeSchema[]>
+    > = {
+      resources: empty(),
+      data_sources: empty(),
+      ephemeral_resources: empty(),
+      functions: empty(),
+      provider: empty(),
     };
 
     filteredNodes.forEach((node) => {
-      groups[node.schemaGroup].push(node);
+      groups[node.schemaGroup][getCategoryForType(node.terraformType)].push(node);
     });
 
     return groups;
   }, [filteredNodes]);
+
+  const groupTotal = (key: TerraformNodeSchema["schemaGroup"]) =>
+    CATEGORY_ORDER.reduce((sum, c) => sum + groupedNodes[key][c].length, 0);
 
   const tileMin = Math.max(78, Math.min(132, Math.floor(width / 3.2)));
   const hasSearch = search.trim().length > 0;
@@ -445,7 +461,7 @@ export const LeftPanel = ({
 
             <div className="space-y-5">
               {GROUP_ORDER
-                .filter((groupKey) => groupedNodes[groupKey].length > 0 || !hasSearch)
+                .filter((groupKey) => groupTotal(groupKey) > 0 || !hasSearch)
                 .map((groupKey) => (
                   <section key={groupKey} className="px-3">
                     {/* Group header */}
@@ -454,44 +470,60 @@ export const LeftPanel = ({
                         {GROUP_LABELS[groupKey]}
                       </span>
                       <div className="h-px flex-1 bg-slate-200" />
-                      {groupedNodes[groupKey].length > 0 && (
+                      {groupTotal(groupKey) > 0 && (
                         <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-slate-500">
-                          {groupedNodes[groupKey].length}
+                          {groupTotal(groupKey)}
                         </span>
                       )}
                     </div>
 
-                    {groupedNodes[groupKey].length === 0 ? (
+                    {groupTotal(groupKey) === 0 ? (
                       <p className="px-1 text-[11px] text-slate-400">None available</p>
                     ) : (
-                      <div
-                        className="grid gap-1.5"
-                        style={{
-                          gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
-                        }}
-                      >
-                        {groupedNodes[groupKey].map((node) => (
-                          <button
-                            key={node.id}
-                            type="button"
-                            draggable
-                            onClick={() => addResource(node)}
-                            onDragStart={(event) => handleDragStart(event, node)}
-                            onDragEnd={handleDragEnd}
-                            title={`${node.label} (${node.terraformType})`}
-                            className="group flex cursor-grab select-none flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-3 text-center shadow-sm transition-all duration-150 hover:border-orange-300 hover:shadow-md hover:shadow-orange-100/50 active:scale-[0.96] active:cursor-grabbing"
-                          >
-                            <img
-                              src={node.icon}
-                              alt={node.label}
-                              draggable={false}
-                              className="pointer-events-none h-8 w-8 select-none object-cover transition-transform duration-150 group-hover:scale-110"
-                            />
-                            <span className="pointer-events-none line-clamp-2 select-none text-[10.5px] font-medium leading-tight text-slate-600 transition-colors group-hover:text-slate-900">
-                              {node.label}
-                            </span>
-                          </button>
-                        ))}
+                      <div className="space-y-4">
+                        {CATEGORY_ORDER
+                          .filter((cat) => groupedNodes[groupKey][cat].length > 0)
+                          .map((cat) => (
+                            <div key={cat}>
+                              <div className="mb-1.5 flex items-center gap-2 pl-1">
+                                <span className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500">
+                                  {CATEGORY_LABELS[cat]}
+                                </span>
+                                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8.5px] font-medium tabular-nums text-slate-400">
+                                  {groupedNodes[groupKey][cat].length}
+                                </span>
+                              </div>
+                              <div
+                                className="grid gap-1.5"
+                                style={{
+                                  gridTemplateColumns: `repeat(auto-fill, minmax(${tileMin}px, 1fr))`,
+                                }}
+                              >
+                                {groupedNodes[groupKey][cat].map((node) => (
+                                  <button
+                                    key={node.id}
+                                    type="button"
+                                    draggable
+                                    onClick={() => addResource(node)}
+                                    onDragStart={(event) => handleDragStart(event, node)}
+                                    onDragEnd={handleDragEnd}
+                                    title={`${node.label} (${node.terraformType})`}
+                                    className="group flex cursor-grab select-none flex-col items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-3 text-center shadow-sm transition-all duration-150 hover:border-orange-300 hover:shadow-md hover:shadow-orange-100/50 active:scale-[0.96] active:cursor-grabbing"
+                                  >
+                                    <img
+                                      src={node.icon}
+                                      alt={node.label}
+                                      draggable={false}
+                                      className="pointer-events-none h-8 w-8 select-none object-cover transition-transform duration-150 group-hover:scale-110"
+                                    />
+                                    <span className="pointer-events-none line-clamp-2 select-none text-[10.5px] font-medium leading-tight text-slate-600 transition-colors group-hover:text-slate-900">
+                                      {node.label}
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                       </div>
                     )}
                   </section>

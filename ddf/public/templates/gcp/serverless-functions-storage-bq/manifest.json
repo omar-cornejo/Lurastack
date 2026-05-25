@@ -1,0 +1,12 @@
+{
+  "id": "gcp/serverless-functions-storage-bq",
+  "name": "GCP — Serverless (Functions + Storage + BigQuery)",
+  "description": "Cloud Function gatillada por Storage, datos a BigQuery.",
+  "provider": "gcp",
+  "resourceCount": 6,
+  "tags": [
+    "serverless",
+    "event-driven"
+  ],
+  "icon": "mdi:google-cloud"
+}

@@ -1655,12 +1655,22 @@ export const RightPanel = ({
                         }
                       });
 
-                      // Remove dotted keys from the store that are no longer in the parsed HCL.
+                      // Remove a dotted key only when its parent block IS represented
+                      // in the parsed HCL but this specific field is missing — that's a
+                      // user removing one field. If the whole block is absent from
+                      // parsedAttributes, the parser likely failed to extract it
+                      // (deep nesting, etc.); preserve the value rather than destroy data.
                       Object.keys(currentAttributes).forEach((key) => {
-                        if (
-                          key.includes(".") &&
-                          !Object.prototype.hasOwnProperty.call(parsedAttributes, key)
-                        ) {
+                        if (!key.includes(".")) return;
+                        const prefix = key.split(".").slice(0, -1).join(".");
+                        const blockHasAnyParsedField = Object.keys(parsedAttributes).some(
+                          (k) => k.startsWith(`${prefix}.`),
+                        );
+                        const fieldIsParsed = Object.prototype.hasOwnProperty.call(
+                          parsedAttributes,
+                          key,
+                        );
+                        if (blockHasAnyParsedField && !fieldIsParsed) {
                           delete nextAttributes[key];
                         }
                       });
