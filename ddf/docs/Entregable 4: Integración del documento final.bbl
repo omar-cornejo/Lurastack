@@ -1,0 +1,818 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.2 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{none/global//global/global}
+    \entry{noauthor_que_2024}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{El cloud computing permite a los clientes utilizar la infraestructura y las aplicaciones a través de Internet, sin necesidad de instalarlas y mantenerlas en las instalaciones.}
+      \field{day}{14}
+      \field{langid}{spanish}
+      \field{month}{2}
+      \field{shorttitle}{¿Qué es el cloud computing?}
+      \field{title}{¿Qué es el cloud computing? {|} {IBM}}
+      \field{urlday}{23}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{year}{2024}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://www.ibm.com/es-es/think/topics/cloud-computing
+      \endverb
+      \verb{url}
+      \verb https://www.ibm.com/es-es/think/topics/cloud-computing
+      \endverb
+    \endentry
+    \entry{noauthor_que_nodate-4}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{Conozca qué es la infraestructura como código ({IaC}), cómo funciona y cómo se interseca con {DevSecOps}. Descubra los diferentes enfoques de {IaC} para comprender cómo su organización puede aprovecharlo.}
+      \field{langid}{spanish}
+      \field{shorttitle}{¿Qué es la infraestructura como código ({IaC})?}
+      \field{title}{¿Qué es la infraestructura como código ({IaC})? ¿Cómo funciona el {IAC}?}
+      \field{titleaddon}{Fortinet}
+      \field{urlday}{23}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/KWFPZPPP/infrastructure-as-code.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.fortinet.com/lat/resources/cyberglossary/infrastructure-as-code.html
+      \endverb
+      \verb{url}
+      \verb https://www.fortinet.com/lat/resources/cyberglossary/infrastructure-as-code.html
+      \endverb
+    \endentry
+    \entry{noauthor_que_nodate-6}{online}{}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Amazon Web Services ({AWS}) es la nube más adoptada y completa en el mundo, que ofrece más de 200 servicios integrales de centros de datos a nivel global.}
+      \field{langid}{spanish}
+      \field{title}{¿Qué es {AWS}?}
+      \field{titleaddon}{Amazon Web Services, Inc.}
+      \field{urlday}{23}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/YSVK92AI/what-is-aws.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://aws.amazon.com/es/what-is-aws/
+      \endverb
+      \verb{url}
+      \verb https://aws.amazon.com/es/what-is-aws/
+      \endverb
+    \endentry
+    \entry{noauthor_descripcion_nodate}{online}{}
+      \field{sortinit}{4}
+      \field{sortinithash}{9381316451d1b9788675a07e972a12a7}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Get a basic overview of Google Cloud Platform, learn about overall concepts and gain pointers to our resources.}
+      \field{langid}{spanish}
+      \field{title}{Descripción general de Google Cloud {|} Get started}
+      \field{titleaddon}{Google Cloud Documentation}
+      \field{urlday}{23}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/TA3T5UWI/overview.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://docs.cloud.google.com/docs/overview?hl=es-419
+      \endverb
+      \verb{url}
+      \verb https://docs.cloud.google.com/docs/overview?hl=es-419
+      \endverb
+    \endentry
+    \entry{noauthor_que_nodate-5}{online}{}
+      \field{sortinit}{5}
+      \field{sortinithash}{20e9b4b0b173788c5dace24730f47d8c}
+      \field{labeltitlesource}{title}
+      \field{title}{¿Qué es Azure? {|} Microsoft Azure}
+      \field{urlday}{23}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb ¿Qué es Azure? | Microsoft Azure:/home/omar/Zotero/storage/3KE9ZF63/what-is-azure.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://azure.microsoft.com/es-es/resources/cloud-computing-dictionary/what-is-azure/
+      \endverb
+      \verb{url}
+      \verb https://azure.microsoft.com/es-es/resources/cloud-computing-dictionary/what-is-azure/
+      \endverb
+    \endentry
+    \entry{noauthor_ibm_nodate}{online}{}
+      \field{sortinit}{6}
+      \field{sortinithash}{b33bc299efb3c36abec520a4c896a66d}
+      \field{labeltitlesource}{title}
+      \field{title}{{IBM} Cloud}
+      \field{urlday}{25}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://www.ibm.com/es-es/solutions/cloud
+      \endverb
+      \verb{url}
+      \verb https://www.ibm.com/es-es/solutions/cloud
+      \endverb
+    \endentry
+    \entry{noauthor_alibaba_nodate}{online}{}
+      \field{sortinit}{7}
+      \field{sortinithash}{108d0be1b1bee9773a1173443802c0a3}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Founded in 2009, Alibaba Cloud is a leading cloud computing and artificial}
+      \field{title}{Alibaba Cloud-Alibaba Group}
+      \field{urlday}{25}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/7P5Y7VEK/about-alibaba-businesses-1747835448811585536.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://home.alibabagroup.com/en-US/about-alibaba-businesses-1747835448811585536
+      \endverb
+      \verb{url}
+      \verb https://home.alibabagroup.com/en-US/about-alibaba-businesses-1747835448811585536
+      \endverb
+    \endentry
+    \entry{noauthor_hyperscalers_nodate}{online}{}
+      \field{sortinit}{8}
+      \field{sortinithash}{a231b008ebf0ecbe0b4d96dcc159445f}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{Los hyperscalers o hiperescaladores son proveedores grandes de servicios de nube, como la informática y el almacenamiento, a nivel empresarial.}
+      \field{langid}{spanish}
+      \field{shorttitle}{Hyperscalers - hiperescaladores}
+      \field{title}{Hyperscalers - hiperescaladores: principales proveedores de la nube}
+      \field{urlday}{23}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/9RTCWHT6/what-is-a-hyperscaler.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.redhat.com/es/topics/cloud-computing/what-is-a-hyperscaler
+      \endverb
+      \verb{url}
+      \verb https://www.redhat.com/es/topics/cloud-computing/what-is-a-hyperscaler
+      \endverb
+    \endentry
+    \entry{noauthor_escalabilidad_nodate}{online}{}
+      \field{sortinit}{9}
+      \field{sortinithash}{0a5ebc79d83c96b6579069544c73c7d4}
+      \field{labeltitlesource}{title}
+      \field{abstract}{La escalabilidad es la capacidad de un sistema, proceso o recurso para adaptarse y manejar un aumento en las demandas del usuario sin perder su...}
+      \field{langid}{spanish}
+      \field{title}{Escalabilidad - Definicion.de}
+      \field{titleaddon}{Definición.de}
+      \field{urlday}{23}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/CFYAZT5Q/escalabilidad.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://definicion.de/escalabilidad/
+      \endverb
+      \verb{url}
+      \verb https://definicion.de/escalabilidad/
+      \endverb
+    \endentry
+    \entry{noauthor_portabilidad_nodate}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{La portabilidad es una característica del software, siendo una forma de reutilización que ayuda a evitar el “bloqueo” de ciertos entornos operativos, p.ej. proveedores de nube, sistemas operativos o vendedores. Tradicionalmente, el software es construido para entornos específicos (p. ej. {AWS} o Linux). El software portable, por otro lado, funciona en diferentes entornos operativos sin necesidad de una adaptación importante. Una aplicación se considera portable si el esfuerzo requerido para adaptarla a un nuevo entorno está dentro de límites razonables. La frase “portar” significa modificar el software y hacerlo adaptable para trabajar en diferentes sistemas informáticos.}
+      \field{langid}{spanish}
+      \field{title}{Portabilidad}
+      \field{titleaddon}{Cloud Native Glosario}
+      \field{urlday}{23}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/HGZA7LG6/portability.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://glossary.cncf.io/es/portability/
+      \endverb
+      \verb{url}
+      \verb https://glossary.cncf.io/es/portability/
+      \endverb
+    \endentry
+    \entry{noauthor_que_nodate-3}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{Crea un futuro sostenible gracias a las ventajas de la informática en la nube, y otras soluciones y tecnologías sostenibles.}
+      \field{langid}{spanish}
+      \field{shorttitle}{¿Qué es la sostenibilidad?}
+      \field{title}{¿Qué es la sostenibilidad? Definición e importancia {|} Sostenibilidad de Microsoft}
+      \field{urlday}{24}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/SPN6JZS4/sustainability-definition.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.microsoft.com/es-co/sustainability/learning-center/sustainability-definition
+      \endverb
+      \verb{url}
+      \verb https://www.microsoft.com/es-co/sustainability/learning-center/sustainability-definition
+      \endverb
+    \endentry
+    \entry{noauthor_que_nodate-2}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{La expresión open source se refiere al software open source (código abierto), es decir, al código que cualquier persona puede utilizar, modificar y distribuir.}
+      \field{langid}{spanish}
+      \field{title}{¿Qué es el open source o código abierto?}
+      \field{urlday}{24}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/KX4F96Z5/what-is-open-source.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.redhat.com/es/topics/open-source/what-is-open-source
+      \endverb
+      \verb{url}
+      \verb https://www.redhat.com/es/topics/open-source/what-is-open-source
+      \endverb
+    \endentry
+    \entry{noauthor_que_2025}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{shorttitle}
+      \field{abstract}{Terraform es una herramienta de infraestructura como código ({IaC}) que permite a los desarrolladores utilizar código legible por humanos para aprovisionar, actualizar y destruir los componentes de la infraestructura.}
+      \field{day}{15}
+      \field{langid}{spanish}
+      \field{month}{4}
+      \field{shorttitle}{¿Qué es Terraform?}
+      \field{title}{¿Qué es Terraform? {|} {IBM}}
+      \field{urlday}{26}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{year}{2025}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/P6NQLYKS/terraform.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.ibm.com/es-es/think/topics/terraform
+      \endverb
+      \verb{url}
+      \verb https://www.ibm.com/es-es/think/topics/terraform
+      \endverb
+    \endentry
+    \entry{noauthor_brainboard_nodate}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Brainboard es una plataforma colaborativa que permite diseñar y gestionar visualmente infraestructuras en la nube, generando automáticamente código {IaC}. {|} Utiliza Brainboard en una ventana dedicada y sin distracciones con {WebCatalog} Desktop para {macOS} y Windows. Mejora tu productividad con un cambio de aplicación más rápido y una multitarea más fluida. Gestiona y cambia fácilmente entre varias cuentas sin utilizar varios navegadores.}
+      \field{langid}{spanish}
+      \field{title}{Brainboard - Aplicación de escritorio para Mac, Windows ({PC})}
+      \field{titleaddon}{{WebCatalog}}
+      \field{urlday}{26}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/RFMJUVJX/brainboard.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://webcatalog.io/es/apps/brainboard
+      \endverb
+      \verb{url}
+      \verb https://webcatalog.io/es/apps/brainboard
+      \endverb
+    \endentry
+    \entry{noauthor_infrastructure_nodate}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Learn how to create, deploy, and manage infrastructure on any cloud using Pulumi's open source infrastructure as code {SDK}.}
+      \field{langid}{american}
+      \field{title}{Infrastructure as Code}
+      \field{titleaddon}{pulumi}
+      \field{urlday}{5}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/I44UBXXP/iac.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.pulumi.com/docs/iac/
+      \endverb
+      \verb{url}
+      \verb https://www.pulumi.com/docs/iac/
+      \endverb
+    \endentry
+    \entry{noauthor_cloud_nodate}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{{AWS} Cloud Development Kit ({CDK}) is an open-source software development framework used to model and provision your cloud application resources with familiar programming languages.}
+      \field{langid}{american}
+      \field{title}{Cloud Development Framework - {AWS} Cloud Development Kit - {AWS}}
+      \field{titleaddon}{Amazon Web Services, Inc.}
+      \field{urlday}{19}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/DUIB7YIY/cdk.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://aws.amazon.com/cdk/
+      \endverb
+      \verb{url}
+      \verb https://aws.amazon.com/cdk/
+      \endverb
+    \endentry
+    \entry{noauthor_que_nodate-7}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{El producto mínimo viable es una versión inicial de un producto o servicio que se elabora con sus características básicas. Te contamos para qué sirve.}
+      \field{langid}{spanish}
+      \field{title}{¿Qué es el {MVP} o producto mínimo viable y para qué sirve?}
+      \field{titleaddon}{Banco Santander Impulsa Empresas}
+      \field{urlday}{26}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/8PCQ7AKZ/producto-minimo-viable.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.impulsa-empresa.es/diccionario/producto-minimo-viable/
+      \endverb
+      \verb{url}
+      \verb https://www.impulsa-empresa.es/diccionario/producto-minimo-viable/
+      \endverb
+    \endentry
+    \entry{kniberg_kanban_2010}{book}{}
+      \name{author}{2}{}{%
+        {{hash=21b4b0b95d2e23cb807ae277c60489e0}{%
+           family={Kniberg},
+           familyi={K\bibinitperiod},
+           given={Henrik},
+           giveni={H\bibinitperiod}}}%
+        {{hash=201bfab8350b1edfed6a04041fb4c595}{%
+           family={Skarin},
+           familyi={S\bibinitperiod},
+           given={Mattias},
+           giveni={M\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {Lulu.com}%
+      }
+      \strng{namehash}{8111e8a68ebcf77fe13bc10d9f64066d}
+      \strng{fullhash}{8111e8a68ebcf77fe13bc10d9f64066d}
+      \strng{bibnamehash}{8111e8a68ebcf77fe13bc10d9f64066d}
+      \strng{authorbibnamehash}{8111e8a68ebcf77fe13bc10d9f64066d}
+      \strng{authornamehash}{8111e8a68ebcf77fe13bc10d9f64066d}
+      \strng{authorfullhash}{8111e8a68ebcf77fe13bc10d9f64066d}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Scrum and Kanban are two flavours of Agile software development - two deceptively simple but surprisingly powerful approaches to software development. So how do they relate to each other? The purpose of this book is to clear up the fog, so you can figure out how Kanban and Scrum might be useful in your environment. Part I illustrates the similarities and differences between Kanban and Scrum, comparing for understanding, not for judgement. There is no such thing as a good or bad tool - just good or bad decisions about when and how to use which tool. This book includes: - Kanban and Scrum in a nutshell - Comparison of Kanban and Scrum and other Agile methods - Practical examples and pitfalls - Cartoons and diagrams illustrating day-to-day work - Detailed case study of a Kanban implementation within a Scrum organization Part {II} is a case study illustrating how a Scrum-based development organization implemented Kanban in their operations and support teams.}
+      \field{isbn}{978-0-557-13832-6}
+      \field{langid}{english}
+      \field{note}{Google-Books-{ID}: Hx1KAgAAQBAJ}
+      \field{pagetotal}{122}
+      \field{title}{Kanban and Scrum - Making the Most of Both}
+      \field{year}{2010}
+      \field{dateera}{ce}
+      \keyw{Computers / Programming / General}
+    \endentry
+    \entry{noauthor_acerca_nodate}{online}{}
+      \field{sortinit}{1}
+      \field{sortinithash}{4f6aaa89bab872aa0999fec09ff8e98a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Puedes utilizar {GitHub} y Git para colaborar en el trabajo.}
+      \field{langid}{spanish}
+      \field{title}{Acerca de {GitHub} y Git - Documentación de {GitHub}}
+      \field{titleaddon}{{GitHub} Docs}
+      \field{urlday}{26}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://docs-internal.github.com/es/get-started/start-your-journey/about-github-and-git
+      \endverb
+      \verb{url}
+      \verb https://docs-internal.github.com/es/get-started/start-your-journey/about-github-and-git
+      \endverb
+    \endentry
+    \entry{noauthor_que_nodate-8}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Descubre qué es Trello y para qué sirve, además de sus características, funciones, ventajas, desventajas y los beneficios de esta herramienta online.}
+      \field{langid}{spanish}
+      \field{title}{Qué es Trello, características y ventajas {|} {OpenWebinars}}
+      \field{titleaddon}{{OpenWebinars}.net}
+      \field{urlday}{26}
+      \field{urlmonth}{2}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://openwebinars.net/blog/que-es-trello/
+      \endverb
+      \verb{url}
+      \verb https://openwebinars.net/blog/que-es-trello/
+      \endverb
+    \endentry
+    \entry{noauthor_que_nodate-9}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{title}{¿Qué es un diagrama de Gantt y para qué sirve? {|} {OBS} Business School}
+      \field{urlday}{17}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb ¿Qué es un diagrama de Gantt y para qué sirve? | OBS Business School:/home/omar/Zotero/storage/26UTDRCU/que-es-un-diagrama-de-gantt-y-para-que-sirve.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.obsbusiness.school/blog/que-es-un-diagrama-de-gantt-y-para-que-sirve
+      \endverb
+      \verb{url}
+      \verb https://www.obsbusiness.school/blog/que-es-un-diagrama-de-gantt-y-para-que-sirve
+      \endverb
+    \endentry
+    \entry{noauthor_visual_nodate}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Visual Studio Code redefines {AI}-powered coding with {GitHub} Copilot for building and debugging modern web and cloud applications. Visual Studio Code is free and available on your favorite platform - Linux, {macOS}, and Windows.}
+      \field{langid}{english}
+      \field{title}{Visual Studio Code - The open source {AI} code editor}
+      \field{urlday}{17}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://code.visualstudio.com/
+      \endverb
+      \verb{url}
+      \verb https://code.visualstudio.com/
+      \endverb
+    \endentry
+    \entry{noauthor_rust_nodate}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{A language empowering everyone to build reliable and efficient software.}
+      \field{langid}{american}
+      \field{title}{Rust Programming Language}
+      \field{urlday}{17}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://rust-lang.org/
+      \endverb
+      \verb{url}
+      \verb https://rust-lang.org/
+      \endverb
+    \endentry
+    \entry{noauthor_que_2025-1}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{The cross-platform app building toolkit}
+      \field{day}{19}
+      \field{langid}{spanish}
+      \field{month}{2}
+      \field{title}{¿Qué es Tauri?}
+      \field{titleaddon}{Tauri}
+      \field{urlday}{17}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{year}{2025}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://v2.tauri.app/es/start/
+      \endverb
+      \verb{url}
+      \verb https://v2.tauri.app/es/start/
+      \endverb
+    \endentry
+    \entry{noauthor_getting_nodate}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Next Generation Frontend Tooling}
+      \field{langid}{american}
+      \field{title}{Getting Started}
+      \field{titleaddon}{vitejs}
+      \field{urlday}{17}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/HYT9ELMY/vite.dev.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://vite.dev
+      \endverb
+      \verb{url}
+      \verb https://vite.dev
+      \endverb
+    \endentry
+    \entry{noauthor_react_nodate}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{React is the library for web and native user interfaces. Build user interfaces out of individual pieces called components written in {JavaScript}. React is designed to let you seamlessly combine components written by independent people, teams, and organizations.}
+      \field{langid}{english}
+      \field{title}{React}
+      \field{urlday}{19}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/XP43NL8P/react.dev.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://react.dev/
+      \endverb
+      \verb{url}
+      \verb https://react.dev/
+      \endverb
+    \endentry
+    \entry{noauthor_javascript_nodate}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{abstract}{{TypeScript} extends {JavaScript} by adding types to the language. {TypeScript} speeds up your development experience by catching errors and providing fixes before you even run your code.}
+      \field{langid}{english}
+      \field{title}{{JavaScript} With Syntax For Types.}
+      \field{urlday}{19}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/BWC5TA9C/www.typescriptlang.org.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://www.typescriptlang.org/
+      \endverb
+      \verb{url}
+      \verb https://www.typescriptlang.org/
+      \endverb
+    \endentry
+    \entry{noauthor_latex_nodate}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{title}{{LaTeX} - A document preparation system}
+      \field{urlday}{17}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://www.latex-project.org/
+      \endverb
+      \verb{url}
+      \verb https://www.latex-project.org/
+      \endverb
+    \endentry
+    \entry{noauthor_google_nodate}{online}{}
+      \field{sortinit}{2}
+      \field{sortinithash}{8b555b3791beccb63322c22f3320aa9a}
+      \field{labeltitlesource}{title}
+      \field{title}{Google Meet}
+      \field{urlday}{17}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Google Meet:/home/omar/Zotero/storage/YCNQUJXG/landing.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://meet.google.com/landing
+      \endverb
+      \verb{url}
+      \verb https://meet.google.com/landing
+      \endverb
+    \endentry
+    \entry{noauthor_hashicorphcl_2026}{software}{}
+      \list{publisher}{1}{%
+        {HashiCorp}%
+      }
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{abstract}{{HCL} is the {HashiCorp} configuration language.}
+      \field{day}{17}
+      \field{month}{3}
+      \field{note}{original-date: 2014-07-31T21:09:00Z}
+      \field{title}{hashicorp/hcl}
+      \field{urlday}{17}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{year}{2026}
+      \field{dateera}{ce}
+      \field{urldateera}{ce}
+      \verb{urlraw}
+      \verb https://github.com/hashicorp/hcl
+      \endverb
+      \verb{url}
+      \verb https://github.com/hashicorp/hcl
+      \endverb
+      \keyw{configuration-language,hashicorp,hcl,json}
+    \endentry
+    \entry{noauthor_calcular_nodate}{online}{}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{title}{Calcular sueldo medio por profesión y provincia {|} {InfoJobs} Salarios}
+      \field{urlday}{9}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Calcular sueldo medio por profesión y provincia | InfoJobs Salarios:/home/omar/Zotero/storage/74DRVYGP/salarios.infojobs.net.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://salarios.infojobs.net/
+      \endverb
+      \verb{url}
+      \verb https://salarios.infojobs.net/
+      \endverb
+    \endentry
+    \entry{noauthor_precio_nodate}{online}{}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Comprueba aquí el Precio actual de la Luz {|} Precios máximos y mínimos de la luz a lo largo del día, con y sin Discriminación Horaria del día que quieras}
+      \field{langid}{spanish}
+      \field{title}{Precio de la tarifa de luz por horas {HOY} {|} 09 Marzo 2026}
+      \field{urlday}{9}
+      \field{urlmonth}{3}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/LYT4554W/tarifaluzhora.es.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://tarifaluzhora.es/
+      \endverb
+      \verb{url}
+      \verb https://tarifaluzhora.es/
+      \endverb
+    \endentry
+    \entry{noauthor_home_nodate}{online}{}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{abstract}{C4 model}
+      \field{langid}{american}
+      \field{title}{Home}
+      \field{titleaddon}{C4 model}
+      \field{urlday}{19}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/QTS48D88/c4model.com.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://c4model.com/
+      \endverb
+      \verb{url}
+      \verb https://c4model.com/
+      \endverb
+    \endentry
+    \entry{noauthor_build_nodate}{online}{}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Build cross-platform desktop apps with {JavaScript}, {HTML}, and {CSS}}
+      \field{langid}{english}
+      \field{title}{Build cross-platform desktop apps with {JavaScript}, {HTML}, and {CSS} {|} Electron}
+      \field{urlday}{19}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/TBPBBL8C/electronjs.org.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://electronjs.org/
+      \endverb
+      \verb{url}
+      \verb https://electronjs.org/
+      \endverb
+    \endentry
+    \entry{noauthor_go_nodate}{online}{}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Go is an open source programming language that makes it simple to build secure, scalable systems.}
+      \field{langid}{english}
+      \field{title}{The Go Programming Language}
+      \field{urlday}{5}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/DP9IQY4I/go.dev.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://go.dev/
+      \endverb
+      \verb{url}
+      \verb https://go.dev/
+      \endverb
+    \endentry
+    \entry{noauthor_what_nodate}{online}{}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{langid}{english}
+      \field{title}{What is the Model Context Protocol ({MCP})?}
+      \field{titleaddon}{Model Context Protocol}
+      \field{urlday}{19}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/VQKSYEAM/intro.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://modelcontextprotocol.io/docs/getting-started/intro
+      \endverb
+      \verb{url}
+      \verb https://modelcontextprotocol.io/docs/getting-started/intro
+      \endverb
+    \endentry
+    \entry{noauthor_descripcion_nodate-1}{online}{}
+      \field{sortinit}{3}
+      \field{sortinithash}{ad6fe7482ffbd7b9f99c9e8b5dccd3d7}
+      \field{labeltitlesource}{title}
+      \field{abstract}{Conozca los conceptos básicos y la terminología esencial en {GitHub} Actions.}
+      \field{langid}{spanish}
+      \field{title}{Descripción de {GitHub} Actions - Documentación de {GitHub}}
+      \field{titleaddon}{{GitHub} Docs}
+      \field{urlday}{19}
+      \field{urlmonth}{5}
+      \field{urlyear}{2026}
+      \field{urldateera}{ce}
+      \verb{file}
+      \verb Snapshot:/home/omar/Zotero/storage/Y3XLLLQG/understand-github-actions.html:text/html
+      \endverb
+      \verb{urlraw}
+      \verb https://docs-internal.github.com/es/actions/get-started/understand-github-actions
+      \endverb
+      \verb{url}
+      \verb https://docs-internal.github.com/es/actions/get-started/understand-github-actions
+      \endverb
+    \endentry
+  \enddatalist
+  \missing{noauthor_json_nodate}
+\endrefsection
+\endinput
+
