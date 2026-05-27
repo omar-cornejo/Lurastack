@@ -8,7 +8,7 @@ import {
 import type { HistoryEntry, HistoryIndex } from "../types/history";
 import type { ResourcePlanChange } from "../canvas/types";
 
-const HISTORY_DIR = ".ddf-history";
+const HISTORY_DIR = ".lurastack-history";
 const INDEX_FILE = "index.json";
 const MAX_ENTRIES = 200;
 

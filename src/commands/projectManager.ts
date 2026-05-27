@@ -9,20 +9,16 @@ import {
   BaseDirectory,
 } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-dialog";
-import type { DdfProject, DdfViewSnapshot, RecentProject } from "../types/project";
+import type { LuraProject, ViewSnapshot, RecentProject } from "../types/project";
 import type { Node, Edge } from "reactflow";
 import type { CanvasTerraformNodeData, CanvasEdgeData } from "../canvas/types";
-import type { DdfSerializedNode, DdfSerializedEdge } from "../types/project";
-
-// ── Tauri detection ──────────────────────────────────────────────────────────
+import type { SerializedNode, SerializedEdge } from "../types/project";
 
 const isTauri = () =>
   typeof window !== "undefined" &&
   !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 
-// ── Recent projects (localStorage) ──────────────────────────────────────────
-
-const RECENT_KEY = "ddf:recent-projects";
+const RECENT_KEY = "lurastack:recent-projects";
 const MAX_RECENT = 12;
 
 export function getRecentProjects(): RecentProject[] {
@@ -53,13 +49,11 @@ export function removeFromRecent(path: string): void {
   localStorage.setItem(RECENT_KEY, JSON.stringify(list));
 }
 
-// ── File I/O ─────────────────────────────────────────────────────────────────
-
 export async function saveProjectToPath(
-  project: DdfProject,
+  project: LuraProject,
   absolutePath: string,
 ): Promise<void> {
-  const updated: DdfProject = {
+  const updated: LuraProject = {
     ...project,
     meta: { ...project.meta, updatedAt: new Date().toISOString() },
   };
@@ -74,7 +68,7 @@ export async function saveProjectToPath(
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = absolutePath.split(/[\\/]/).pop() ?? "project.ddf";
+    a.download = absolutePath.split(/[\\/]/).pop() ?? "project.lura";
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -86,9 +80,9 @@ export async function saveProjectToPath(
   });
 }
 
-export async function loadProjectFromPath(absolutePath: string): Promise<DdfProject> {
+export async function loadProjectFromPath(absolutePath: string): Promise<LuraProject> {
   const json = await readTextFile(absolutePath);
-  const project = JSON.parse(json) as DdfProject;
+  const project = JSON.parse(json) as LuraProject;
 
   addToRecent({
     name: project.meta.name,
@@ -99,10 +93,8 @@ export async function loadProjectFromPath(absolutePath: string): Promise<DdfProj
   return project;
 }
 
-// ── Native dialog pickers ────────────────────────────────────────────────────
-
 /**
- * Opens a directory picker, creates a <slug>/ subfolder, and returns the .ddf path inside it.
+ * Opens a directory picker, creates a <slug>/ subfolder, and returns the .lura path inside it.
  * Returns null if cancelled.
  */
 export async function pickSavePath(projectName: string): Promise<string | null> {
@@ -118,18 +110,16 @@ export async function pickSavePath(projectName: string): Promise<string | null> 
   const slug = projectNameToSlug(projectName);
   const projectDir = `${parentDir}/${slug}`;
   await mkdir(projectDir, { recursive: true });
-  return `${projectDir}/${slug}.ddf`;
+  return `${projectDir}/${slug}.lura`;
 }
 
-/** Returns the directory containing the .ddf file. */
-export function getProjectDir(ddfPath: string): string {
-  const normalized = ddfPath.replace(/\\/g, "/");
+export function getProjectDir(projectPath: string): string {
+  const normalized = projectPath.replace(/\\/g, "/");
   const parts = normalized.split("/");
   parts.pop();
   return parts.join("/");
 }
 
-/** Writes HCL content to main.tf inside the project directory. */
 export async function writeMainTf(projectDir: string, hclContent: string): Promise<void> {
   await writeTextFile(`${projectDir}/main.tf`, hclContent);
 }
@@ -172,7 +162,7 @@ export async function pickOpenPath(): Promise<string | null> {
   if (!isTauri()) return null;
   const result = await open({
     title: "Open project",
-    filters: [{ name: "DDF Project", extensions: ["ddf"] }],
+    filters: [{ name: "LuraStack Project", extensions: ["lura"] }],
     multiple: false,
     directory: false,
   });
@@ -180,27 +170,24 @@ export async function pickOpenPath(): Promise<string | null> {
   return typeof result === "string" ? result : result[0] ?? null;
 }
 
-// ── AppData fallback (used only for legacy / when no path is set) ────────────
-
+// AppData fallback: used only for legacy projects or when no path is set.
 export async function saveProjectToAppData(
-  project: DdfProject,
+  project: LuraProject,
   fileName: string,
 ): Promise<void> {
-  const updated: DdfProject = {
+  const updated: LuraProject = {
     ...project,
     meta: { ...project.meta, updatedAt: new Date().toISOString() },
   };
   const json = JSON.stringify(updated, null, 2);
-  await writeTextFile(`ddf-projects/${fileName}`, json, {
+  await writeTextFile(`lurastack-projects/${fileName}`, json, {
     baseDir: BaseDirectory.AppData,
   });
 }
 
-// ── Snapshot helpers ─────────────────────────────────────────────────────────
-
 export function snapshotNodes(
   nodes: Node<CanvasTerraformNodeData>[],
-): DdfSerializedNode[] {
+): SerializedNode[] {
   return nodes.map((n) => ({
     id: n.id,
     type: n.type,
@@ -214,7 +201,7 @@ export function snapshotNodes(
   }));
 }
 
-export function snapshotEdges(edges: Edge<CanvasEdgeData>[]): DdfSerializedEdge[] {
+export function snapshotEdges(edges: Edge<CanvasEdgeData>[]): SerializedEdge[] {
   return edges.map((e) => ({
     id: e.id,
     source: e.source,
@@ -227,7 +214,7 @@ export function snapshotEdges(edges: Edge<CanvasEdgeData>[]): DdfSerializedEdge[
 }
 
 export function restoreNodes(
-  serialized: DdfSerializedNode[],
+  serialized: SerializedNode[],
 ): Node<CanvasTerraformNodeData>[] {
   return serialized.map((n) => ({
     id: n.id,
@@ -243,7 +230,7 @@ export function restoreNodes(
 }
 
 export function restoreEdges(
-  serialized: DdfSerializedEdge[],
+  serialized: SerializedEdge[],
 ): Edge<CanvasEdgeData>[] {
   return serialized.map((e) => ({
     id: e.id,
@@ -256,9 +243,7 @@ export function restoreEdges(
   }));
 }
 
-// ── Project factory ──────────────────────────────────────────────────────────
-
-export function createEmptyProject(name: string): DdfProject {
+export function createEmptyProject(name: string): LuraProject {
   const viewId = crypto.randomUUID();
   const now = new Date().toISOString();
   return {
@@ -271,9 +256,9 @@ export function createEmptyProject(name: string): DdfProject {
 }
 
 export function buildProjectSnapshot(
-  project: DdfProject,
-  viewSnapshots: Map<string, DdfViewSnapshot>,
-): DdfProject {
+  project: LuraProject,
+  viewSnapshots: Map<string, ViewSnapshot>,
+): LuraProject {
   const views = project.views.map((v) => viewSnapshots.get(v.id) ?? v);
   return {
     ...project,
@@ -287,7 +272,7 @@ export function projectNameToSlug(name: string): string {
 }
 
 export function projectNameToFileName(name: string): string {
-  return projectNameToSlug(name) + ".ddf";
+  return projectNameToSlug(name) + ".lura";
 }
 
 export function viewNameToFolderName(name: string): string {

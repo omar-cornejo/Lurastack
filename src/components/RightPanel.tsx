@@ -18,7 +18,7 @@ import {
   type InspectorProperty,
 } from "../commands/schemaInspector";
 import HistoryTab from "./HistoryTab";
-import type { DdfViewSnapshot } from "../types/project";
+import type { ViewSnapshot } from "../types/project";
 
 type RightPanelTab = "info" | "hcl";
 type RightPanelMode = "inspector" | "history";
@@ -55,7 +55,7 @@ type RightPanelProps = {
   projectDir?: string;
   currentViewId?: string;
   historyRefreshSignal?: number;
-  onRestoreFromHistory?: (snapshot: DdfViewSnapshot, entryId: string) => void;
+  onRestoreFromHistory?: (snapshot: ViewSnapshot, entryId: string) => void;
 };
 
 type DiffAttributeStatus = "create" | "change" | "destroy" | "unchanged";
@@ -66,8 +66,8 @@ type DiffAttributeRow = {
   status: DiffAttributeStatus;
 };
 
-const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
-const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
+const OBJECT_MAPPER_REF_MIME = "application/x-lurastack-object-mapper-ref";
+const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 let latestMapperDragPayload = "";
 
 const terraformRefPattern = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
@@ -810,7 +810,6 @@ export const RightPanel = ({
       style={{ width: visible ? width : 0 }}
       className={`absolute right-0 top-0 z-30 flex h-full flex-col bg-white border-l border-slate-200 ${isResizing ? "" : "transition-all duration-200"}`}
     >
-      {/* Resize handle */}
       {visible && (
         <div className="absolute left-0 top-0 z-10 h-full w-3 -translate-x-1/2 cursor-col-resize">
           <button
@@ -833,7 +832,6 @@ export const RightPanel = ({
         </div>
       )}
 
-      {/* Toggle button */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -853,7 +851,6 @@ export const RightPanel = ({
       </button>
 
       <div className="overflow-hidden flex flex-col h-full w-full min-w-0">
-          {/* Mode switch: Inspector vs Historial */}
           <div className="shrink-0 flex border-b border-slate-200 bg-white">
             {(["inspector", "history"] as RightPanelMode[]).map((mode) => {
               const isActive = activeMode === mode;
@@ -877,7 +874,6 @@ export const RightPanel = ({
             })}
           </div>
 
-          {/* History mode: full-height history view */}
           {activeMode === "history" && (
             <div className="flex-1 min-w-0 w-full overflow-hidden bg-slate-50/60">
               {projectDir && currentViewId ? (
@@ -899,7 +895,6 @@ export const RightPanel = ({
           )}
 
           {activeMode === "inspector" && (<>
-          {/* Header */}
           <div className="shrink-0 border-b border-slate-200 bg-white">
             <div className="flex items-center gap-3 px-4 pt-3.5 pb-3">
               {selectedNode ? (
@@ -969,7 +964,6 @@ export const RightPanel = ({
               )}
             </div>
 
-            {/* Tabs */}
             <div className="flex border-t border-slate-100 px-3">
               {(["info", "hcl"] as RightPanelTab[]).map((tab) => (
                 <button
@@ -988,13 +982,11 @@ export const RightPanel = ({
             </div>
           </div>
 
-          {/* Scrollable content */}
           <div
             id="right-panel-content"
             className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50/60 py-3"
             style={{ scrollbarWidth: "thin", scrollbarColor: "#e2e8f0 transparent" }}
           >
-            {/* Empty state */}
             {(!selectedNode || !selectedResource || !selectedSchema) && (
               <div className="mx-3 flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
@@ -1007,10 +999,8 @@ export const RightPanel = ({
               </div>
             )}
 
-            {/* INFO TAB */}
             {activeTab === "info" && selectedNode && selectedResource && selectedSchema && (
               <div className="space-y-3 px-3">
-                {/* Subnet toggle */}
                 {!diffMode && !cloudMode && selectedSchema.terraformType === "aws_subnet" && (
                   <div className="space-y-1.5">
                     <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400">Subnet type</label>
@@ -1030,7 +1020,6 @@ export const RightPanel = ({
                   </div>
                 )}
 
-                {/* Attributes section */}
                 {cloudMode ? (() => {
                   const groups = new Map<string, DiffAttributeRow[]>();
                   cloudAttributeRows.forEach((row) => {
@@ -1242,7 +1231,6 @@ export const RightPanel = ({
                   );
                 })() : (
                 <div className="space-y-2">
-                  {/* Filters bar */}
                   <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                     <div className="mb-2.5 flex items-center justify-between">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Attributes</span>
@@ -1337,7 +1325,6 @@ export const RightPanel = ({
                     </div>
                   </div>
 
-                  {/* Property sections */}
                   {filteredInspectorSections.map((section) => (
                     <div key={section.sectionKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
                       <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
@@ -1516,7 +1503,6 @@ export const RightPanel = ({
                 </div>
                 )}
 
-                {/* Children / zone nodes */}
                 {!diffMode && !cloudMode && selectedNode.data.isContainer && (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
@@ -1558,7 +1544,6 @@ export const RightPanel = ({
               </div>
             )}
 
-            {/* HCL TAB */}
             {activeTab === "hcl" && (
               <div className="flex h-full flex-col px-3">
                 {(!selectedNode || !selectedResource || !selectedSchema) ? (

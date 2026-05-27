@@ -188,7 +188,6 @@ export function highlightHcl(source: string): string {
   while (i < n) {
     const ch = source[i];
 
-    // Whitespace / newlines
     if (ch === " " || ch === "\t" || ch === "\r" || ch === "\n") {
       let end = i;
       while (end < n && (source[end] === " " || source[end] === "\t" || source[end] === "\r" || source[end] === "\n")) end++;
@@ -197,7 +196,6 @@ export function highlightHcl(source: string): string {
       continue;
     }
 
-    // Line comment
     if (ch === "#" || (ch === "/" && source[i + 1] === "/")) {
       let end = i;
       while (end < n && source[end] !== "\n") end++;
@@ -206,7 +204,6 @@ export function highlightHcl(source: string): string {
       continue;
     }
 
-    // Block comment
     if (ch === "/" && source[i + 1] === "*") {
       let end = i + 2;
       while (end < n - 1 && !(source[end] === "*" && source[end + 1] === "/")) end++;
@@ -216,7 +213,6 @@ export function highlightHcl(source: string): string {
       continue;
     }
 
-    // String
     if (ch === '"') {
       const { html, end } = scanString(source, i);
       out.push(html);
@@ -224,7 +220,6 @@ export function highlightHcl(source: string): string {
       continue;
     }
 
-    // Number
     if (/[0-9]/.test(ch)) {
       let end = i;
       while (end < n && /[0-9._eExXa-fA-F]/.test(source[end])) end++;
@@ -233,7 +228,6 @@ export function highlightHcl(source: string): string {
       continue;
     }
 
-    // Identifier / keyword / reference
     if (/[a-zA-Z_]/.test(ch)) {
       let end = i;
       while (end < n && /[a-zA-Z0-9_-]/.test(source[end])) end++;

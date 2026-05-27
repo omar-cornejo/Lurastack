@@ -5,7 +5,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { readDir, readTextFile, writeTextFile, remove, rename, mkdir } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
-import type { DdfCodeFile } from "../types/project";
+import type { CodeFile } from "../types/project";
 import type { BottomPanelLogEntry, BottomPanelLogLevel } from "../types/logs";
 import {
   formatTypeLabel,
@@ -21,8 +21,8 @@ type CodePanelProps = {
   cloudProvider: CloudProvider;
   region: string;
   projectDir?: string;
-  initialCustomFiles?: DdfCodeFile[];
-  onCustomFilesChange?: (files: DdfCodeFile[]) => void;
+  initialCustomFiles?: CodeFile[];
+  onCustomFilesChange?: (files: CodeFile[]) => void;
   onMainTfBlocksChange?: (blocks: ParsedMainTfBlock[], overrideCanvas?: boolean) => void;
   onValidationLogs: (entries: BottomPanelLogEntry[]) => void;
   onOpenLogsPanel: () => void;
@@ -443,7 +443,7 @@ export default function CodePanel({
         .filter((name) => name.toLowerCase().endsWith(".tf") && name.toLowerCase() !== "main.tf")
         .sort((a, b) => a.localeCompare(b));
 
-      const files: DdfCodeFile[] = await Promise.all(
+      const files: CodeFile[] = await Promise.all(
         tfFiles.map(async (name) => ({
           id: name,
           name,
@@ -590,7 +590,6 @@ export default function CodePanel({
   const onMainTfBlocksChangeRef = useRef(onMainTfBlocksChange);
   onMainTfBlocksChangeRef.current = onMainTfBlocksChange;
 
-  // Handle toggling free edit mode
   useEffect(() => {
     if (isFreeEditMode) {
       // Entering free edit mode: cache current manual segments

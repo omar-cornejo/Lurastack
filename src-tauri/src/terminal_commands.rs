@@ -176,7 +176,7 @@ pub fn open_detached_terminal_window(
     let app_url = format!("/?detachedTerminal=1&cwd={encoded_cwd}&viewId={encoded_view_id}");
 
     let window = WebviewWindowBuilder::new(&app, label, WebviewUrl::App(app_url.into()))
-        .title("DDF Terminal")
+        .title("LuraStack Terminal")
         .inner_size(980.0, 360.0)
         .resizable(true)
         .build()

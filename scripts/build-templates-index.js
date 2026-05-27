@@ -36,13 +36,13 @@ async function main() {
       if (!(await isDir(slugDir))) continue;
 
       const manifestPath = join(slugDir, "manifest.json");
-      const projectPath = join(slugDir, "project.ddf");
+      const projectPath = join(slugDir, "project.lura");
 
       try {
         await stat(manifestPath);
         await stat(projectPath);
       } catch {
-        console.warn(`[templates] Skipping ${provider}/${slug}: missing manifest.json or project.ddf`);
+        console.warn(`[templates] Skipping ${provider}/${slug}: missing manifest.json or project.lura`);
         continue;
       }
 

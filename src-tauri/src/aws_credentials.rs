@@ -296,7 +296,7 @@ pub async fn get_aws_env_source() -> Result<AwsEnvSource, String> {
     let cwd = std::env::current_dir()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| "(desconocido)".to_string());
-    let env_file_path = std::env::var("DDF_ENV_FILE").ok().filter(|s| !s.is_empty());
+    let env_file_path = std::env::var("LURASTACK_ENV_FILE").ok().filter(|s| !s.is_empty());
     let env_file_exists = env_file_path
         .as_deref()
         .map(|p| PathBuf::from(p).exists())

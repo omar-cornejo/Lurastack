@@ -83,13 +83,11 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
   const [recent, setRecent] = useState<RecentProject[]>([]);
   const [error, setError] = useState("");
 
-  // New project form
   const [newName, setNewName] = useState("");
   const [nameError, setNameError] = useState("");
   const [pickingDir, setPickingDir] = useState(false);
   const [chosenPath, setChosenPath] = useState<string | null>(null);
 
-  // Templates
   const [templates, setTemplates] = useState<TemplateManifest[]>([]);
   const [providerFilter, setProviderFilter] = useState<TemplateProvider | "all">("all");
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateManifest | null>(null);
@@ -115,8 +113,6 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
     if (providerFilter === "all") return templates;
     return templates.filter((t) => t.provider === providerFilter);
   }, [templates, providerFilter]);
-
-  // ── New project ──────────────────────────────────────────────────────────
 
   const handlePickSavePath = async () => {
     const trimmed = newName.trim();
@@ -147,8 +143,6 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
     setError("");
   };
 
-  // ── Import ───────────────────────────────────────────────────────────────
-
   const handleImport = async () => {
     setError("");
     try {
@@ -178,8 +172,6 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
     removeFromRecent(path);
     setRecent(getRecentProjects());
   };
-
-  // ── Templates ────────────────────────────────────────────────────────────
 
   const openTemplateModal = (template: TemplateManifest) => {
     setSelectedTemplate(template);
@@ -229,15 +221,12 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
   const selectedDirectoryPath = toDirectoryPath(chosenPath);
   const selectedTemplateDirectoryPath = toDirectoryPath(templatePath);
 
-  // ── Render ───────────────────────────────────────────────────────────────
-
   return (
     <div className="flex w-full h-full bg-gray-950 overflow-hidden">
 
-      {/* ── Left sidebar ── */}
       <div className="flex flex-col w-64 shrink-0 border-r border-gray-800 bg-gray-950 p-6">
         <div className="mb-8">
-          <div className="text-4xl font-bold tracking-[0.3em] text-white">ddf</div>
+          <div className="text-4xl font-bold tracking-[0.2em] text-white">LuraStack</div>
         </div>
 
         <div className="flex flex-col gap-2">
@@ -257,7 +246,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
           <SideAction
             icon="mdi:folder-open-outline"
             label="Import Project"
-            description=".ddf file"
+            description=".lura file"
             onClick={handleImport}
           />
           <SideAction
@@ -277,7 +266,6 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
         )}
       </div>
 
-      {/* ── Main area ── */}
       <div className="flex flex-col flex-1 min-w-0 p-8 overflow-hidden">
 
         {view === "new" && (
@@ -403,7 +391,6 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
         )}
       </div>
 
-      {/* ── Template instantiation modal ── */}
       {selectedTemplate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
           <div className="w-full max-w-md mx-4 rounded-lg border border-gray-800 bg-gray-900 p-6">
@@ -485,8 +472,6 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
     </div>
   );
 }
-
-// ── Sub-components ────────────────────────────────────────────────────────────
 
 function SideAction({
   icon,

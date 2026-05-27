@@ -5,7 +5,7 @@ import WorkspaceView from "./components/WorkspaceView";
 import WelcomeScreen from "./components/WelcomeScreen";
 import DetachedTerminalWindow from "./components/DetachedTerminalWindow";
 import { ViewInfo } from "./types/views";
-import type { DdfProject, DdfViewSnapshot } from "./types/project";
+import type { LuraProject, ViewSnapshot } from "./types/project";
 import {
   saveProjectToPath,
   syncAuxiliaryTfFiles,
@@ -41,24 +41,20 @@ export default function App() {
     return <DetachedTerminalWindow />;
   }
 
-  // ── Project state ─────────────────────────────────────────────────────────
-  const [project, setProject] = useState<DdfProject | null>(null);
+  const [project, setProject] = useState<LuraProject | null>(null);
   const [projectFilePath, setProjectFilePath] = useState<string | null>(null);
   const [autosave, setAutosave] = useState(false);
 
-  // ── View state ────────────────────────────────────────────────────────────
   const [views, setViews] = useState<ViewInfo[]>([]);
   const [activeViewId, setActiveViewId] = useState<string>("");
   const [pendingCloseViewId, setPendingCloseViewId] = useState<string | null>(null);
   const [isClosingView, setIsClosingView] = useState(false);
 
   // Per-view snapshot cache (used for save)
-  const viewSnapshotsRef = useRef<Map<string, DdfViewSnapshot>>(new Map());
-
-  // ── Internal helpers ──────────────────────────────────────────────────────
+  const viewSnapshotsRef = useRef<Map<string, ViewSnapshot>>(new Map());
 
   const applyLoadedProject = useCallback(
-    (loaded: DdfProject, filePath: string) => {
+    (loaded: LuraProject, filePath: string) => {
       viewCounter = loaded.views.length + 1;
       const viewInfos = loaded.views.map((v) => makeViewInfo(v.id, v.name));
       viewSnapshotsRef.current = new Map(loaded.views.map((v) => [v.id, v]));
@@ -72,7 +68,7 @@ export default function App() {
   );
 
   const assembleSave = useCallback(
-    (overrideName?: string): DdfProject => {
+    (overrideName?: string): LuraProject => {
       if (!project) throw new Error("No project");
       const base = overrideName
         ? { ...project, meta: { ...project.meta, name: overrideName } }
@@ -83,7 +79,7 @@ export default function App() {
   );
 
   const persistProjectBundle = useCallback(
-    async (snapshot: DdfProject, filePath: string) => {
+    async (snapshot: LuraProject, filePath: string) => {
       await saveProjectToPath(snapshot, filePath);
       const projectDir = getProjectDir(filePath);
       await ensureProjectLayout(projectDir, snapshot.views.map((view) => view.name));
@@ -99,7 +95,7 @@ export default function App() {
   );
 
   const persistIfAutosave = useCallback(
-    (nextProject: DdfProject, nextActiveViewId: string) => {
+    (nextProject: LuraProject, nextActiveViewId: string) => {
       if (!autosave || !projectFilePath) return;
       const snapshot = buildProjectSnapshot(
         { ...nextProject, activeViewId: nextActiveViewId },
@@ -113,8 +109,6 @@ export default function App() {
     },
     [autosave, projectFilePath, persistProjectBundle],
   );
-
-  // ── Project actions ───────────────────────────────────────────────────────
 
   /** Called by WelcomeScreen after the user fills the new-project form */
   const handleProjectReady = useCallback(
@@ -176,7 +170,7 @@ export default function App() {
     const newName = newPath
       .split(/[\\/]/)
       .pop()
-      ?.replace(/\.ddf$/i, "")
+      ?.replace(/\.lura$/i, "")
       .replace(/[-_]+/g, " ")
       ?? project.meta.name;
     try {
@@ -246,7 +240,7 @@ export default function App() {
 
   // Called (debounced) by each WorkspaceView when its state changes
   const handleViewStateChange = useCallback(
-    (viewId: string, snapshot: DdfViewSnapshot) => {
+    (viewId: string, snapshot: ViewSnapshot) => {
       viewSnapshotsRef.current.set(viewId, snapshot);
       if (!autosave || !projectFilePath || !project) return;
       const snap = buildProjectSnapshot(
@@ -258,11 +252,9 @@ export default function App() {
     [autosave, projectFilePath, project, activeViewId, persistProjectBundle],
   );
 
-  // ── View actions ──────────────────────────────────────────────────────────
-
   const handleCreateView = useCallback(() => {
     const v = makeViewInfo();
-    const snap: DdfViewSnapshot = {
+    const snap: ViewSnapshot = {
       id: v.id,
       name: v.name,
       resources: [],
@@ -395,8 +387,6 @@ export default function App() {
     },
     [activeViewId, persistIfAutosave, projectFilePath, views],
   );
-
-  // ── Render ────────────────────────────────────────────────────────────────
 
   const hasProject = project !== null;
   const projectDir = projectFilePath ? getProjectDir(projectFilePath) : undefined;

@@ -70,7 +70,6 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
           <Handle type="target" id="top" position={Position.Top} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-violet-500" />
           <Handle type="source" id="top" position={Position.Top} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-violet-500" />
 
-          {/* Header */}
           <div className="container-drag-handle pointer-events-auto flex shrink-0 items-start gap-3 overflow-hidden rounded-t-xl border-b border-dashed border-violet-200 bg-white/90 px-3 py-2.5">
             <div className="mt-0.5 flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-violet-50 to-violet-100/60 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
               <img src={data.icon} alt={data.label} className="h-full w-full object-cover drop-shadow-sm" draggable={false} />
@@ -83,7 +82,6 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
             </div>
           </div>
 
-          {/* Body */}
           <div className="pointer-events-none flex flex-1 items-center justify-center">
             <span className="text-[10px] font-medium text-violet-300/80">Drop nodes here</span>
           </div>
@@ -123,7 +121,6 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
         <Handle type="target" id="top" position={Position.Top} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-indigo-500" />
         <Handle type="source" id="top" position={Position.Top} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-indigo-500" />
 
-        {/* Header */}
         <div className="container-drag-handle pointer-events-auto flex shrink-0 items-start gap-3 overflow-hidden rounded-t-xl border-b border-indigo-100 bg-white px-3 py-2.5">
           <div className="mt-0.5 flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-indigo-50 to-indigo-100/60 shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]">
             <img src={data.icon} alt={data.label} className="h-full w-full object-cover drop-shadow-sm" draggable={false} />
@@ -136,7 +133,6 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
           </div>
         </div>
 
-        {/* Body */}
         <div className={`pointer-events-none flex flex-1 items-center justify-center ${planBg ?? "bg-indigo-50/30"}`}>
           <span className="text-[10px] font-medium text-indigo-300/80">Drop nodes here</span>
         </div>
@@ -192,7 +188,6 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
         className={`!h-2 !w-2 !rounded-full !border-2 !border-white ${handleColor} !-top-[5px]`}
       />
 
-      {/* Icon container */}
       <div
         className={`mt-0.5 flex h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br ${iconBg}
           shadow-[0_1px_4px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.05)]`}
@@ -205,7 +200,6 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
         />
       </div>
 
-      {/* Text */}
       <div className="flex flex-col">
         <p className="whitespace-nowrap text-[12.5px] font-semibold leading-snug text-slate-800">
           {data.label}

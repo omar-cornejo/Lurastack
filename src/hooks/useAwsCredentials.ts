@@ -53,9 +53,9 @@ export type ResolvedAwsCredentials = {
 export type AwsCredentials = ResolvedAwsCredentials;
 
 const STORAGE_KEYS: Record<CloudProvider, string> = {
-  aws: "ddf_aws_credentials",
-  gcp: "ddf_gcp_credentials",
-  azure: "ddf_azure_credentials",
+  aws: "lurastack_aws_credentials",
+  gcp: "lurastack_gcp_credentials",
+  azure: "lurastack_azure_credentials",
 };
 
 function loadAwsFromStorage(): AwsStoredCredentials {

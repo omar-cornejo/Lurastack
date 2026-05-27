@@ -2,13 +2,13 @@ import { useEffect, useState, useCallback } from "react";
 import { Icon } from "@iconify/react";
 import { loadHistoryIndex, loadHistoryEntry } from "../commands/historyManager";
 import type { HistoryEntry, HistoryIndex, HistoryAction } from "../types/history";
-import type { DdfViewSnapshot } from "../types/project";
+import type { ViewSnapshot } from "../types/project";
 
 type HistoryTabProps = {
   projectDir: string;
   currentViewId: string;
   refreshSignal: number;
-  onRestore: (snapshot: DdfViewSnapshot, entryId: string) => void;
+  onRestore: (snapshot: ViewSnapshot, entryId: string) => void;
 };
 
 function relativeTime(iso: string): string {
@@ -139,7 +139,6 @@ export default function HistoryTab({
 
   return (
     <div className="flex flex-col h-full w-full min-w-0 overflow-hidden pl-1.5">
-      {/* Header / filter toggle */}
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
         <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
           {filtered.length} {filtered.length === 1 ? "entrada" : "entradas"}
@@ -157,7 +156,6 @@ export default function HistoryTab({
         </button>
       </div>
 
-      {/* Entry list */}
       <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden" style={{ scrollbarWidth: "thin", scrollbarColor: "#e2e8f0 transparent" }}>
         {filtered.length === 0 && (
           <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
@@ -180,7 +178,6 @@ export default function HistoryTab({
 
           return (
             <div key={entry.id}>
-            {/* Day divider */}
             {showDayDivider && (
               <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-1.5">
                 <span className="inline-block max-w-full truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500">
@@ -189,7 +186,6 @@ export default function HistoryTab({
               </div>
             )}
             <div className="border-b border-slate-100 last:border-b-0">
-              {/* Row */}
               <button
                 type="button"
                 className="flex w-full items-start gap-2.5 bg-slate-50 px-3 py-2.5 text-left"
@@ -232,7 +228,6 @@ export default function HistoryTab({
                 />
               </button>
 
-              {/* Detail panel */}
               {isExpanded && (
                 <div className="bg-slate-50/80 border-t border-slate-100 px-3 py-3 space-y-3">
                   {loadingDetail && !expandedEntry && (
@@ -241,12 +236,10 @@ export default function HistoryTab({
 
                   {expandedEntry && (
                     <>
-                      {/* Timestamp detail */}
                       <p className="text-[10px] text-slate-400">
                         {new Date(expandedEntry.timestamp).toLocaleString()}
                       </p>
 
-                      {/* Changes list */}
                       {expandedEntry.changes && expandedEntry.changes.length > 0 && (
                         <div className="space-y-1">
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
@@ -276,7 +269,6 @@ export default function HistoryTab({
                         </div>
                       )}
 
-                      {/* Restore / info */}
                       {isPlanOnly(expandedEntry.action) ? (
                         <p className="text-[11px] text-slate-400 italic">
                           Las entradas de Plan no modifican estado; no se puede restaurar a este punto.

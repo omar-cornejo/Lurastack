@@ -1,7 +1,7 @@
 import { writeTextFile, mkdir } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { TemplateIndex, TemplateManifest } from "../types/templates";
-import type { DdfProject, DdfViewSnapshot } from "../types/project";
+import type { LuraProject, ViewSnapshot } from "../types/project";
 import { projectNameToSlug, getViewDir } from "./projectManager";
 import { buildMultiProviderHcl } from "../models/hclEmitter";
 import { mergeProviderSettings, getProviderFromResourceType, type CloudProvider } from "../models/providerConfig";
@@ -24,18 +24,18 @@ export async function loadTemplateIndex(): Promise<TemplateManifest[]> {
   }
 }
 
-async function loadTemplateProject(templateId: string): Promise<DdfProject> {
-  const response = await fetch(`/${TEMPLATES_BASE}/${templateId}/project.ddf`, {
+async function loadTemplateProject(templateId: string): Promise<LuraProject> {
+  const response = await fetch(`/${TEMPLATES_BASE}/${templateId}/project.lura`, {
     cache: "no-cache",
   });
   if (!response.ok) {
     throw new Error(`Could not load template ${templateId} (${response.status})`);
   }
-  return (await response.json()) as DdfProject;
+  return (await response.json()) as LuraProject;
 }
 
 /**
- * Opens a directory picker and returns the absolute `.ddf` path inside a fresh `<slug>/` subfolder.
+ * Opens a directory picker and returns the absolute `.lura` path inside a fresh `<slug>/` subfolder.
  * Mirrors `pickSavePath` in projectManager but exposed here so the template flow stays self-contained.
  */
 export async function pickTemplateDestination(projectName: string): Promise<string | null> {
@@ -51,12 +51,12 @@ export async function pickTemplateDestination(projectName: string): Promise<stri
   const slug = projectNameToSlug(projectName);
   const projectDir = `${parentDir}/${slug}`;
   await mkdir(projectDir, { recursive: true });
-  return `${projectDir}/${slug}.ddf`;
+  return `${projectDir}/${slug}.lura`;
 }
 
 /**
  * Materializes a template at the chosen path with the user-supplied name.
- * Returns the absolute `.ddf` path written to disk.
+ * Returns the absolute `.lura` path written to disk.
  */
 export async function createProjectFromTemplate(
   templateId: string,
@@ -66,7 +66,7 @@ export async function createProjectFromTemplate(
   const base = await loadTemplateProject(templateId);
 
   const now = new Date().toISOString();
-  const project: DdfProject = {
+  const project: LuraProject = {
     ...base,
     meta: {
       ...base.meta,
@@ -93,7 +93,7 @@ export async function createProjectFromTemplate(
   return absolutePath;
 }
 
-async function writeViewMainTf(projectRoot: string, view: DdfViewSnapshot): Promise<void> {
+async function writeViewMainTf(projectRoot: string, view: ViewSnapshot): Promise<void> {
   if (!view.resources || view.resources.length === 0) return;
   const providerSettings = mergeProviderSettings(view.providerSettings);
   const activeProvider: CloudProvider =
@@ -110,7 +110,7 @@ async function writeViewMainTf(projectRoot: string, view: DdfViewSnapshot): Prom
   await writeTextFile(`${viewDir}/main.tf`, hcl);
 }
 
-function inferProviderFromResources(resources: DdfViewSnapshot["resources"]): CloudProvider | null {
+function inferProviderFromResources(resources: ViewSnapshot["resources"]): CloudProvider | null {
   for (const r of resources) {
     const p = getProviderFromResourceType(r.type);
     if (p) return p;

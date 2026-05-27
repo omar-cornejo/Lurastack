@@ -1,11 +1,11 @@
 [package]
-name = "ddf"
+name = "lurastack"
 version = "0.1.0"
-description = "DDF — visual Terraform editor with bidirectional HCL generation"
+description = "LuraStack — a visual platform for designing, generating, and deploying infrastructure stacks through Infrastructure as Code (IaC)"
 authors = ["Omar Cornejo <omarcornejovargas@gmail.com>"]
 license = "Apache-2.0"
-repository = "https://github.com/omar-cornejo/ddfib"
-homepage = "https://github.com/omar-cornejo/ddfib"
+repository = "https://github.com/omar-cornejo/lurastack"
+homepage = "https://github.com/omar-cornejo/lurastack"
 keywords = ["terraform", "iac", "visual-editor", "tauri"]
 categories = ["development-tools"]
 edition = "2021"
@@ -16,7 +16,7 @@ edition = "2021"
 # The `_lib` suffix may seem redundant but it is necessary
 # to make the lib name unique and wouldn't conflict with the bin name.
 # This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
-name = "ddf_lib"
+name = "lurastack_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

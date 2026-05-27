@@ -53,7 +53,7 @@ import {
   DEFAULT_CONTAINER_SIZE,
   DEFAULT_RESOURCE_NODE_SIZE,
 } from "../commands/createCanvasNode";
-import type { DdfCodeFile, DdfViewSnapshot } from "../types/project";
+import type { CodeFile, ViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 import { useProviderCredentials, buildEnvForProvider } from "../hooks/useAwsCredentials";
@@ -70,7 +70,7 @@ import { appendHistoryEntry, summarizePlanChanges } from "../commands/historyMan
 import type { HistoryEntry } from "../types/history";
 import DivergenceBanner from "./DivergenceBanner";
 
-const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
+const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 const POPOUT_HEARTBEAT_TTL_MS = 900;
 const POPOUT_HEARTBEAT_CHECK_MS = 250;
 
@@ -79,8 +79,8 @@ type WorkspaceViewProps = {
   viewName?: string;
   projectDir?: string;
   isVisible?: boolean;
-  initialState?: DdfViewSnapshot;
-  onStateChange?: (viewId: string, snapshot: DdfViewSnapshot) => void;
+  initialState?: ViewSnapshot;
+  onStateChange?: (viewId: string, snapshot: ViewSnapshot) => void;
 };
 
 type CanvasViewportBounds = {
@@ -134,7 +134,7 @@ export default function WorkspaceView({
     provider: "registry.terraform.io/hashicorp/aws",
     resources: initialState?.resources ?? [],
   });
-  const [codeFiles, setCodeFiles] = useState<DdfCodeFile[]>(initialState?.codeFiles ?? []);
+  const [codeFiles, setCodeFiles] = useState<CodeFile[]>(initialState?.codeFiles ?? []);
   const [codePanelMainTfDraft, setCodePanelMainTfDraft] = useState<string | undefined>(undefined);
   const [codePanelFreeEditMode, setCodePanelFreeEditMode] = useState(false);
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
@@ -212,7 +212,7 @@ export default function WorkspaceView({
     [],
   );
 
-  const captureViewSnapshot = useCallback((): import("../types/project").DdfViewSnapshot => ({
+  const captureViewSnapshot = useCallback((): import("../types/project").ViewSnapshot => ({
     id: viewId,
     name: viewName,
     resources: projectRef.current.resources,
@@ -430,11 +430,11 @@ export default function WorkspaceView({
   // Tracks the last snapshot committed to history. Any meaningful change
   // (resource add/remove, attribute change, edge add/remove) produces ONE entry.
   // Pure node-position drags are ignored to avoid spam during canvas dragging.
-  const lastCommittedSnapshotRef = useRef<import("../types/project").DdfViewSnapshot | null>(null);
+  const lastCommittedSnapshotRef = useRef<import("../types/project").ViewSnapshot | null>(null);
 
   const computeLocalEditDiff = (
-    before: import("../types/project").DdfViewSnapshot,
-    after: import("../types/project").DdfViewSnapshot,
+    before: import("../types/project").ViewSnapshot,
+    after: import("../types/project").ViewSnapshot,
   ): {
     changes: Array<{ address: string; action: "create" | "change" | "destroy" }>;
     summary: { created: number; changed: number; destroyed: number };
@@ -444,7 +444,6 @@ export default function WorkspaceView({
     const changes: Array<{ address: string; action: "create" | "change" | "destroy" }> = [];
     let created = 0, changed = 0, destroyed = 0;
 
-    // Resources added / modified
     for (const [key, afterR] of afterRes) {
       const beforeR = beforeRes.get(key);
       if (!beforeR) {
@@ -455,7 +454,6 @@ export default function WorkspaceView({
         changed++;
       }
     }
-    // Resources removed
     for (const key of beforeRes.keys()) {
       if (!afterRes.has(key)) {
         changes.push({ address: key, action: "destroy" });
@@ -484,7 +482,7 @@ export default function WorkspaceView({
   };
 
   const handleRestoreFromHistory = useCallback(
-    (snapshot: import("../types/project").DdfViewSnapshot) => {
+    (snapshot: import("../types/project").ViewSnapshot) => {
       setNodes(restoreNodes(snapshot.nodes));
       setEdges(restoreEdges(snapshot.edges));
       setProject((prev) => ({ ...prev, resources: snapshot.resources }));
@@ -501,7 +499,7 @@ export default function WorkspaceView({
   useEffect(() => {
     if (!onStateChange) return;
     const timeout = setTimeout(() => {
-      const snap: import("../types/project").DdfViewSnapshot = {
+      const snap: import("../types/project").ViewSnapshot = {
         id: viewId,
         name: viewName,
         resources: project.resources,
@@ -823,8 +821,8 @@ export default function WorkspaceView({
 
     };
 
-    window.addEventListener("ddf-remove-edge-mapping", handler);
-    return () => window.removeEventListener("ddf-remove-edge-mapping", handler);
+    window.addEventListener("lurastack-remove-edge-mapping", handler);
+    return () => window.removeEventListener("lurastack-remove-edge-mapping", handler);
   }, [nodes, setEdges]);
 
   const onNodesChange = useCallback(
@@ -1172,7 +1170,6 @@ export default function WorkspaceView({
         currentNodeIndex: nodes.length,
       });
 
-      // Emitir advertencias y conflictos como logs
       const warningLogs = importResult.warnings.map((w) =>
         createLogEntry("warning", "HCL Import", `${w.resourceKey} — ${w.reason}`),
       );
@@ -1188,17 +1185,13 @@ export default function WorkspaceView({
         setCodeLogs((current) => [...allLogs, ...current].slice(0, 200));
       }
 
-      // Actualizar proyecto: agregar nuevos recursos, eliminar importados que ya no están en HCL
       setProject((currentProject) => {
-        // Filtrar recursos: mantener los que no están marcados para eliminación
         const filteredResources = currentProject.resources.filter(
           (r) => !importResult.deletedResourceIds.includes(r.id),
         );
 
-        // Agregar nuevos recursos
         const nextResources = [...filteredResources, ...importResult.newResources];
 
-        // Actualizar atributos de recursos existentes
         for (const resource of nextResources) {
           if (importResult.updatedResourceIds.has(resource.id)) {
             // El importador ya actualizó los atributos en el recurso in-place,
@@ -1215,16 +1208,12 @@ export default function WorkspaceView({
         return nextProject;
       });
 
-      // Actualizar canvas: agregar nuevos nodos, eliminar los que corresponden a recursos eliminados
       setNodes((currentNodes) => {
-        // Filtrar nodos: eliminar los que corresponden a recursos eliminados
         let workingNodes = currentNodes.filter(
           (n) => !importResult.deletedResourceIds.includes(n.data.resourceId),
         );
 
-        // Agregar nodos nuevos con placement automático
         if (importResult.newNodes.length > 0) {
-          // Calcular posiciones para los nuevos nodos de forma determinista
           const newNodesWithPositions = importResult.newNodes.map((node, idx) => {
             const baseX = 80 + (idx % 4) * 220;
             const baseY = 80 + Math.floor(idx / 4) * 130;
@@ -1236,19 +1225,16 @@ export default function WorkspaceView({
 
           workingNodes = [...workingNodes, ...newNodesWithPositions];
 
-          // Aplicar expansión de contenedores si es necesario
           for (const newNode of newNodesWithPositions) {
             workingNodes = expandAncestorContainers(workingNodes, newNode.id);
           }
         }
 
-        // Aplicar membresías de zone containers
         workingNodes = applyZoneContainerMemberships(workingNodes);
 
         return workingNodes;
       });
 
-      // Actualizar nodos visuales (iconos, etiquetas)
       const visualUpdates: Array<{ resourceId: string; label: string; icon: string }> = [];
 
       for (const resource of project.resources) {

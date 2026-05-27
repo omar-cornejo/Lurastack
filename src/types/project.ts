@@ -2,7 +2,7 @@ import type { TerraformResource } from "../models/terraform";
 import type { CanvasTerraformNodeData, CanvasEdgeData } from "../canvas/types";
 import type { CloudProvider, ProviderSettings } from "../models/providerConfig";
 
-export type DdfSerializedNode = {
+export type SerializedNode = {
   id: string;
   type?: string;
   position: { x: number; y: number };
@@ -14,7 +14,7 @@ export type DdfSerializedNode = {
   style?: Record<string, unknown>;
 };
 
-export type DdfSerializedEdge = {
+export type SerializedEdge = {
   id: string;
   source: string;
   target: string;
@@ -24,24 +24,24 @@ export type DdfSerializedEdge = {
   data?: CanvasEdgeData;
 };
 
-export type DdfCodeFile = {
+export type CodeFile = {
   id: string;
   name: string;
   content: string;
 };
 
-export type DdfViewSnapshot = {
+export type ViewSnapshot = {
   id: string;
   name: string;
   resources: TerraformResource[];
-  nodes: DdfSerializedNode[];
-  edges: DdfSerializedEdge[];
-  codeFiles?: DdfCodeFile[];
+  nodes: SerializedNode[];
+  edges: SerializedEdge[];
+  codeFiles?: CodeFile[];
   activeProvider?: CloudProvider;
   providerSettings?: Partial<ProviderSettings>;
 };
 
-export type DdfProject = {
+export type LuraProject = {
   version: "1";
   meta: {
     name: string;
@@ -52,7 +52,7 @@ export type DdfProject = {
     autosave: boolean;
   };
   activeViewId: string;
-  views: DdfViewSnapshot[];
+  views: ViewSnapshot[];
 };
 
 export type RecentProject = {

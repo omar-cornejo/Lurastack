@@ -1,6 +1,6 @@
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
 
-export const NODE_DRAG_MIME = "application/x-ddfib-node-schema";
+export const NODE_DRAG_MIME = "application/x-lurastack-node-schema";
 
 export const serializeDraggedNode = (node: TerraformNodeSchema) =>
   JSON.stringify(node);

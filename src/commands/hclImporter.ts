@@ -68,7 +68,6 @@ export function importHclBlocksToResources(
   }> = [];
   const deletedResourceIds: string[] = [];
 
-  // Agrupar bloques por type.name para detectar duplicados
   const blocksByKey = new Map<string, ParsedMainTfBlock[]>();
   for (const block of parsedBlocks) {
     const key = `${block.type}.${block.name}`;
@@ -78,7 +77,6 @@ export function importHclBlocksToResources(
     blocksByKey.get(key)!.push(block);
   }
 
-  // Detectar duplicados en HCL
   for (const [key, blocks] of blocksByKey) {
     if (blocks.length > 1) {
       warnings.push({
@@ -88,14 +86,12 @@ export function importHclBlocksToResources(
     }
   }
 
-  // Procesar cada bloque único
   const processedKeys = new Set<string>();
   for (const block of parsedBlocks) {
     const key = `${block.type}.${block.name}`;
-    if (processedKeys.has(key)) continue; // Ya procesamos un bloque con este key
+    if (processedKeys.has(key)) continue;
     processedKeys.add(key);
 
-    // Buscar schema para este tipo
     const schema = schemas.find((s) => s.terraformType === block.type);
     if (!schema) {
       warnings.push({
@@ -105,7 +101,6 @@ export function importHclBlocksToResources(
       continue;
     }
 
-    // Buscar recurso existente con el mismo type.name
     const existingResource = existingResources.find(
       (r) => r.type === block.type && r.name === block.name,
     );
@@ -116,7 +111,6 @@ export function importHclBlocksToResources(
       const existingOrigin = existingResource.origin ?? "canvas";
 
       if (!overrideCanvas) {
-        // Aplicar regla de precedencia
         if (ignoreOrigins.includes(existingOrigin)) {
           conflicts.push({
             resourceKey: key,
@@ -145,12 +139,10 @@ export function importHclBlocksToResources(
         }
       }
 
-      // Actualizar atributos del recurso existente
       updatedResourceIds.add(existingResource.id);
       existingResource.config.attributes = { ...block.attributes };
       existingResource.kind = block.kind;
 
-      // Warn about attributes that are not in the schema
       const knownKeys = new Set(schema.properties.map((p) => p.name));
       const unknownKeys = Object.keys(block.attributes).filter((k) => {
         const topLevel = k.split(".")[0];
@@ -163,7 +155,6 @@ export function importHclBlocksToResources(
         });
       }
 
-      // Buscar si hay nodo correspondiente y marcarlo como actualizado
       const nodeForResource = existingNodes.find(
         (n) => n.data.resourceId === existingResource.id,
       );
@@ -171,7 +162,6 @@ export function importHclBlocksToResources(
         updatedNodeIds.add(nodeForResource.id);
       }
     } else {
-      // Crear recurso nuevo
       const newResource = createTerraformResourceFromSchema(
         schema,
         block.name,
@@ -180,7 +170,6 @@ export function importHclBlocksToResources(
       newResource.config.attributes = { ...block.attributes };
       newResource.kind = block.kind;
 
-      // Warn about unknown attributes for new resources too
       const knownKeysNew = new Set(schema.properties.map((p) => p.name));
       const unknownKeysNew = Object.keys(block.attributes).filter((k) => {
         const topLevel = k.split(".")[0];
@@ -195,7 +184,6 @@ export function importHclBlocksToResources(
 
       newResources.push(newResource);
 
-      // Crear nodo para el nuevo recurso
       const newNode = createCanvasNodeFromUserAction(
         schema,
         currentNodeIndex + newNodes.length,

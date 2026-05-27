@@ -1,7 +1,3 @@
-/**
- * HCL Parser utilities for extracting provider info and manual code segments
- */
-
 export type ProviderInfo = {
   name: "aws" | "gcp" | "azure";
   region: string;
@@ -33,7 +29,6 @@ export function extractProviderFromHcl(
   const regionMatch = configBlock.match(/region\s*=\s*"([^"]+)"/);
   const region = regionMatch ? regionMatch[1] : "";
 
-  // Extract any additional config (everything except region line)
   const customConfig = configBlock
     .split("\n")
     .filter((line) => !line.match(/region\s*=/))
@@ -55,7 +50,6 @@ export function extractManualSegments(
   const comments: string[] = [];
   const lines = fullHcl.split("\n");
 
-  // Extract all comment lines
   lines.forEach((line) => {
     const trimmed = line.trim();
     if (trimmed.startsWith("#")) {
@@ -63,11 +57,9 @@ export function extractManualSegments(
     }
   });
 
-  // Extract custom provider config
   const providerInfo = extractProviderFromHcl(fullHcl);
   const customProviderConfig = providerInfo?.customConfig || "";
 
-  // Extract content before "provider" block
   const providerStartIndex = fullHcl.indexOf('provider "');
   const preProviderContent =
     providerStartIndex > 0
@@ -79,8 +71,6 @@ export function extractManualSegments(
           .join("\n")
       : "";
 
-  // Extract content after terraform/provider blocks but before resources
-  // or custom resources/data sources
   const resourcesStartIndex = Math.max(
     fullHcl.indexOf("resource "),
     fullHcl.indexOf("data "),
@@ -130,13 +120,11 @@ export function mergeWithManualCode(
 ): string {
   let result = generatedHcl;
 
-  // If there are comments, add them at the beginning
   if (manualSegments.comments.length > 0) {
     const commentBlock = manualSegments.comments.join("\n");
     result = `${commentBlock}\n\n${result}`;
   }
 
-  // If there's custom provider config, merge it into the provider block
   if (manualSegments.customProviderConfig) {
     const providerRegex = /provider\s+"[^"]+"\s*\{\s*region\s*=\s*"[^"]+"\s*\n\s*\}/;
     const customConfig = manualSegments.customProviderConfig
@@ -153,7 +141,6 @@ export function mergeWithManualCode(
     );
   }
 
-  // If there's post-resources content, append it
   if (manualSegments.postResourcesContent) {
     result = `${result}\n\n${manualSegments.postResourcesContent}`;
   }

@@ -1,11 +1,11 @@
-// Generates the 8 gallery templates (.ddf + manifest) from an arch spec.
+// Generates the 8 gallery templates (.lura + manifest) from an arch spec.
 // Run from project root:   node scripts/generate-templates.mjs
 //
 // For each architecture we define resources as { type, name, attrs, x, y }.
 // The script:
 //   - Reads the schema's .tf.tpl as hclTemplate (so the canvas restores correctly).
 //   - Resolves the icon from a small inline copy of iconRegistry.
-//   - Writes public/templates/<provider>/<id>/{manifest.json,project.ddf}.
+//   - Writes public/templates/<provider>/<id>/{manifest.json,project.lura}.
 //   - Rewrites public/templates/index.json adding the 8 entries (keeping the 3 empty ones).
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
@@ -149,7 +149,7 @@ const writeTemplate = ({ provider, id, name, description, tags, entries }) => {
   writeFileSync(resolve(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 
   const project = buildProject(name, provider, entries);
-  writeFileSync(resolve(dir, "project.ddf"), JSON.stringify(project, null, 2) + "\n");
+  writeFileSync(resolve(dir, "project.lura"), JSON.stringify(project, null, 2) + "\n");
   return manifest;
 };
 
@@ -162,7 +162,7 @@ const ROW = 200;
 
 const AWS_BASIC = [
   { type: "aws_vpc", name: "main",
-    attrs: { cidr_block: "10.0.0.0/16", tags: '{ Name = "ddf-basic-vpc" }' },
+    attrs: { cidr_block: "10.0.0.0/16", tags: '{ Name = "lurastack-basic-vpc" }' },
     x: 0, y: 0 },
   { type: "aws_internet_gateway", name: "main",
     attrs: { vpc_id: "aws_vpc.main.id" },
@@ -178,13 +178,13 @@ const AWS_BASIC = [
     attrs: { subnet_id: "aws_subnet.public_a.id", route_table_id: "aws_route_table.public.id" },
     x: COL, y: ROW },
   { type: "aws_security_group", name: "ssh",
-    attrs: { name: "ddf-basic-ssh", vpc_id: "aws_vpc.main.id" },
+    attrs: { name: "lurastack-basic-ssh", vpc_id: "aws_vpc.main.id" },
     x: 2 * COL, y: ROW },
   { type: "aws_instance", name: "app",
     attrs: { ami: "ami-0c02fb55956c7d316", instance_type: "t3.micro",
              subnet_id: "aws_subnet.public_a.id",
              vpc_security_group_ids: '[aws_security_group.ssh.id]',
-             tags: '{ Name = "ddf-basic-vm" }' },
+             tags: '{ Name = "lurastack-basic-vm" }' },
     x: COL, y: 2 * ROW },
 ];
 
@@ -204,31 +204,31 @@ const AWS_WEB = [
     attrs: { vpc_id: "aws_vpc.main.id", cidr_block: "10.0.12.0/24",
              availability_zone: "us-east-1b" }, x: 3 * COL, y: ROW },
   { type: "aws_security_group", name: "alb",
-    attrs: { name: "ddf-web-alb-sg", vpc_id: "aws_vpc.main.id" }, x: 0, y: 2 * ROW },
+    attrs: { name: "lurastack-web-alb-sg", vpc_id: "aws_vpc.main.id" }, x: 0, y: 2 * ROW },
   { type: "aws_security_group", name: "app",
-    attrs: { name: "ddf-web-app-sg", vpc_id: "aws_vpc.main.id" }, x: COL, y: 2 * ROW },
+    attrs: { name: "lurastack-web-app-sg", vpc_id: "aws_vpc.main.id" }, x: COL, y: 2 * ROW },
   { type: "aws_security_group", name: "db",
-    attrs: { name: "ddf-web-db-sg", vpc_id: "aws_vpc.main.id" }, x: 2 * COL, y: 2 * ROW },
+    attrs: { name: "lurastack-web-db-sg", vpc_id: "aws_vpc.main.id" }, x: 2 * COL, y: 2 * ROW },
   { type: "aws_alb", name: "main",
-    attrs: { name: "ddf-web-alb", load_balancer_type: "application",
+    attrs: { name: "lurastack-web-alb", load_balancer_type: "application",
              subnets: '[aws_subnet.public_a.id, aws_subnet.public_b.id]',
              security_groups: '[aws_security_group.alb.id]' }, x: 0, y: 3 * ROW },
   { type: "aws_alb_target_group", name: "app",
-    attrs: { name: "ddf-web-tg", port: 80, protocol: "HTTP",
+    attrs: { name: "lurastack-web-tg", port: 80, protocol: "HTTP",
              vpc_id: "aws_vpc.main.id", target_type: "instance" }, x: COL, y: 3 * ROW },
   { type: "aws_alb_listener", name: "http",
     attrs: { load_balancer_arn: "aws_alb.main.arn", port: 80, protocol: "HTTP" },
     x: 2 * COL, y: 3 * ROW },
   { type: "aws_launch_template", name: "app",
-    attrs: { name_prefix: "ddf-web-lt-", image_id: "ami-0c02fb55956c7d316",
+    attrs: { name_prefix: "lurastack-web-lt-", image_id: "ami-0c02fb55956c7d316",
              instance_type: "t3.micro",
              vpc_security_group_ids: '[aws_security_group.app.id]' }, x: 3 * COL, y: 3 * ROW },
   { type: "aws_autoscaling_group", name: "app",
-    attrs: { name: "ddf-web-asg", min_size: 2, max_size: 4, desired_capacity: 2,
+    attrs: { name: "lurastack-web-asg", min_size: 2, max_size: 4, desired_capacity: 2,
              vpc_zone_identifier: '[aws_subnet.private_a.id, aws_subnet.private_b.id]',
              target_group_arns: '[aws_alb_target_group.app.arn]' }, x: 4 * COL, y: 3 * ROW },
   { type: "aws_rds_cluster", name: "db",
-    attrs: { cluster_identifier: "ddf-web-aurora", engine: "aurora-mysql",
+    attrs: { cluster_identifier: "lurastack-web-aurora", engine: "aurora-mysql",
              master_username: "admin", master_password: "changeme123!",
              vpc_security_group_ids: '[aws_security_group.db.id]',
              skip_final_snapshot: true }, x: 0, y: 4 * ROW },
@@ -236,12 +236,12 @@ const AWS_WEB = [
 
 const AWS_SERVERLESS = [
   { type: "aws_s3_bucket", name: "uploads",
-    attrs: { bucket: "ddf-serverless-uploads" }, x: 0, y: 0 },
+    attrs: { bucket: "lurastack-serverless-uploads" }, x: 0, y: 0 },
   { type: "aws_dynamodb_table", name: "items",
-    attrs: { name: "ddf-serverless-items", billing_mode: "PAY_PER_REQUEST",
+    attrs: { name: "lurastack-serverless-items", billing_mode: "PAY_PER_REQUEST",
              hash_key: "id" }, x: COL, y: 0 },
   { type: "aws_iam_role", name: "lambda_exec",
-    attrs: { name: "ddf-serverless-lambda-role",
+    attrs: { name: "lurastack-serverless-lambda-role",
              assume_role_policy: 'jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" }, Action = "sts:AssumeRole" }] })' },
     x: 2 * COL, y: 0 },
   { type: "aws_iam_role_policy_attachment", name: "basic",
@@ -249,7 +249,7 @@ const AWS_SERVERLESS = [
              policy_arn: "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole" },
     x: 3 * COL, y: 0 },
   { type: "aws_lambda_function", name: "processor",
-    attrs: { function_name: "ddf-serverless-processor",
+    attrs: { function_name: "lurastack-serverless-processor",
              role: "aws_iam_role.lambda_exec.arn", handler: "index.handler",
              runtime: "nodejs20.x", filename: "lambda.zip" }, x: COL, y: ROW },
   { type: "aws_lambda_permission", name: "from_s3",
@@ -263,14 +263,14 @@ const AWS_SERVERLESS = [
 
 const AWS_DATA = [
   { type: "aws_sqs_queue", name: "ingest",
-    attrs: { name: "ddf-data-ingest", visibility_timeout_seconds: 60 }, x: 0, y: 0 },
+    attrs: { name: "lurastack-data-ingest", visibility_timeout_seconds: 60 }, x: 0, y: 0 },
   { type: "aws_s3_bucket", name: "raw",
-    attrs: { bucket: "ddf-data-raw" }, x: COL, y: 0 },
+    attrs: { bucket: "lurastack-data-raw" }, x: COL, y: 0 },
   { type: "aws_dynamodb_table", name: "events",
-    attrs: { name: "ddf-data-events", billing_mode: "PAY_PER_REQUEST",
+    attrs: { name: "lurastack-data-events", billing_mode: "PAY_PER_REQUEST",
              hash_key: "id" }, x: 2 * COL, y: 0 },
   { type: "aws_iam_role", name: "lambda_exec",
-    attrs: { name: "ddf-data-lambda-role",
+    attrs: { name: "lurastack-data-lambda-role",
              assume_role_policy: 'jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Allow", Principal = { Service = "lambda.amazonaws.com" }, Action = "sts:AssumeRole" }] })' },
     x: 0, y: ROW },
   { type: "aws_iam_role_policy_attachment", name: "sqs_exec",
@@ -278,7 +278,7 @@ const AWS_DATA = [
              policy_arn: "arn:aws:iam::aws:policy/service-role/AWSLambdaSQSQueueExecutionRole" },
     x: COL, y: ROW },
   { type: "aws_lambda_function", name: "worker",
-    attrs: { function_name: "ddf-data-worker",
+    attrs: { function_name: "lurastack-data-worker",
              role: "aws_iam_role.lambda_exec.arn", handler: "index.handler",
              runtime: "nodejs20.x", filename: "worker.zip" }, x: 2 * COL, y: ROW },
   { type: "aws_lambda_event_source_mapping", name: "sqs_to_lambda",
@@ -291,83 +291,83 @@ const AWS_DATA = [
 
 const GCP_BASIC = [
   { type: "google_compute_network", name: "main",
-    attrs: { name: "ddf-basic-vpc", auto_create_subnetworks: false }, x: 0, y: 0 },
+    attrs: { name: "lurastack-basic-vpc", auto_create_subnetworks: false }, x: 0, y: 0 },
   { type: "google_compute_subnetwork", name: "main",
-    attrs: { name: "ddf-basic-subnet", region: "us-central1",
+    attrs: { name: "lurastack-basic-subnet", region: "us-central1",
              network: "google_compute_network.main.id", ip_cidr_range: "10.0.1.0/24" }, x: COL, y: 0 },
   { type: "google_compute_firewall", name: "ssh",
-    attrs: { name: "ddf-basic-allow-ssh", network: "google_compute_network.main.id",
+    attrs: { name: "lurastack-basic-allow-ssh", network: "google_compute_network.main.id",
              direction: "INGRESS", source_ranges: '["0.0.0.0/0"]' }, x: 2 * COL, y: 0 },
   { type: "google_compute_instance", name: "vm",
-    attrs: { name: "ddf-basic-vm", zone: "us-central1-a", machine_type: "e2-micro" },
+    attrs: { name: "lurastack-basic-vm", zone: "us-central1-a", machine_type: "e2-micro" },
     x: COL, y: ROW },
 ];
 
 const GCP_WEB = [
   { type: "google_compute_network", name: "main",
-    attrs: { name: "ddf-web-vpc", auto_create_subnetworks: false }, x: 0, y: 0 },
+    attrs: { name: "lurastack-web-vpc", auto_create_subnetworks: false }, x: 0, y: 0 },
   { type: "google_compute_subnetwork", name: "main",
-    attrs: { name: "ddf-web-subnet", region: "us-central1",
+    attrs: { name: "lurastack-web-subnet", region: "us-central1",
              network: "google_compute_network.main.id", ip_cidr_range: "10.0.1.0/24" }, x: COL, y: 0 },
   { type: "google_compute_firewall", name: "http",
-    attrs: { name: "ddf-web-allow-http", network: "google_compute_network.main.id",
+    attrs: { name: "lurastack-web-allow-http", network: "google_compute_network.main.id",
              direction: "INGRESS", source_ranges: '["0.0.0.0/0"]' }, x: 2 * COL, y: 0 },
   { type: "google_compute_health_check", name: "http",
-    attrs: { name: "ddf-web-hc" }, x: 3 * COL, y: 0 },
+    attrs: { name: "lurastack-web-hc" }, x: 3 * COL, y: 0 },
   { type: "google_compute_instance_template", name: "app",
-    attrs: { name: "ddf-web-tpl", machine_type: "e2-small" }, x: 0, y: ROW },
+    attrs: { name: "lurastack-web-tpl", machine_type: "e2-small" }, x: 0, y: ROW },
   { type: "google_compute_instance_group_manager", name: "app",
-    attrs: { name: "ddf-web-mig", base_instance_name: "ddf-web",
+    attrs: { name: "lurastack-web-mig", base_instance_name: "lurastack-web",
              zone: "us-central1-a", target_size: 2 }, x: COL, y: ROW },
   { type: "google_compute_backend_service", name: "app",
-    attrs: { name: "ddf-web-backend", protocol: "HTTP",
+    attrs: { name: "lurastack-web-backend", protocol: "HTTP",
              health_checks: '[google_compute_health_check.http.id]' }, x: 2 * COL, y: ROW },
   { type: "google_compute_url_map", name: "app",
-    attrs: { name: "ddf-web-url-map",
+    attrs: { name: "lurastack-web-url-map",
              default_service: "google_compute_backend_service.app.id" }, x: 3 * COL, y: ROW },
   { type: "google_compute_address", name: "lb_ip",
-    attrs: { name: "ddf-web-lb-ip", region: "us-central1" }, x: 0, y: 2 * ROW },
+    attrs: { name: "lurastack-web-lb-ip", region: "us-central1" }, x: 0, y: 2 * ROW },
   { type: "google_sql_database_instance", name: "db",
-    attrs: { name: "ddf-web-sql", region: "us-central1",
+    attrs: { name: "lurastack-web-sql", region: "us-central1",
              database_version: "MYSQL_8_0", deletion_protection: false }, x: COL, y: 2 * ROW },
 ];
 
 const GCP_SERVERLESS = [
   { type: "google_storage_bucket", name: "uploads",
-    attrs: { name: "ddf-serverless-uploads-bucket", location: "US" }, x: 0, y: 0 },
+    attrs: { name: "lurastack-serverless-uploads-bucket", location: "US" }, x: 0, y: 0 },
   { type: "google_storage_bucket", name: "source",
-    attrs: { name: "ddf-serverless-source-bucket", location: "US" }, x: COL, y: 0 },
+    attrs: { name: "lurastack-serverless-source-bucket", location: "US" }, x: COL, y: 0 },
   { type: "google_service_account", name: "fn",
-    attrs: { account_id: "ddf-serverless-fn",
-             display_name: "DDF Serverless Function SA" }, x: 2 * COL, y: 0 },
+    attrs: { account_id: "lurastack-serverless-fn",
+             display_name: "LuraStack Serverless Function SA" }, x: 2 * COL, y: 0 },
   { type: "google_bigquery_dataset", name: "analytics",
-    attrs: { dataset_id: "ddf_serverless_analytics", location: "US" }, x: 0, y: ROW },
+    attrs: { dataset_id: "lurastack_serverless_analytics", location: "US" }, x: 0, y: ROW },
   { type: "google_bigquery_table", name: "events",
     attrs: { dataset_id: "google_bigquery_dataset.analytics.dataset_id",
              table_id: "events", deletion_protection: false }, x: COL, y: ROW },
   { type: "google_cloudfunctions2_function", name: "processor",
-    attrs: { name: "ddf-serverless-processor", location: "us-central1" }, x: 2 * COL, y: ROW },
+    attrs: { name: "lurastack-serverless-processor", location: "us-central1" }, x: 2 * COL, y: ROW },
 ];
 
 const GCP_DATA = [
   { type: "google_pubsub_topic", name: "ingest",
-    attrs: { name: "ddf-data-ingest" }, x: 0, y: 0 },
+    attrs: { name: "lurastack-data-ingest" }, x: 0, y: 0 },
   { type: "google_storage_bucket", name: "raw",
-    attrs: { name: "ddf-data-raw", location: "US" }, x: COL, y: 0 },
+    attrs: { name: "lurastack-data-raw", location: "US" }, x: COL, y: 0 },
   { type: "google_storage_bucket", name: "source",
-    attrs: { name: "ddf-data-fn-source", location: "US" }, x: 2 * COL, y: 0 },
+    attrs: { name: "lurastack-data-fn-source", location: "US" }, x: 2 * COL, y: 0 },
   { type: "google_bigquery_dataset", name: "warehouse",
-    attrs: { dataset_id: "ddf_data_warehouse", location: "US" }, x: 3 * COL, y: 0 },
+    attrs: { dataset_id: "lurastack_data_warehouse", location: "US" }, x: 3 * COL, y: 0 },
   { type: "google_bigquery_table", name: "events",
     attrs: { dataset_id: "google_bigquery_dataset.warehouse.dataset_id",
              table_id: "events", deletion_protection: false }, x: 0, y: ROW },
   { type: "google_service_account", name: "fn",
-    attrs: { account_id: "ddf-data-fn",
-             display_name: "DDF Data Function SA" }, x: COL, y: ROW },
+    attrs: { account_id: "lurastack-data-fn",
+             display_name: "LuraStack Data Function SA" }, x: COL, y: ROW },
   { type: "google_cloudfunctions2_function", name: "worker",
-    attrs: { name: "ddf-data-worker", location: "us-central1" }, x: 2 * COL, y: ROW },
+    attrs: { name: "lurastack-data-worker", location: "us-central1" }, x: 2 * COL, y: ROW },
   { type: "google_pubsub_subscription", name: "audit",
-    attrs: { name: "ddf-data-audit-sub", topic: "google_pubsub_topic.ingest.id" }, x: 3 * COL, y: ROW },
+    attrs: { name: "lurastack-data-audit-sub", topic: "google_pubsub_topic.ingest.id" }, x: 3 * COL, y: ROW },
 ];
 
 const TEMPLATES = [
