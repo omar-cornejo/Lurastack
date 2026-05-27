@@ -1,0 +1,9 @@
+{
+  "id": "gcp/empty-gcp",
+  "name": "GCP — Empty project",
+  "description": "Proyecto en blanco con un view inicial preparado para GCP.",
+  "provider": "gcp",
+  "resourceCount": 0,
+  "tags": ["starter", "blank"],
+  "icon": "mdi:google-cloud"
+}

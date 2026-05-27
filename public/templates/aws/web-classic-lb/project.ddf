@@ -1,0 +1,737 @@
+{
+  "version": "1",
+  "meta": {
+    "name": "AWS \u2014 Classic web (ALB + ASG + RDS)",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "settings": {
+    "autosave": false
+  },
+  "activeViewId": "view-94ba6010-515c-4cf5-aae2-834b148faf07",
+  "views": [
+    {
+      "id": "view-94ba6010-515c-4cf5-aae2-834b148faf07",
+      "name": "View 1",
+      "activeProvider": "aws",
+      "resources": [
+        {
+          "id": "b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "kind": "resource",
+          "type": "aws_vpc",
+          "name": "main",
+          "schemaId": "aws_vpc",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_vpc                                             \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_vpc\" \"this\" {\n\n  assign_generated_ipv6_cidr_block     = false  # bool | optional\n  cidr_block                           = \"\"     # string | optional+computed\n  enable_dns_hostnames                 = false  # bool | optional+computed\n  enable_dns_support                   = false  # bool | optional\n  enable_network_address_usage_metrics = false  # bool | optional+computed\n  id                                   = \"\"     # string | optional+computed\n  instance_tenancy                     = \"\"     # string | optional\n  ipv4_ipam_pool_id                    = \"\"     # string | optional\n  ipv4_netmask_length                  = 0      # number | optional\n  ipv6_cidr_block                      = \"\"     # string | optional+computed\n  ipv6_cidr_block_network_border_group = \"\"     # string | optional+computed\n  ipv6_ipam_pool_id                    = \"\"     # string | optional\n  ipv6_netmask_length                  = 0      # number | optional\n  tags                                 = {}     # map(string) | optional\n  tags_all                             = {}     # map(string) | optional+computed\n\n  # arn                                  = \"\"     # string | computed\n  # default_network_acl_id               = \"\"     # string | computed\n  # default_route_table_id               = \"\"     # string | computed\n  # default_security_group_id            = \"\"     # string | computed\n  # dhcp_options_id                      = \"\"     # string | computed\n  # ipv6_association_id                  = \"\"     # string | computed\n  # main_route_table_id                  = \"\"     # string | computed\n  # owner_id                             = \"\"     # string | computed\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "cidr_block": "10.0.0.0/16"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 0,
+            "icon": "/icons/Virtual-private-cloud-VPC_32.svg"
+          }
+        },
+        {
+          "id": "50bba32e-55dc-458c-8ce5-359075e13818",
+          "kind": "resource",
+          "type": "aws_internet_gateway",
+          "name": "main",
+          "schemaId": "aws_internet_gateway",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_internet_gateway                                \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_internet_gateway\" \"this\" {\n\n  id       = \"\"     # string | optional+computed\n  tags     = {}     # map(string) | optional\n  tags_all = {}     # map(string) | optional+computed\n  vpc_id   = \"\"     # string | optional+computed\n\n  # arn      = \"\"     # string | computed\n  # owner_id = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 0,
+            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg"
+          }
+        },
+        {
+          "id": "4459913d-fd1d-4f94-9094-25e1b67572ed",
+          "kind": "resource",
+          "type": "aws_subnet",
+          "name": "public_a",
+          "schemaId": "aws_subnet",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_subnet                                          \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_subnet\" \"this\" {\n\n  vpc_id                                         = \"\"     # string | required\n  assign_ipv6_address_on_creation                = false  # bool | optional\n  availability_zone                              = \"\"     # string | optional+computed\n  availability_zone_id                           = \"\"     # string | optional+computed\n  cidr_block                                     = \"\"     # string | optional\n  customer_owned_ipv4_pool                       = \"\"     # string | optional\n  enable_dns64                                   = false  # bool | optional\n  enable_lni_at_device_index                     = 0      # number | optional\n  enable_resource_name_dns_a_record_on_launch    = false  # bool | optional\n  enable_resource_name_dns_aaaa_record_on_launch = false  # bool | optional\n  id                                             = \"\"     # string | optional+computed\n  ipv6_cidr_block                                = \"\"     # string | optional\n  ipv6_native                                    = false  # bool | optional\n  map_customer_owned_ip_on_launch                = false  # bool | optional\n  map_public_ip_on_launch                        = false  # bool | optional\n  outpost_arn                                    = \"\"     # string | optional\n  private_dns_hostname_type_on_launch            = \"\"     # string | optional+computed\n  tags                                           = {}     # map(string) | optional\n  tags_all                                       = {}     # map(string) | optional+computed\n\n  # arn                                            = \"\"     # string | computed\n  # ipv6_cidr_block_association_id                 = \"\"     # string | computed\n  # owner_id                                       = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id",
+              "cidr_block": "10.0.1.0/24",
+              "availability_zone": "us-east-1a",
+              "map_public_ip_on_launch": true
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 0,
+            "icon": "/icons/Private-subnet_32.svg"
+          }
+        },
+        {
+          "id": "910f5571-1a92-4c39-8c6d-4c2ef249e338",
+          "kind": "resource",
+          "type": "aws_subnet",
+          "name": "public_b",
+          "schemaId": "aws_subnet",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_subnet                                          \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_subnet\" \"this\" {\n\n  vpc_id                                         = \"\"     # string | required\n  assign_ipv6_address_on_creation                = false  # bool | optional\n  availability_zone                              = \"\"     # string | optional+computed\n  availability_zone_id                           = \"\"     # string | optional+computed\n  cidr_block                                     = \"\"     # string | optional\n  customer_owned_ipv4_pool                       = \"\"     # string | optional\n  enable_dns64                                   = false  # bool | optional\n  enable_lni_at_device_index                     = 0      # number | optional\n  enable_resource_name_dns_a_record_on_launch    = false  # bool | optional\n  enable_resource_name_dns_aaaa_record_on_launch = false  # bool | optional\n  id                                             = \"\"     # string | optional+computed\n  ipv6_cidr_block                                = \"\"     # string | optional\n  ipv6_native                                    = false  # bool | optional\n  map_customer_owned_ip_on_launch                = false  # bool | optional\n  map_public_ip_on_launch                        = false  # bool | optional\n  outpost_arn                                    = \"\"     # string | optional\n  private_dns_hostname_type_on_launch            = \"\"     # string | optional+computed\n  tags                                           = {}     # map(string) | optional\n  tags_all                                       = {}     # map(string) | optional+computed\n\n  # arn                                            = \"\"     # string | computed\n  # ipv6_cidr_block_association_id                 = \"\"     # string | computed\n  # owner_id                                       = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id",
+              "cidr_block": "10.0.2.0/24",
+              "availability_zone": "us-east-1b",
+              "map_public_ip_on_launch": true
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 840,
+            "y": 0,
+            "icon": "/icons/Private-subnet_32.svg"
+          }
+        },
+        {
+          "id": "2f6b0539-260c-49ca-9544-0fee7c6dacac",
+          "kind": "resource",
+          "type": "aws_subnet",
+          "name": "private_a",
+          "schemaId": "aws_subnet",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_subnet                                          \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_subnet\" \"this\" {\n\n  vpc_id                                         = \"\"     # string | required\n  assign_ipv6_address_on_creation                = false  # bool | optional\n  availability_zone                              = \"\"     # string | optional+computed\n  availability_zone_id                           = \"\"     # string | optional+computed\n  cidr_block                                     = \"\"     # string | optional\n  customer_owned_ipv4_pool                       = \"\"     # string | optional\n  enable_dns64                                   = false  # bool | optional\n  enable_lni_at_device_index                     = 0      # number | optional\n  enable_resource_name_dns_a_record_on_launch    = false  # bool | optional\n  enable_resource_name_dns_aaaa_record_on_launch = false  # bool | optional\n  id                                             = \"\"     # string | optional+computed\n  ipv6_cidr_block                                = \"\"     # string | optional\n  ipv6_native                                    = false  # bool | optional\n  map_customer_owned_ip_on_launch                = false  # bool | optional\n  map_public_ip_on_launch                        = false  # bool | optional\n  outpost_arn                                    = \"\"     # string | optional\n  private_dns_hostname_type_on_launch            = \"\"     # string | optional+computed\n  tags                                           = {}     # map(string) | optional\n  tags_all                                       = {}     # map(string) | optional+computed\n\n  # arn                                            = \"\"     # string | computed\n  # ipv6_cidr_block_association_id                 = \"\"     # string | computed\n  # owner_id                                       = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id",
+              "cidr_block": "10.0.11.0/24",
+              "availability_zone": "us-east-1a"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 200,
+            "icon": "/icons/Private-subnet_32.svg"
+          }
+        },
+        {
+          "id": "58e97ca4-f484-4af8-a551-d76053a6f87a",
+          "kind": "resource",
+          "type": "aws_subnet",
+          "name": "private_b",
+          "schemaId": "aws_subnet",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_subnet                                          \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_subnet\" \"this\" {\n\n  vpc_id                                         = \"\"     # string | required\n  assign_ipv6_address_on_creation                = false  # bool | optional\n  availability_zone                              = \"\"     # string | optional+computed\n  availability_zone_id                           = \"\"     # string | optional+computed\n  cidr_block                                     = \"\"     # string | optional\n  customer_owned_ipv4_pool                       = \"\"     # string | optional\n  enable_dns64                                   = false  # bool | optional\n  enable_lni_at_device_index                     = 0      # number | optional\n  enable_resource_name_dns_a_record_on_launch    = false  # bool | optional\n  enable_resource_name_dns_aaaa_record_on_launch = false  # bool | optional\n  id                                             = \"\"     # string | optional+computed\n  ipv6_cidr_block                                = \"\"     # string | optional\n  ipv6_native                                    = false  # bool | optional\n  map_customer_owned_ip_on_launch                = false  # bool | optional\n  map_public_ip_on_launch                        = false  # bool | optional\n  outpost_arn                                    = \"\"     # string | optional\n  private_dns_hostname_type_on_launch            = \"\"     # string | optional+computed\n  tags                                           = {}     # map(string) | optional\n  tags_all                                       = {}     # map(string) | optional+computed\n\n  # arn                                            = \"\"     # string | computed\n  # ipv6_cidr_block_association_id                 = \"\"     # string | computed\n  # owner_id                                       = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id",
+              "cidr_block": "10.0.12.0/24",
+              "availability_zone": "us-east-1b"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 840,
+            "y": 200,
+            "icon": "/icons/Private-subnet_32.svg"
+          }
+        },
+        {
+          "id": "120ee966-3547-4bbb-9e4a-dfb4bde0a44a",
+          "kind": "resource",
+          "type": "aws_security_group",
+          "name": "alb",
+          "schemaId": "aws_security_group",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_security_group                                  \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_security_group\" \"this\" {\n\n  description            = \"\"     # string | optional\n  egress                 = []     # set(object({ cidr_blocks: list(string), description: string, from_port: number, ipv6_cidr_blocks: list(string), prefix_list_ids: list(string), protocol: string, security_groups: set(string), self: bool, to_port: number })) | optional+computed\n  id                     = \"\"     # string | optional+computed\n  ingress                = []     # set(object({ cidr_blocks: list(string), description: string, from_port: number, ipv6_cidr_blocks: list(string), prefix_list_ids: list(string), protocol: string, security_groups: set(string), self: bool, to_port: number })) | optional+computed\n  name                   = \"\"     # string | optional+computed\n  name_prefix            = \"\"     # string | optional+computed\n  revoke_rules_on_delete = false  # bool | optional\n  tags                   = {}     # map(string) | optional\n  tags_all               = {}     # map(string) | optional+computed\n  vpc_id                 = \"\"     # string | optional+computed\n\n  # arn                    = \"\"     # string | computed\n  # owner_id               = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-web-alb-sg",
+              "vpc_id": "aws_vpc.main.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 400,
+            "icon": "/icons/aws_security_group.svg"
+          }
+        },
+        {
+          "id": "3789aeb8-229a-4d00-83b2-18ebb5e05c0a",
+          "kind": "resource",
+          "type": "aws_security_group",
+          "name": "app",
+          "schemaId": "aws_security_group",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_security_group                                  \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_security_group\" \"this\" {\n\n  description            = \"\"     # string | optional\n  egress                 = []     # set(object({ cidr_blocks: list(string), description: string, from_port: number, ipv6_cidr_blocks: list(string), prefix_list_ids: list(string), protocol: string, security_groups: set(string), self: bool, to_port: number })) | optional+computed\n  id                     = \"\"     # string | optional+computed\n  ingress                = []     # set(object({ cidr_blocks: list(string), description: string, from_port: number, ipv6_cidr_blocks: list(string), prefix_list_ids: list(string), protocol: string, security_groups: set(string), self: bool, to_port: number })) | optional+computed\n  name                   = \"\"     # string | optional+computed\n  name_prefix            = \"\"     # string | optional+computed\n  revoke_rules_on_delete = false  # bool | optional\n  tags                   = {}     # map(string) | optional\n  tags_all               = {}     # map(string) | optional+computed\n  vpc_id                 = \"\"     # string | optional+computed\n\n  # arn                    = \"\"     # string | computed\n  # owner_id               = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-web-app-sg",
+              "vpc_id": "aws_vpc.main.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 400,
+            "icon": "/icons/aws_security_group.svg"
+          }
+        },
+        {
+          "id": "19710ef5-47dc-4666-9d9a-b395ee6f5c22",
+          "kind": "resource",
+          "type": "aws_security_group",
+          "name": "db",
+          "schemaId": "aws_security_group",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_security_group                                  \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_security_group\" \"this\" {\n\n  description            = \"\"     # string | optional\n  egress                 = []     # set(object({ cidr_blocks: list(string), description: string, from_port: number, ipv6_cidr_blocks: list(string), prefix_list_ids: list(string), protocol: string, security_groups: set(string), self: bool, to_port: number })) | optional+computed\n  id                     = \"\"     # string | optional+computed\n  ingress                = []     # set(object({ cidr_blocks: list(string), description: string, from_port: number, ipv6_cidr_blocks: list(string), prefix_list_ids: list(string), protocol: string, security_groups: set(string), self: bool, to_port: number })) | optional+computed\n  name                   = \"\"     # string | optional+computed\n  name_prefix            = \"\"     # string | optional+computed\n  revoke_rules_on_delete = false  # bool | optional\n  tags                   = {}     # map(string) | optional\n  tags_all               = {}     # map(string) | optional+computed\n  vpc_id                 = \"\"     # string | optional+computed\n\n  # arn                    = \"\"     # string | computed\n  # owner_id               = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-web-db-sg",
+              "vpc_id": "aws_vpc.main.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 400,
+            "icon": "/icons/aws_security_group.svg"
+          }
+        },
+        {
+          "id": "21efb385-9a31-4fa5-8306-c8e7d54437a8",
+          "kind": "resource",
+          "type": "aws_alb",
+          "name": "main",
+          "schemaId": "aws_alb",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_alb                                             \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_alb\" \"this\" {\n\n  client_keep_alive                                            = 0      # number | optional\n  customer_owned_ipv4_pool                                     = \"\"     # string | optional\n  desync_mitigation_mode                                       = \"\"     # string | optional\n  dns_record_client_routing_policy                             = \"\"     # string | optional\n  drop_invalid_header_fields                                   = false  # bool | optional\n  enable_cross_zone_load_balancing                             = false  # bool | optional\n  enable_deletion_protection                                   = false  # bool | optional\n  enable_http2                                                 = false  # bool | optional\n  enable_tls_version_and_cipher_suite_headers                  = false  # bool | optional\n  enable_waf_fail_open                                         = false  # bool | optional\n  enable_xff_client_port                                       = false  # bool | optional\n  enable_zonal_shift                                           = false  # bool | optional\n  enforce_security_group_inbound_rules_on_private_link_traffic = \"\"     # string | optional+computed\n  id                                                           = \"\"     # string | optional+computed\n  idle_timeout                                                 = 0      # number | optional\n  internal                                                     = false  # bool | optional+computed\n  ip_address_type                                              = \"\"     # string | optional+computed\n  load_balancer_type                                           = \"\"     # string | optional\n  name                                                         = \"\"     # string | optional+computed\n  name_prefix                                                  = \"\"     # string | optional+computed\n  preserve_host_header                                         = false  # bool | optional\n  security_groups                                              = []     # set(string) | optional+computed\n  subnets                                                      = []     # set(string) | optional+computed\n  tags                                                         = {}     # map(string) | optional\n  tags_all                                                     = {}     # map(string) | optional+computed\n  xff_header_processing_mode                                   = \"\"     # string | optional\n\n  # arn                                                          = \"\"     # string | computed\n  # arn_suffix                                                   = \"\"     # string | computed\n  # dns_name                                                     = \"\"     # string | computed\n  # vpc_id                                                       = \"\"     # string | computed\n  # zone_id                                                      = \"\"     # string | computed\n\n  access_logs { # list [0..1]\n    bucket  = \"\"     # string | required\n    enabled = false  # bool | optional\n    prefix  = \"\"     # string | optional\n\n  }\n\n  connection_logs { # list [0..1]\n    bucket  = \"\"     # string | required\n    enabled = false  # bool | optional\n    prefix  = \"\"     # string | optional\n\n  }\n\n  ipam_pools { # list [0..1]\n    ipv4_ipam_pool_id = \"\"     # string | required\n\n  }\n\n  minimum_load_balancer_capacity { # list [0..1]\n    capacity_units = 0      # number | required\n\n  }\n\n  subnet_mapping { # set\n    subnet_id            = \"\"     # string | required\n    allocation_id        = \"\"     # string | optional\n    ipv6_address         = \"\"     # string | optional\n    private_ipv4_address = \"\"     # string | optional\n\n    # outpost_id           = \"\"     # string | computed\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-web-alb",
+              "load_balancer_type": "application",
+              "subnets": "[aws_subnet.public_a.id, aws_subnet.public_b.id]",
+              "security_groups": "[aws_security_group.alb.id]"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 600,
+            "icon": "/icons/aws_alb.svg"
+          }
+        },
+        {
+          "id": "46f661c0-a5f6-4447-b5a1-00c1ee9d795e",
+          "kind": "resource",
+          "type": "aws_alb_target_group",
+          "name": "app",
+          "schemaId": "aws_alb_target_group",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_alb_target_group                                \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_alb_target_group\" \"this\" {\n\n  connection_termination             = false  # bool | optional+computed\n  deregistration_delay               = \"\"     # string | optional\n  id                                 = \"\"     # string | optional+computed\n  ip_address_type                    = \"\"     # string | optional+computed\n  lambda_multi_value_headers_enabled = false  # bool | optional\n  load_balancing_algorithm_type      = \"\"     # string | optional+computed\n  load_balancing_anomaly_mitigation  = \"\"     # string | optional+computed\n  load_balancing_cross_zone_enabled  = \"\"     # string | optional+computed\n  name                               = \"\"     # string | optional+computed\n  name_prefix                        = \"\"     # string | optional+computed\n  port                               = 0      # number | optional\n  preserve_client_ip                 = \"\"     # string | optional+computed\n  protocol                           = \"\"     # string | optional\n  protocol_version                   = \"\"     # string | optional+computed\n  proxy_protocol_v2                  = false  # bool | optional\n  slow_start                         = 0      # number | optional\n  tags                               = {}     # map(string) | optional\n  tags_all                           = {}     # map(string) | optional+computed\n  target_type                        = \"\"     # string | optional\n  vpc_id                             = \"\"     # string | optional\n\n  # arn                                = \"\"     # string | computed\n  # arn_suffix                         = \"\"     # string | computed\n  # load_balancer_arns                 = []     # set(string) | computed\n\n  health_check { # list [0..1]\n    enabled             = false  # bool | optional\n    healthy_threshold   = 0      # number | optional\n    interval            = 0      # number | optional\n    matcher             = \"\"     # string | optional+computed\n    path                = \"\"     # string | optional+computed\n    port                = \"\"     # string | optional\n    protocol            = \"\"     # string | optional\n    timeout             = 0      # number | optional+computed\n    unhealthy_threshold = 0      # number | optional\n\n  }\n\n  stickiness { # list [0..1]\n    type            = \"\"     # string | required\n    cookie_duration = 0      # number | optional\n    cookie_name     = \"\"     # string | optional\n    enabled         = false  # bool | optional\n\n  }\n\n  target_failover { # list\n    on_deregistration = \"\"     # string | required\n    on_unhealthy      = \"\"     # string | required\n\n  }\n\n  target_group_health { # list [0..1]\n\n    dns_failover { # list [0..1]\n      minimum_healthy_targets_count      = \"\"     # string | optional\n      minimum_healthy_targets_percentage = \"\"     # string | optional\n\n    }\n\n    unhealthy_state_routing { # list [0..1]\n      minimum_healthy_targets_count      = 0      # number | optional\n      minimum_healthy_targets_percentage = \"\"     # string | optional\n\n    }\n\n  }\n\n  target_health_state { # list\n    enable_unhealthy_connection_termination = false  # bool | required\n    unhealthy_draining_interval             = 0      # number | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-web-tg",
+              "port": 80,
+              "protocol": "HTTP",
+              "vpc_id": "aws_vpc.main.id",
+              "target_type": "instance"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 600,
+            "icon": "/icons/aws_alb.svg"
+          }
+        },
+        {
+          "id": "871bc2c1-8baa-47f5-94bc-3f62f36ae826",
+          "kind": "resource",
+          "type": "aws_alb_listener",
+          "name": "http",
+          "schemaId": "aws_alb_listener",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_alb_listener                                    \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_alb_listener\" \"this\" {\n\n  load_balancer_arn                                                     = \"\"     # string | required\n  alpn_policy                                                           = \"\"     # string | optional\n  certificate_arn                                                       = \"\"     # string | optional\n  id                                                                    = \"\"     # string | optional+computed\n  port                                                                  = 0      # number | optional\n  protocol                                                              = \"\"     # string | optional+computed\n  routing_http_request_x_amzn_mtls_clientcert_header_name               = \"\"     # string | optional+computed\n  routing_http_request_x_amzn_mtls_clientcert_issuer_header_name        = \"\"     # string | optional+computed\n  routing_http_request_x_amzn_mtls_clientcert_leaf_header_name          = \"\"     # string | optional+computed\n  routing_http_request_x_amzn_mtls_clientcert_serial_number_header_name = \"\"     # string | optional+computed\n  routing_http_request_x_amzn_mtls_clientcert_subject_header_name       = \"\"     # string | optional+computed\n  routing_http_request_x_amzn_mtls_clientcert_validity_header_name      = \"\"     # string | optional+computed\n  routing_http_request_x_amzn_tls_cipher_suite_header_name              = \"\"     # string | optional+computed\n  routing_http_request_x_amzn_tls_version_header_name                   = \"\"     # string | optional+computed\n  routing_http_response_access_control_allow_credentials_header_value   = \"\"     # string | optional+computed\n  routing_http_response_access_control_allow_headers_header_value       = \"\"     # string | optional+computed\n  routing_http_response_access_control_allow_methods_header_value       = \"\"     # string | optional+computed\n  routing_http_response_access_control_allow_origin_header_value        = \"\"     # string | optional+computed\n  routing_http_response_access_control_expose_headers_header_value      = \"\"     # string | optional+computed\n  routing_http_response_access_control_max_age_header_value             = \"\"     # string | optional+computed\n  routing_http_response_content_security_policy_header_value            = \"\"     # string | optional+computed\n  routing_http_response_server_enabled                                  = false  # bool | optional+computed\n  routing_http_response_strict_transport_security_header_value          = \"\"     # string | optional+computed\n  routing_http_response_x_content_type_options_header_value             = \"\"     # string | optional+computed\n  routing_http_response_x_frame_options_header_value                    = \"\"     # string | optional+computed\n  ssl_policy                                                            = \"\"     # string | optional+computed\n  tags                                                                  = {}     # map(string) | optional\n  tags_all                                                              = {}     # map(string) | optional+computed\n  tcp_idle_timeout_seconds                                              = 0      # number | optional+computed\n\n  # arn                                                                   = \"\"     # string | computed\n\n  default_action { # list [1..*]\n    type             = \"\"     # string | required\n    order            = 0      # number | optional+computed\n    target_group_arn = \"\"     # string | optional\n\n    authenticate_cognito { # list [0..1]\n      user_pool_arn                       = \"\"     # string | required\n      user_pool_client_id                 = \"\"     # string | required\n      user_pool_domain                    = \"\"     # string | required\n      authentication_request_extra_params = {}     # map(string) | optional\n      on_unauthenticated_request          = \"\"     # string | optional+computed\n      scope                               = \"\"     # string | optional+computed\n      session_cookie_name                 = \"\"     # string | optional+computed\n      session_timeout                     = 0      # number | optional+computed\n\n    }\n\n    authenticate_oidc { # list [0..1]\n      authorization_endpoint              = \"\"     # string | required\n      client_id                           = \"\"     # string | required\n      client_secret                       = \"\"     # string | required+sensitive\n      issuer                              = \"\"     # string | required\n      token_endpoint                      = \"\"     # string | required\n      user_info_endpoint                  = \"\"     # string | required\n      authentication_request_extra_params = {}     # map(string) | optional\n      on_unauthenticated_request          = \"\"     # string | optional+computed\n      scope                               = \"\"     # string | optional+computed\n      session_cookie_name                 = \"\"     # string | optional+computed\n      session_timeout                     = 0      # number | optional+computed\n\n    }\n\n    fixed_response { # list [0..1]\n      content_type = \"\"     # string | required\n      message_body = \"\"     # string | optional\n      status_code  = \"\"     # string | optional+computed\n\n    }\n\n    forward { # list [0..1]\n\n      stickiness { # list [0..1]\n        duration = 0      # number | required\n        enabled  = false  # bool | optional\n\n      }\n\n      target_group { # set [1..5]\n        arn    = \"\"     # string | required\n        weight = 0      # number | optional\n\n      }\n\n    }\n\n    redirect { # list [0..1]\n      status_code = \"\"     # string | required\n      host        = \"\"     # string | optional\n      path        = \"\"     # string | optional\n      port        = \"\"     # string | optional\n      protocol    = \"\"     # string | optional\n      query       = \"\"     # string | optional\n\n    }\n\n  }\n\n  mutual_authentication { # list [0..1]\n    mode                             = \"\"     # string | required\n    advertise_trust_store_ca_names   = \"\"     # string | optional+computed\n    ignore_client_certificate_expiry = false  # bool | optional\n    trust_store_arn                  = \"\"     # string | optional\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "load_balancer_arn": "aws_alb.main.arn",
+              "port": 80,
+              "protocol": "HTTP",
+              "default_action.type": "forward",
+              "default_action.target_group_arn": "aws_alb_target_group.app.arn"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 600,
+            "icon": "/icons/aws_alb.svg"
+          }
+        },
+        {
+          "id": "63239518-e67d-4364-a937-9527d7e14e8b",
+          "kind": "resource",
+          "type": "aws_launch_template",
+          "name": "app",
+          "schemaId": "aws_launch_template",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_launch_template                                 \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_launch_template\" \"this\" {\n\n  default_version                      = 0      # number | optional+computed\n  description                          = \"\"     # string | optional\n  disable_api_stop                     = false  # bool | optional\n  disable_api_termination              = false  # bool | optional\n  ebs_optimized                        = \"\"     # string | optional\n  id                                   = \"\"     # string | optional+computed\n  image_id                             = \"\"     # string | optional\n  instance_initiated_shutdown_behavior = \"\"     # string | optional\n  instance_type                        = \"\"     # string | optional\n  kernel_id                            = \"\"     # string | optional\n  key_name                             = \"\"     # string | optional\n  name                                 = \"\"     # string | optional+computed\n  name_prefix                          = \"\"     # string | optional+computed\n  ram_disk_id                          = \"\"     # string | optional\n  security_group_names                 = []     # set(string) | optional\n  tags                                 = {}     # map(string) | optional\n  tags_all                             = {}     # map(string) | optional+computed\n  update_default_version               = false  # bool | optional\n  user_data                            = \"\"     # string | optional\n  vpc_security_group_ids               = []     # set(string) | optional\n\n  # arn                                  = \"\"     # string | computed\n  # latest_version                       = 0      # number | computed\n\n  block_device_mappings { # list\n    device_name  = \"\"     # string | optional\n    no_device    = \"\"     # string | optional\n    virtual_name = \"\"     # string | optional\n\n    ebs { # list [0..1]\n      delete_on_termination      = \"\"     # string | optional\n      encrypted                  = \"\"     # string | optional\n      iops                       = 0      # number | optional+computed\n      kms_key_id                 = \"\"     # string | optional\n      snapshot_id                = \"\"     # string | optional\n      throughput                 = 0      # number | optional+computed\n      volume_initialization_rate = 0      # number | optional+computed\n      volume_size                = 0      # number | optional+computed\n      volume_type                = \"\"     # string | optional+computed\n\n    }\n\n  }\n\n  capacity_reservation_specification { # list [0..1]\n    capacity_reservation_preference = \"\"     # string | optional\n\n    capacity_reservation_target { # list [0..1]\n      capacity_reservation_id                 = \"\"     # string | optional\n      capacity_reservation_resource_group_arn = \"\"     # string | optional\n\n    }\n\n  }\n\n  cpu_options { # list [0..1]\n    amd_sev_snp      = \"\"     # string | optional\n    core_count       = 0      # number | optional\n    threads_per_core = 0      # number | optional\n\n  }\n\n  credit_specification { # list [0..1]\n    cpu_credits = \"\"     # string | optional\n\n  }\n\n  elastic_gpu_specifications { # list DEPRECATED\n    type = \"\"     # string | required\n\n  }\n\n  elastic_inference_accelerator { # list [0..1] DEPRECATED\n    type = \"\"     # string | required\n\n  }\n\n  enclave_options { # list [0..1]\n    enabled = false  # bool | optional\n\n  }\n\n  hibernation_options { # list [0..1]\n    configured = false  # bool | required\n\n  }\n\n  iam_instance_profile { # list [0..1]\n    arn  = \"\"     # string | optional\n    name = \"\"     # string | optional\n\n  }\n\n  instance_market_options { # list [0..1]\n    market_type = \"\"     # string | optional\n\n    spot_options { # list [0..1]\n      block_duration_minutes         = 0      # number | optional\n      instance_interruption_behavior = \"\"     # string | optional\n      max_price                      = \"\"     # string | optional\n      spot_instance_type             = \"\"     # string | optional\n      valid_until                    = \"\"     # string | optional+computed\n\n    }\n\n  }\n\n  instance_requirements { # list [0..1]\n    accelerator_manufacturers                               = []     # set(string) | optional\n    accelerator_names                                       = []     # set(string) | optional\n    accelerator_types                                       = []     # set(string) | optional\n    allowed_instance_types                                  = []     # set(string) | optional\n    bare_metal                                              = \"\"     # string | optional\n    burstable_performance                                   = \"\"     # string | optional\n    cpu_manufacturers                                       = []     # set(string) | optional\n    excluded_instance_types                                 = []     # set(string) | optional\n    instance_generations                                    = []     # set(string) | optional\n    local_storage                                           = \"\"     # string | optional\n    local_storage_types                                     = []     # set(string) | optional\n    max_spot_price_as_percentage_of_optimal_on_demand_price = 0      # number | optional\n    on_demand_max_price_percentage_over_lowest_price        = 0      # number | optional\n    require_hibernate_support                               = false  # bool | optional\n    spot_max_price_percentage_over_lowest_price             = 0      # number | optional\n\n    accelerator_count { # list [0..1]\n      max = 0      # number | optional\n      min = 0      # number | optional\n\n    }\n\n    accelerator_total_memory_mib { # list [0..1]\n      max = 0      # number | optional\n      min = 0      # number | optional\n\n    }\n\n    baseline_ebs_bandwidth_mbps { # list [0..1]\n      max = 0      # number | optional\n      min = 0      # number | optional\n\n    }\n\n    memory_gib_per_vcpu { # list [0..1]\n      max = 0      # number | optional\n      min = 0      # number | optional\n\n    }\n\n    memory_mib { # list [1..1]\n      min = 0      # number | required\n      max = 0      # number | optional\n\n    }\n\n    network_bandwidth_gbps { # list [0..1]\n      max = 0      # number | optional\n      min = 0      # number | optional\n\n    }\n\n    network_interface_count { # list [0..1]\n      max = 0      # number | optional\n      min = 0      # number | optional\n\n    }\n\n    total_local_storage_gb { # list [0..1]\n      max = 0      # number | optional\n      min = 0      # number | optional\n\n    }\n\n    vcpu_count { # list [1..1]\n      min = 0      # number | required\n      max = 0      # number | optional\n\n    }\n\n  }\n\n  license_specification { # set\n    license_configuration_arn = \"\"     # string | required\n\n  }\n\n  maintenance_options { # list [0..1]\n    auto_recovery = \"\"     # string | optional\n\n  }\n\n  metadata_options { # list [0..1]\n    http_endpoint               = \"\"     # string | optional+computed\n    http_protocol_ipv6          = \"\"     # string | optional+computed\n    http_put_response_hop_limit = 0      # number | optional+computed\n    http_tokens                 = \"\"     # string | optional+computed\n    instance_metadata_tags      = \"\"     # string | optional+computed\n\n  }\n\n  monitoring { # list [0..1]\n    enabled = false  # bool | optional\n\n  }\n\n  network_interfaces { # list\n    associate_carrier_ip_address = \"\"     # string | optional\n    associate_public_ip_address  = \"\"     # string | optional\n    delete_on_termination        = \"\"     # string | optional\n    description                  = \"\"     # string | optional\n    device_index                 = 0      # number | optional\n    interface_type               = \"\"     # string | optional\n    ipv4_address_count           = 0      # number | optional\n    ipv4_addresses               = []     # set(string) | optional\n    ipv4_prefix_count            = 0      # number | optional\n    ipv4_prefixes                = []     # set(string) | optional\n    ipv6_address_count           = 0      # number | optional\n    ipv6_addresses               = []     # set(string) | optional\n    ipv6_prefix_count            = 0      # number | optional\n    ipv6_prefixes                = []     # set(string) | optional\n    network_card_index           = 0      # number | optional\n    network_interface_id         = \"\"     # string | optional\n    primary_ipv6                 = \"\"     # string | optional\n    private_ip_address           = \"\"     # string | optional\n    security_groups              = []     # set(string) | optional\n    subnet_id                    = \"\"     # string | optional\n\n    connection_tracking_specification { # list [0..1]\n      tcp_established_timeout = 0      # number | optional\n      udp_stream_timeout      = 0      # number | optional\n      udp_timeout             = 0      # number | optional\n\n    }\n\n    ena_srd_specification { # list [0..1]\n      ena_srd_enabled = false  # bool | optional\n\n      ena_srd_udp_specification { # list [0..1]\n        ena_srd_udp_enabled = false  # bool | optional\n\n      }\n\n    }\n\n  }\n\n  placement { # list [0..1]\n    affinity                = \"\"     # string | optional\n    availability_zone       = \"\"     # string | optional\n    group_name              = \"\"     # string | optional\n    host_id                 = \"\"     # string | optional\n    host_resource_group_arn = \"\"     # string | optional\n    partition_number        = 0      # number | optional\n    spread_domain           = \"\"     # string | optional\n    tenancy                 = \"\"     # string | optional\n\n  }\n\n  private_dns_name_options { # list [0..1]\n    enable_resource_name_dns_a_record    = false  # bool | optional\n    enable_resource_name_dns_aaaa_record = false  # bool | optional\n    hostname_type                        = \"\"     # string | optional\n\n  }\n\n  tag_specifications { # list\n    resource_type = \"\"     # string | optional\n    tags          = {}     # map(string) | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name_prefix": "ddf-web-lt-",
+              "image_id": "ami-0c02fb55956c7d316",
+              "instance_type": "t3.micro",
+              "vpc_security_group_ids": "[aws_security_group.app.id]"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 840,
+            "y": 600,
+            "icon": "/icons/EC2-instance-contents_32.svg"
+          }
+        },
+        {
+          "id": "b4bc2f7f-efbd-42c6-84d0-ad01d236395b",
+          "kind": "resource",
+          "type": "aws_autoscaling_group",
+          "name": "app",
+          "schemaId": "aws_autoscaling_group",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_autoscaling_group                               \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_autoscaling_group\" \"this\" {\n\n  max_size                         = 0      # number | required\n  min_size                         = 0      # number | required\n  availability_zones               = []     # set(string) | optional+computed\n  capacity_rebalance               = false  # bool | optional\n  context                          = \"\"     # string | optional\n  default_cooldown                 = 0      # number | optional+computed\n  default_instance_warmup          = 0      # number | optional\n  desired_capacity                 = 0      # number | optional+computed\n  desired_capacity_type            = \"\"     # string | optional\n  enabled_metrics                  = []     # set(string) | optional\n  force_delete                     = false  # bool | optional\n  force_delete_warm_pool           = false  # bool | optional\n  health_check_grace_period        = 0      # number | optional\n  health_check_type                = \"\"     # string | optional+computed\n  id                               = \"\"     # string | optional+computed\n  ignore_failed_scaling_activities = false  # bool | optional\n  launch_configuration             = \"\"     # string | optional\n  load_balancers                   = []     # set(string) | optional+computed\n  max_instance_lifetime            = 0      # number | optional\n  metrics_granularity              = \"\"     # string | optional\n  min_elb_capacity                 = 0      # number | optional\n  name                             = \"\"     # string | optional+computed\n  name_prefix                      = \"\"     # string | optional+computed\n  placement_group                  = \"\"     # string | optional\n  protect_from_scale_in            = false  # bool | optional\n  service_linked_role_arn          = \"\"     # string | optional+computed\n  suspended_processes              = []     # set(string) | optional\n  target_group_arns                = []     # set(string) | optional+computed\n  termination_policies             = []     # list(string) | optional\n  vpc_zone_identifier              = []     # set(string) | optional+computed\n  wait_for_capacity_timeout        = \"\"     # string | optional\n  wait_for_elb_capacity            = 0      # number | optional\n\n  # arn                              = \"\"     # string | computed\n  # predicted_capacity               = 0      # number | computed\n  # warm_pool_size                   = 0      # number | computed\n\n  availability_zone_distribution { # list [0..1]\n    capacity_distribution_strategy = \"\"     # string | optional\n\n  }\n\n  capacity_reservation_specification { # list [0..1]\n    capacity_reservation_preference = \"\"     # string | optional+computed\n\n    capacity_reservation_target { # list [0..1]\n      capacity_reservation_ids                 = []     # list(string) | optional\n      capacity_reservation_resource_group_arns = []     # list(string) | optional\n\n    }\n\n  }\n\n  initial_lifecycle_hook { # set\n    lifecycle_transition    = \"\"     # string | required\n    name                    = \"\"     # string | required\n    default_result          = \"\"     # string | optional+computed\n    heartbeat_timeout       = 0      # number | optional\n    notification_metadata   = \"\"     # string | optional\n    notification_target_arn = \"\"     # string | optional\n    role_arn                = \"\"     # string | optional\n\n  }\n\n  instance_maintenance_policy { # list [0..1]\n    max_healthy_percentage = 0      # number | required\n    min_healthy_percentage = 0      # number | required\n\n  }\n\n  instance_refresh { # list [0..1]\n    strategy = \"\"     # string | required\n    triggers = []     # set(string) | optional\n\n    preferences { # list [0..1]\n      auto_rollback                = false  # bool | optional\n      checkpoint_delay             = \"\"     # string | optional\n      checkpoint_percentages       = []     # list(number) | optional\n      instance_warmup              = \"\"     # string | optional\n      max_healthy_percentage       = 0      # number | optional\n      min_healthy_percentage       = 0      # number | optional\n      scale_in_protected_instances = \"\"     # string | optional\n      skip_matching                = false  # bool | optional\n      standby_instances            = \"\"     # string | optional\n\n      alarm_specification { # list [0..1]\n        alarms = []     # list(string) | optional\n\n      }\n\n    }\n\n  }\n\n  launch_template { # list [0..1]\n    id      = \"\"     # string | optional+computed\n    name    = \"\"     # string | optional+computed\n    version = \"\"     # string | optional+computed\n\n  }\n\n  mixed_instances_policy { # list [0..1]\n\n    instances_distribution { # list [0..1]\n      on_demand_allocation_strategy            = \"\"     # string | optional+computed\n      on_demand_base_capacity                  = 0      # number | optional+computed\n      on_demand_percentage_above_base_capacity = 0      # number | optional+computed\n      spot_allocation_strategy                 = \"\"     # string | optional+computed\n      spot_instance_pools                      = 0      # number | optional+computed\n      spot_max_price                           = \"\"     # string | optional\n\n    }\n\n    launch_template { # list [1..1]\n\n      launch_template_specification { # list [1..1]\n        launch_template_id   = \"\"     # string | optional+computed\n        launch_template_name = \"\"     # string | optional+computed\n        version              = \"\"     # string | optional+computed\n\n      }\n\n      override { # list\n        instance_type     = \"\"     # string | optional\n        weighted_capacity = \"\"     # string | optional\n\n        instance_requirements { # list [0..1]\n          accelerator_manufacturers                               = []     # set(string) | optional\n          accelerator_names                                       = []     # set(string) | optional\n          accelerator_types                                       = []     # set(string) | optional\n          allowed_instance_types                                  = []     # set(string) | optional\n          bare_metal                                              = \"\"     # string | optional\n          burstable_performance                                   = \"\"     # string | optional\n          cpu_manufacturers                                       = []     # set(string) | optional\n          excluded_instance_types                                 = []     # set(string) | optional\n          instance_generations                                    = []     # set(string) | optional\n          local_storage                                           = \"\"     # string | optional\n          local_storage_types                                     = []     # set(string) | optional\n          max_spot_price_as_percentage_of_optimal_on_demand_price = 0      # number | optional\n          on_demand_max_price_percentage_over_lowest_price        = 0      # number | optional\n          require_hibernate_support                               = false  # bool | optional\n          spot_max_price_percentage_over_lowest_price             = 0      # number | optional\n\n          accelerator_count { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n          accelerator_total_memory_mib { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n          baseline_ebs_bandwidth_mbps { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n          memory_gib_per_vcpu { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n          memory_mib { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n          network_bandwidth_gbps { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n          network_interface_count { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n          total_local_storage_gb { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n          vcpu_count { # list [0..1]\n            max = 0      # number | optional\n            min = 0      # number | optional\n\n          }\n\n        }\n\n        launch_template_specification { # list [0..1]\n          launch_template_id   = \"\"     # string | optional+computed\n          launch_template_name = \"\"     # string | optional+computed\n          version              = \"\"     # string | optional+computed\n\n        }\n\n      }\n\n    }\n\n  }\n\n  tag { # set\n    key                 = \"\"     # string | required\n    propagate_at_launch = false  # bool | required\n    value               = \"\"     # string | required\n\n  }\n\n  timeouts { # single\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n  traffic_source { # set\n    identifier = \"\"     # string | required\n    type       = \"\"     # string | optional\n\n  }\n\n  warm_pool { # list [0..1]\n    max_group_prepared_capacity = 0      # number | optional\n    min_size                    = 0      # number | optional\n    pool_state                  = \"\"     # string | optional\n\n    instance_reuse_policy { # list [0..1]\n      reuse_on_scale_in = false  # bool | optional\n\n    }\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "ddf-web-asg",
+              "min_size": 2,
+              "max_size": 4,
+              "desired_capacity": 2,
+              "vpc_zone_identifier": "[aws_subnet.private_a.id, aws_subnet.private_b.id]",
+              "target_group_arns": "[aws_alb_target_group.app.arn]",
+              "launch_template.id": "aws_launch_template.app.id",
+              "launch_template.version": "$Latest"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 1120,
+            "y": 600,
+            "icon": "/icons/aws_autoscaling_group.svg"
+          }
+        },
+        {
+          "id": "cef8ae25-2e1d-410b-8d2d-6bb33a7d5744",
+          "kind": "resource",
+          "type": "aws_rds_cluster",
+          "name": "db",
+          "schemaId": "aws_rds_cluster",
+          "origin": "imported-file",
+          "hclTemplate": "# \u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n# \u2502  resource: aws_rds_cluster                                     \u2502\n# \u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\nresource \"aws_rds_cluster\" \"this\" {\n\n  engine                                = \"\"     # string | required\n  allocated_storage                     = 0      # number | optional+computed\n  allow_major_version_upgrade           = false  # bool | optional\n  apply_immediately                     = false  # bool | optional+computed\n  availability_zones                    = []     # set(string) | optional+computed\n  backtrack_window                      = 0      # number | optional\n  backup_retention_period               = 0      # number | optional+computed\n  ca_certificate_identifier             = \"\"     # string | optional+computed\n  cluster_identifier                    = \"\"     # string | optional+computed\n  cluster_identifier_prefix             = \"\"     # string | optional+computed\n  cluster_members                       = []     # set(string) | optional+computed\n  cluster_scalability_type              = \"\"     # string | optional+computed\n  copy_tags_to_snapshot                 = false  # bool | optional\n  database_insights_mode                = \"\"     # string | optional+computed\n  database_name                         = \"\"     # string | optional+computed\n  db_cluster_instance_class             = \"\"     # string | optional\n  db_cluster_parameter_group_name       = \"\"     # string | optional+computed\n  db_instance_parameter_group_name      = \"\"     # string | optional\n  db_subnet_group_name                  = \"\"     # string | optional+computed\n  db_system_id                          = \"\"     # string | optional+computed\n  delete_automated_backups              = false  # bool | optional\n  deletion_protection                   = false  # bool | optional\n  domain                                = \"\"     # string | optional\n  domain_iam_role_name                  = \"\"     # string | optional\n  enable_global_write_forwarding        = false  # bool | optional\n  enable_http_endpoint                  = false  # bool | optional\n  enable_local_write_forwarding         = false  # bool | optional\n  enabled_cloudwatch_logs_exports       = []     # set(string) | optional\n  engine_lifecycle_support              = \"\"     # string | optional+computed\n  engine_mode                           = \"\"     # string | optional\n  engine_version                        = \"\"     # string | optional+computed\n  final_snapshot_identifier             = \"\"     # string | optional\n  global_cluster_identifier             = \"\"     # string | optional\n  iam_database_authentication_enabled   = false  # bool | optional\n  iam_roles                             = []     # set(string) | optional+computed\n  id                                    = \"\"     # string | optional+computed\n  iops                                  = 0      # number | optional\n  kms_key_id                            = \"\"     # string | optional+computed\n  manage_master_user_password           = false  # bool | optional\n  master_password                       = \"\"     # string | optional+sensitive\n  master_password_wo                    = \"\"     # string | optional+sensitive+write_only\n  master_password_wo_version            = 0      # number | optional\n  master_user_secret_kms_key_id         = \"\"     # string | optional+computed\n  master_username                       = \"\"     # string | optional+computed\n  monitoring_interval                   = 0      # number | optional+computed\n  monitoring_role_arn                   = \"\"     # string | optional+computed\n  network_type                          = \"\"     # string | optional+computed\n  performance_insights_enabled          = false  # bool | optional\n  performance_insights_kms_key_id       = \"\"     # string | optional+computed\n  performance_insights_retention_period = 0      # number | optional+computed\n  port                                  = 0      # number | optional+computed\n  preferred_backup_window               = \"\"     # string | optional+computed\n  preferred_maintenance_window          = \"\"     # string | optional+computed\n  replication_source_identifier         = \"\"     # string | optional\n  skip_final_snapshot                   = false  # bool | optional\n  snapshot_identifier                   = \"\"     # string | optional\n  source_region                         = \"\"     # string | optional\n  storage_encrypted                     = false  # bool | optional+computed\n  storage_type                          = \"\"     # string | optional+computed\n  tags                                  = {}     # map(string) | optional\n  tags_all                              = {}     # map(string) | optional+computed\n  vpc_security_group_ids                = []     # set(string) | optional+computed\n\n  # arn                                   = \"\"     # string | computed\n  # ca_certificate_valid_till             = \"\"     # string | computed\n  # cluster_resource_id                   = \"\"     # string | computed\n  # endpoint                              = \"\"     # string | computed\n  # engine_version_actual                 = \"\"     # string | computed\n  # hosted_zone_id                        = \"\"     # string | computed\n  # master_user_secret = [  # list(object)\n  #   {\n  #     kms_key_id = \"\"\n  #     secret_arn = \"\"\n  #     secret_status = \"\"\n  #   }\n  # ]\n  # reader_endpoint                       = \"\"     # string | computed\n\n  restore_to_point_in_time { # list [0..1]\n    restore_to_time            = \"\"     # string | optional\n    restore_type               = \"\"     # string | optional\n    source_cluster_identifier  = \"\"     # string | optional\n    source_cluster_resource_id = \"\"     # string | optional\n    use_latest_restorable_time = false  # bool | optional\n\n  }\n\n  s3_import { # list [0..1]\n    bucket_name           = \"\"     # string | required\n    ingestion_role        = \"\"     # string | required\n    source_engine         = \"\"     # string | required\n    source_engine_version = \"\"     # string | required\n    bucket_prefix         = \"\"     # string | optional\n\n  }\n\n  scaling_configuration { # list [0..1]\n    auto_pause               = false  # bool | optional\n    max_capacity             = 0      # number | optional\n    min_capacity             = 0      # number | optional\n    seconds_before_timeout   = 0      # number | optional\n    seconds_until_auto_pause = 0      # number | optional\n    timeout_action           = \"\"     # string | optional\n\n  }\n\n  serverlessv2_scaling_configuration { # list [0..1]\n    max_capacity             = 0      # number | required\n    min_capacity             = 0      # number | required\n    seconds_until_auto_pause = 0      # number | optional+computed\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "cluster_identifier": "ddf-web-aurora",
+              "engine": "aurora-mysql",
+              "master_username": "admin",
+              "master_password": "changeme123!",
+              "vpc_security_group_ids": "[aws_security_group.db.id]",
+              "skip_final_snapshot": true
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 800,
+            "icon": "/icons/Arch_Amazon-RDS_64.svg"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "id": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "type": "terraformResource",
+          "position": {
+            "x": 80,
+            "y": 80
+          },
+          "data": {
+            "resourceId": "b4295859-75d5-4353-b63c-4cda4d1732dd",
+            "schemaId": "aws_vpc",
+            "label": "main",
+            "icon": "/icons/Virtual-private-cloud-VPC_32.svg",
+            "terraformType": "aws_vpc",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "style": {
+            "width": 1128,
+            "height": 622
+          },
+          "width": 1128,
+          "height": 622,
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0
+        },
+        {
+          "id": "node-50bba32e-55dc-458c-8ce5-359075e13818",
+          "type": "terraformResource",
+          "position": {
+            "x": 30,
+            "y": 60
+          },
+          "data": {
+            "resourceId": "50bba32e-55dc-458c-8ce5-359075e13818",
+            "schemaId": "aws_internet_gateway",
+            "label": "main",
+            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg",
+            "terraformType": "aws_internet_gateway",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-4459913d-fd1d-4f94-9094-25e1b67572ed",
+          "type": "terraformResource",
+          "position": {
+            "x": 394,
+            "y": 60
+          },
+          "data": {
+            "resourceId": "4459913d-fd1d-4f94-9094-25e1b67572ed",
+            "schemaId": "aws_subnet",
+            "label": "public_a",
+            "icon": "/icons/Private-subnet_32.svg",
+            "terraformType": "aws_subnet",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "style": {
+            "width": 340,
+            "height": 200
+          },
+          "width": 340,
+          "height": 200,
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-910f5571-1a92-4c39-8c6d-4c2ef249e338",
+          "type": "terraformResource",
+          "position": {
+            "x": 758,
+            "y": 60
+          },
+          "data": {
+            "resourceId": "910f5571-1a92-4c39-8c6d-4c2ef249e338",
+            "schemaId": "aws_subnet",
+            "label": "public_b",
+            "icon": "/icons/Private-subnet_32.svg",
+            "terraformType": "aws_subnet",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "style": {
+            "width": 340,
+            "height": 200
+          },
+          "width": 340,
+          "height": 200,
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-2f6b0539-260c-49ca-9544-0fee7c6dacac",
+          "type": "terraformResource",
+          "position": {
+            "x": 30,
+            "y": 284
+          },
+          "data": {
+            "resourceId": "2f6b0539-260c-49ca-9544-0fee7c6dacac",
+            "schemaId": "aws_subnet",
+            "label": "private_a",
+            "icon": "/icons/Private-subnet_32.svg",
+            "terraformType": "aws_subnet",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "style": {
+            "width": 340,
+            "height": 200
+          },
+          "width": 340,
+          "height": 200,
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-58e97ca4-f484-4af8-a551-d76053a6f87a",
+          "type": "terraformResource",
+          "position": {
+            "x": 394,
+            "y": 284
+          },
+          "data": {
+            "resourceId": "58e97ca4-f484-4af8-a551-d76053a6f87a",
+            "schemaId": "aws_subnet",
+            "label": "private_b",
+            "icon": "/icons/Private-subnet_32.svg",
+            "terraformType": "aws_subnet",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "style": {
+            "width": 340,
+            "height": 200
+          },
+          "width": 340,
+          "height": 200,
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-120ee966-3547-4bbb-9e4a-dfb4bde0a44a",
+          "type": "terraformResource",
+          "position": {
+            "x": 758,
+            "y": 284
+          },
+          "data": {
+            "resourceId": "120ee966-3547-4bbb-9e4a-dfb4bde0a44a",
+            "schemaId": "aws_security_group",
+            "label": "alb",
+            "icon": "/icons/aws_security_group.svg",
+            "terraformType": "aws_security_group",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-3789aeb8-229a-4d00-83b2-18ebb5e05c0a",
+          "type": "terraformResource",
+          "position": {
+            "x": 30,
+            "y": 508
+          },
+          "data": {
+            "resourceId": "3789aeb8-229a-4d00-83b2-18ebb5e05c0a",
+            "schemaId": "aws_security_group",
+            "label": "app",
+            "icon": "/icons/aws_security_group.svg",
+            "terraformType": "aws_security_group",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-19710ef5-47dc-4666-9d9a-b395ee6f5c22",
+          "type": "terraformResource",
+          "position": {
+            "x": 394,
+            "y": 508
+          },
+          "data": {
+            "resourceId": "19710ef5-47dc-4666-9d9a-b395ee6f5c22",
+            "schemaId": "aws_security_group",
+            "label": "db",
+            "icon": "/icons/aws_security_group.svg",
+            "terraformType": "aws_security_group",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-46f661c0-a5f6-4447-b5a1-00c1ee9d795e",
+          "type": "terraformResource",
+          "position": {
+            "x": 758,
+            "y": 508
+          },
+          "data": {
+            "resourceId": "46f661c0-a5f6-4447-b5a1-00c1ee9d795e",
+            "schemaId": "aws_alb_target_group",
+            "label": "app",
+            "icon": "/icons/aws_alb.svg",
+            "terraformType": "aws_alb_target_group",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10,
+          "parentNode": "node-b4295859-75d5-4353-b63c-4cda4d1732dd",
+          "extent": "parent"
+        },
+        {
+          "id": "node-63239518-e67d-4364-a937-9527d7e14e8b",
+          "type": "terraformResource",
+          "position": {
+            "x": 1268,
+            "y": 80
+          },
+          "data": {
+            "resourceId": "63239518-e67d-4364-a937-9527d7e14e8b",
+            "schemaId": "aws_launch_template",
+            "label": "app",
+            "icon": "/icons/EC2-instance-contents_32.svg",
+            "terraformType": "aws_launch_template",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10
+        },
+        {
+          "id": "node-b4bc2f7f-efbd-42c6-84d0-ad01d236395b",
+          "type": "terraformResource",
+          "position": {
+            "x": 80,
+            "y": 762
+          },
+          "data": {
+            "resourceId": "b4bc2f7f-efbd-42c6-84d0-ad01d236395b",
+            "schemaId": "aws_autoscaling_group",
+            "label": "app",
+            "icon": "/icons/aws_autoscaling_group.svg",
+            "terraformType": "aws_autoscaling_group",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10
+        },
+        {
+          "id": "node-cef8ae25-2e1d-410b-8d2d-6bb33a7d5744",
+          "type": "terraformResource",
+          "position": {
+            "x": 316,
+            "y": 762
+          },
+          "data": {
+            "resourceId": "cef8ae25-2e1d-410b-8d2d-6bb33a7d5744",
+            "schemaId": "aws_rds_cluster",
+            "label": "db",
+            "icon": "/icons/Arch_Amazon-RDS_64.svg",
+            "terraformType": "aws_rds_cluster",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10
+        },
+        {
+          "id": "node-871bc2c1-8baa-47f5-94bc-3f62f36ae826",
+          "type": "terraformResource",
+          "position": {
+            "x": 552,
+            "y": 762
+          },
+          "data": {
+            "resourceId": "871bc2c1-8baa-47f5-94bc-3f62f36ae826",
+            "schemaId": "aws_alb_listener",
+            "label": "http",
+            "icon": "/icons/aws_alb.svg",
+            "terraformType": "aws_alb_listener",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10
+        },
+        {
+          "id": "node-21efb385-9a31-4fa5-8306-c8e7d54437a8",
+          "type": "terraformResource",
+          "position": {
+            "x": 788,
+            "y": 762
+          },
+          "data": {
+            "resourceId": "21efb385-9a31-4fa5-8306-c8e7d54437a8",
+            "schemaId": "aws_alb",
+            "label": "main",
+            "icon": "/icons/aws_alb.svg",
+            "terraformType": "aws_alb",
+            "terraformKind": "resource",
+            "isContainer": false
+          },
+          "style": {
+            "width": 176,
+            "height": 84
+          },
+          "zIndex": 10
+        }
+      ],
+      "edges": [],
+      "codeFiles": []
+    }
+  ]
+}
