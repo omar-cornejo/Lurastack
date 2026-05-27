@@ -1,0 +1,51 @@
+DDF — Visual Terraform Editor
+Copyright 2026 Omar Cornejo
+
+This product includes software developed by Omar Cornejo and contributors,
+licensed under the Apache License, Version 2.0.
+
+==============================================================================
+Third-party software
+==============================================================================
+
+This project bundles or depends on the following third-party software.
+Licenses are reproduced in full in each dependency's own repository.
+
+Frontend (npm):
+  - React (MIT) — https://github.com/facebook/react
+  - ReactFlow (MIT) — https://github.com/xyflow/xyflow
+  - CoreUI React (MIT) — https://github.com/coreui/coreui-react
+  - Iconify React (MIT) — https://github.com/iconify/iconify
+  - xterm.js (MIT) — https://github.com/xtermjs/xterm.js
+  - Tailwind CSS (MIT) — https://github.com/tailwindlabs/tailwindcss
+  - Vite (MIT) — https://github.com/vitejs/vite
+  - Sileo (MIT) — https://www.npmjs.com/package/sileo
+
+Desktop runtime (Rust / Tauri):
+  - Tauri 2 (MIT / Apache-2.0) — https://github.com/tauri-apps/tauri
+  - tauri-plugin-fs, tauri-plugin-dialog, tauri-plugin-opener
+    (MIT / Apache-2.0) — https://github.com/tauri-apps/plugins-workspace
+  - tokio (MIT) — https://github.com/tokio-rs/tokio
+  - serde, serde_json (MIT / Apache-2.0) — https://github.com/serde-rs/serde
+  - portable-pty (MIT) — https://github.com/wez/wezterm
+  - hcl-rs (MIT) — https://github.com/martinohmann/hcl-rs
+  - anyhow (MIT / Apache-2.0) — https://github.com/dtolnay/anyhow
+  - dirs (MIT / Apache-2.0) — https://github.com/dirs-dev/dirs-rs
+
+External tools invoked as subprocesses (not bundled):
+  - Terraform (Business Source License 1.1 from v1.6+; MPL-2.0 for older
+    versions) — https://github.com/hashicorp/terraform
+    DDF executes the user's local `terraform` binary; it does not redistribute it.
+
+==============================================================================
+Icon assets
+==============================================================================
+
+  - AWS Architecture Icons (Asset Package) — © Amazon Web Services, Inc.
+    https://aws.amazon.com/architecture/icons/
+    Used under the AWS Architecture Icons asset usage terms.
+  - Google Cloud Icons — © Google LLC
+    https://cloud.google.com/icons
+    Used under the Google Cloud Icons license terms.
+
+See public/icons/ATTRIBUTIONS.md for details about specific icons.

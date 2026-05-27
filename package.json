@@ -2,6 +2,17 @@
   "name": "ddf",
   "private": true,
   "version": "0.1.0",
+  "description": "Visual Terraform editor with bidirectional HCL generation, built with Tauri + React.",
+  "author": "Omar Cornejo <omarcornejovargas@gmail.com>",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/omar-cornejo/ddfib#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omar-cornejo/ddfib"
+  },
+  "bugs": {
+    "url": "https://github.com/omar-cornejo/ddfib/issues"
+  },
   "type": "module",
   "scripts": {
     "templates:index": "node scripts/build-templates-index.js",

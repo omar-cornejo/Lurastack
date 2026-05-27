@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "ddf",
+  "productName": "DDF",
   "version": "0.1.0",
   "identifier": "com.omarantoniocornejo.ddf",
   "build": {
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "ddf",
+        "title": "DDF",
         "width": 800,
         "height": 600,
         "minWidth": 640,
