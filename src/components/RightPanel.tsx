@@ -855,7 +855,7 @@ export const RightPanel = ({
             {(["inspector", "history"] as RightPanelMode[]).map((mode) => {
               const isActive = activeMode === mode;
               const label = mode === "inspector" ? "Inspector" : "Historial";
-              const icon = mode === "inspector" ? "mdi:inspector" : "mdi:history";
+              const icon = mode === "inspector" ? "mdi:tune-variant" : "mdi:history";
               return (
                 <button
                   key={mode}
@@ -957,7 +957,7 @@ export const RightPanel = ({
               ) : (
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
-                    <Icon icon="mdi:inspector" className="text-slate-400" width={18} />
+                    <Icon icon="mdi:tune-variant" className="text-slate-400" width={18} />
                   </div>
                   <p className="text-[13px] font-semibold text-slate-800">Inspector</p>
                 </div>

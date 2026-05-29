@@ -33,7 +33,7 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/gcp_networking.svg"
+            "icon": "/icons/gcp/gcp_networking.svg"
           }
         },
         {
@@ -56,7 +56,7 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/gcp_networking.svg"
+            "icon": "/icons/gcp/gcp_networking.svg"
           }
         },
         {
@@ -79,7 +79,7 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/gcp_security_identity.svg"
+            "icon": "/icons/gcp/gcp_security_identity.svg"
           }
         },
         {
@@ -99,7 +99,7 @@
           "ui": {
             "x": 840,
             "y": 0,
-            "icon": "/icons/gcp_networking.svg"
+            "icon": "/icons/gcp/gcp_networking.svg"
           }
         },
         {
@@ -120,7 +120,7 @@
           "ui": {
             "x": 0,
             "y": 200,
-            "icon": "/icons/gcp_compute_engine.svg"
+            "icon": "/icons/gcp/gcp_compute_engine.svg"
           }
         },
         {
@@ -143,7 +143,7 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/gcp_compute_engine.svg"
+            "icon": "/icons/gcp/gcp_compute_engine.svg"
           }
         },
         {
@@ -165,7 +165,7 @@
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/gcp_networking.svg"
+            "icon": "/icons/gcp/gcp_networking.svg"
           }
         },
         {
@@ -186,7 +186,7 @@
           "ui": {
             "x": 840,
             "y": 200,
-            "icon": "/icons/gcp_networking.svg"
+            "icon": "/icons/gcp/gcp_networking.svg"
           }
         },
         {
@@ -207,7 +207,7 @@
           "ui": {
             "x": 0,
             "y": 400,
-            "icon": "/icons/gcp_networking.svg"
+            "icon": "/icons/gcp/gcp_networking.svg"
           }
         },
         {
@@ -230,7 +230,7 @@
           "ui": {
             "x": 280,
             "y": 400,
-            "icon": "/icons/gcp_cloud_sql.svg"
+            "icon": "/icons/gcp/gcp_cloud_sql.svg"
           }
         }
       ],
@@ -246,7 +246,7 @@
             "resourceId": "09f35cf5-c14d-453b-a7f2-698cea545d61",
             "schemaId": "google_compute_network",
             "label": "main",
-            "icon": "/icons/gcp_networking.svg",
+            "icon": "/icons/gcp/gcp_networking.svg",
             "terraformType": "google_compute_network",
             "terraformKind": "resource",
             "isContainer": false
@@ -263,7 +263,7 @@
             "resourceId": "f1500186-2cae-4159-a607-152cb6547cf3",
             "schemaId": "google_compute_subnetwork",
             "label": "main",
-            "icon": "/icons/gcp_networking.svg",
+            "icon": "/icons/gcp/gcp_networking.svg",
             "terraformType": "google_compute_subnetwork",
             "terraformKind": "resource",
             "isContainer": false
@@ -280,7 +280,7 @@
             "resourceId": "3d026c96-af0f-46e2-bc8a-1cf7dbe12c3c",
             "schemaId": "google_compute_firewall",
             "label": "http",
-            "icon": "/icons/gcp_security_identity.svg",
+            "icon": "/icons/gcp/gcp_security_identity.svg",
             "terraformType": "google_compute_firewall",
             "terraformKind": "resource",
             "isContainer": false
@@ -297,7 +297,7 @@
             "resourceId": "98e2a5b5-1509-4c63-aabf-a4deaf22770c",
             "schemaId": "google_compute_health_check",
             "label": "http",
-            "icon": "/icons/gcp_networking.svg",
+            "icon": "/icons/gcp/gcp_networking.svg",
             "terraformType": "google_compute_health_check",
             "terraformKind": "resource",
             "isContainer": false
@@ -314,7 +314,7 @@
             "resourceId": "043c5a5e-ec2a-4d73-946e-4fd348be9720",
             "schemaId": "google_compute_instance_template",
             "label": "app",
-            "icon": "/icons/gcp_compute_engine.svg",
+            "icon": "/icons/gcp/gcp_compute_engine.svg",
             "terraformType": "google_compute_instance_template",
             "terraformKind": "resource",
             "isContainer": false
@@ -331,7 +331,7 @@
             "resourceId": "5acc80f3-0f14-4cb3-b7fc-f691eae4497f",
             "schemaId": "google_compute_instance_group_manager",
             "label": "app",
-            "icon": "/icons/gcp_compute_engine.svg",
+            "icon": "/icons/gcp/gcp_compute_engine.svg",
             "terraformType": "google_compute_instance_group_manager",
             "terraformKind": "resource",
             "isContainer": false
@@ -348,7 +348,7 @@
             "resourceId": "d8b93b44-0dba-4e9a-a549-3e8272157428",
             "schemaId": "google_compute_backend_service",
             "label": "app",
-            "icon": "/icons/gcp_networking.svg",
+            "icon": "/icons/gcp/gcp_networking.svg",
             "terraformType": "google_compute_backend_service",
             "terraformKind": "resource",
             "isContainer": false
@@ -365,7 +365,7 @@
             "resourceId": "83838527-66be-4f7d-ba8e-974965c8b30c",
             "schemaId": "google_compute_url_map",
             "label": "app",
-            "icon": "/icons/gcp_networking.svg",
+            "icon": "/icons/gcp/gcp_networking.svg",
             "terraformType": "google_compute_url_map",
             "terraformKind": "resource",
             "isContainer": false
@@ -382,7 +382,7 @@
             "resourceId": "953bdc74-ef2d-4333-9885-58061acde76f",
             "schemaId": "google_compute_address",
             "label": "lb_ip",
-            "icon": "/icons/gcp_networking.svg",
+            "icon": "/icons/gcp/gcp_networking.svg",
             "terraformType": "google_compute_address",
             "terraformKind": "resource",
             "isContainer": false
@@ -399,7 +399,7 @@
             "resourceId": "05366cbd-a057-4681-831b-a8a27033646e",
             "schemaId": "google_sql_database_instance",
             "label": "db",
-            "icon": "/icons/gcp_cloud_sql.svg",
+            "icon": "/icons/gcp/gcp_cloud_sql.svg",
             "terraformType": "google_sql_database_instance",
             "terraformKind": "resource",
             "isContainer": false

@@ -398,23 +398,25 @@ export default function App() {
     <div className="h-screen flex flex-col overflow-hidden">
       <Toaster position="top-center" offset={{ top: 56 }} />
 
-      <GlobalBar
-        views={views}
-        activeViewId={activeViewId}
-        hasProject={hasProject}
-        projectName={project?.meta.name ?? null}
-        autosave={autosave}
-        onSwitchView={setActiveViewId}
-        onCreateView={handleCreateView}
-        onCloseView={handleCloseView}
-        onRenameView={handleRenameView}
-        onNewProject={() => { setProject(null); setProjectFilePath(null); setViews([]); }}
-        onOpenProject={handleOpenProject}
-        onSaveProject={handleSaveProject}
-        onSaveProjectAs={handleSaveProjectAs}
-        onExportHcl={handleExportHcl}
-        onToggleAutosave={handleToggleAutosave}
-      />
+      {hasProject && (
+        <GlobalBar
+          views={views}
+          activeViewId={activeViewId}
+          hasProject={hasProject}
+          projectName={project?.meta.name ?? null}
+          autosave={autosave}
+          onSwitchView={setActiveViewId}
+          onCreateView={handleCreateView}
+          onCloseView={handleCloseView}
+          onRenameView={handleRenameView}
+          onNewProject={() => { setProject(null); setProjectFilePath(null); setViews([]); }}
+          onOpenProject={handleOpenProject}
+          onSaveProject={handleSaveProject}
+          onSaveProjectAs={handleSaveProjectAs}
+          onExportHcl={handleExportHcl}
+          onToggleAutosave={handleToggleAutosave}
+        />
+      )}
 
       <div className="flex flex-1 overflow-hidden relative">
         {!hasProject ? (

@@ -32,7 +32,7 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/Virtual-private-cloud-VPC_32.svg"
+            "icon": "/icons/aws/Virtual-private-cloud-VPC_32.svg"
           }
         },
         {
@@ -52,7 +52,7 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg"
+            "icon": "/icons/aws/Res_Amazon-VPC_Internet-Gateway_48.svg"
           }
         },
         {
@@ -75,7 +75,7 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/Private-subnet_32.svg"
+            "icon": "/icons/aws/Private-subnet_32.svg"
           }
         },
         {
@@ -98,7 +98,7 @@
           "ui": {
             "x": 840,
             "y": 0,
-            "icon": "/icons/Private-subnet_32.svg"
+            "icon": "/icons/aws/Private-subnet_32.svg"
           }
         },
         {
@@ -120,7 +120,7 @@
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/Private-subnet_32.svg"
+            "icon": "/icons/aws/Private-subnet_32.svg"
           }
         },
         {
@@ -142,7 +142,7 @@
           "ui": {
             "x": 840,
             "y": 200,
-            "icon": "/icons/Private-subnet_32.svg"
+            "icon": "/icons/aws/Private-subnet_32.svg"
           }
         },
         {
@@ -163,7 +163,7 @@
           "ui": {
             "x": 0,
             "y": 400,
-            "icon": "/icons/aws_security_group.svg"
+            "icon": "/icons/aws/aws_security_group.svg"
           }
         },
         {
@@ -184,7 +184,7 @@
           "ui": {
             "x": 280,
             "y": 400,
-            "icon": "/icons/aws_security_group.svg"
+            "icon": "/icons/aws/aws_security_group.svg"
           }
         },
         {
@@ -205,7 +205,7 @@
           "ui": {
             "x": 560,
             "y": 400,
-            "icon": "/icons/aws_security_group.svg"
+            "icon": "/icons/aws/aws_security_group.svg"
           }
         },
         {
@@ -228,7 +228,7 @@
           "ui": {
             "x": 0,
             "y": 600,
-            "icon": "/icons/aws_alb.svg"
+            "icon": "/icons/aws/aws_alb.svg"
           }
         },
         {
@@ -252,7 +252,7 @@
           "ui": {
             "x": 280,
             "y": 600,
-            "icon": "/icons/aws_alb.svg"
+            "icon": "/icons/aws/aws_alb.svg"
           }
         },
         {
@@ -274,7 +274,7 @@
           "ui": {
             "x": 560,
             "y": 600,
-            "icon": "/icons/aws_alb.svg"
+            "icon": "/icons/aws/aws_alb.svg"
           }
         },
         {
@@ -297,7 +297,7 @@
           "ui": {
             "x": 840,
             "y": 600,
-            "icon": "/icons/EC2-instance-contents_32.svg"
+            "icon": "/icons/aws/EC2-instance-contents_32.svg"
           }
         },
         {
@@ -322,7 +322,7 @@
           "ui": {
             "x": 1120,
             "y": 600,
-            "icon": "/icons/aws_autoscaling_group.svg"
+            "icon": "/icons/aws/aws_autoscaling_group.svg"
           }
         },
         {
@@ -347,7 +347,7 @@
           "ui": {
             "x": 0,
             "y": 800,
-            "icon": "/icons/Arch_Amazon-RDS_64.svg"
+            "icon": "/icons/aws/Arch_Amazon-RDS_64.svg"
           }
         }
       ],
@@ -363,7 +363,7 @@
             "resourceId": "73823d39-719a-4981-a9a4-7bce6debffde",
             "schemaId": "aws_vpc",
             "label": "main",
-            "icon": "/icons/Virtual-private-cloud-VPC_32.svg",
+            "icon": "/icons/aws/Virtual-private-cloud-VPC_32.svg",
             "terraformType": "aws_vpc",
             "terraformKind": "resource",
             "isContainer": false
@@ -380,7 +380,7 @@
             "resourceId": "b5dd0015-a39f-446b-b192-0d868799b384",
             "schemaId": "aws_internet_gateway",
             "label": "main",
-            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg",
+            "icon": "/icons/aws/Res_Amazon-VPC_Internet-Gateway_48.svg",
             "terraformType": "aws_internet_gateway",
             "terraformKind": "resource",
             "isContainer": false
@@ -397,7 +397,7 @@
             "resourceId": "09eb1053-744c-44aa-91b4-1d4686977fc4",
             "schemaId": "aws_subnet",
             "label": "public_a",
-            "icon": "/icons/Private-subnet_32.svg",
+            "icon": "/icons/aws/Private-subnet_32.svg",
             "terraformType": "aws_subnet",
             "terraformKind": "resource",
             "isContainer": false
@@ -414,7 +414,7 @@
             "resourceId": "2d64d86d-a853-414c-a5df-c13af927dba4",
             "schemaId": "aws_subnet",
             "label": "public_b",
-            "icon": "/icons/Private-subnet_32.svg",
+            "icon": "/icons/aws/Private-subnet_32.svg",
             "terraformType": "aws_subnet",
             "terraformKind": "resource",
             "isContainer": false
@@ -431,7 +431,7 @@
             "resourceId": "590bcb58-58b2-46eb-a1f7-23a0e26b06ce",
             "schemaId": "aws_subnet",
             "label": "private_a",
-            "icon": "/icons/Private-subnet_32.svg",
+            "icon": "/icons/aws/Private-subnet_32.svg",
             "terraformType": "aws_subnet",
             "terraformKind": "resource",
             "isContainer": false
@@ -448,7 +448,7 @@
             "resourceId": "1ef291e7-601b-467f-8dd0-f63c5dbe8e48",
             "schemaId": "aws_subnet",
             "label": "private_b",
-            "icon": "/icons/Private-subnet_32.svg",
+            "icon": "/icons/aws/Private-subnet_32.svg",
             "terraformType": "aws_subnet",
             "terraformKind": "resource",
             "isContainer": false
@@ -465,7 +465,7 @@
             "resourceId": "591791c2-9581-4610-8651-db710111159e",
             "schemaId": "aws_security_group",
             "label": "alb",
-            "icon": "/icons/aws_security_group.svg",
+            "icon": "/icons/aws/aws_security_group.svg",
             "terraformType": "aws_security_group",
             "terraformKind": "resource",
             "isContainer": false
@@ -482,7 +482,7 @@
             "resourceId": "e5eb1ce4-319c-4d52-bac2-b669ca37b724",
             "schemaId": "aws_security_group",
             "label": "app",
-            "icon": "/icons/aws_security_group.svg",
+            "icon": "/icons/aws/aws_security_group.svg",
             "terraformType": "aws_security_group",
             "terraformKind": "resource",
             "isContainer": false
@@ -499,7 +499,7 @@
             "resourceId": "cbf636fe-6bd2-4498-ae73-4c04986ef409",
             "schemaId": "aws_security_group",
             "label": "db",
-            "icon": "/icons/aws_security_group.svg",
+            "icon": "/icons/aws/aws_security_group.svg",
             "terraformType": "aws_security_group",
             "terraformKind": "resource",
             "isContainer": false
@@ -516,7 +516,7 @@
             "resourceId": "6bc0b332-0a62-4a1d-bb58-83fcb3b517ff",
             "schemaId": "aws_alb",
             "label": "main",
-            "icon": "/icons/aws_alb.svg",
+            "icon": "/icons/aws/aws_alb.svg",
             "terraformType": "aws_alb",
             "terraformKind": "resource",
             "isContainer": false
@@ -533,7 +533,7 @@
             "resourceId": "c27d0b42-067b-4c6f-9b38-75a45e12a18d",
             "schemaId": "aws_alb_target_group",
             "label": "app",
-            "icon": "/icons/aws_alb.svg",
+            "icon": "/icons/aws/aws_alb.svg",
             "terraformType": "aws_alb_target_group",
             "terraformKind": "resource",
             "isContainer": false
@@ -550,7 +550,7 @@
             "resourceId": "986b9972-7eb8-44de-8b4b-41a361fa20ba",
             "schemaId": "aws_alb_listener",
             "label": "http",
-            "icon": "/icons/aws_alb.svg",
+            "icon": "/icons/aws/aws_alb.svg",
             "terraformType": "aws_alb_listener",
             "terraformKind": "resource",
             "isContainer": false
@@ -567,7 +567,7 @@
             "resourceId": "d2b11db1-5823-4616-8c17-03dd5cea3e41",
             "schemaId": "aws_launch_template",
             "label": "app",
-            "icon": "/icons/EC2-instance-contents_32.svg",
+            "icon": "/icons/aws/EC2-instance-contents_32.svg",
             "terraformType": "aws_launch_template",
             "terraformKind": "resource",
             "isContainer": false
@@ -584,7 +584,7 @@
             "resourceId": "865a74d7-0887-43da-8fe1-d1318aea9c0a",
             "schemaId": "aws_autoscaling_group",
             "label": "app",
-            "icon": "/icons/aws_autoscaling_group.svg",
+            "icon": "/icons/aws/aws_autoscaling_group.svg",
             "terraformType": "aws_autoscaling_group",
             "terraformKind": "resource",
             "isContainer": false
@@ -601,7 +601,7 @@
             "resourceId": "508daf5a-7133-450c-9b2f-24df6ae76a52",
             "schemaId": "aws_rds_cluster",
             "label": "db",
-            "icon": "/icons/Arch_Amazon-RDS_64.svg",
+            "icon": "/icons/aws/Arch_Amazon-RDS_64.svg",
             "terraformType": "aws_rds_cluster",
             "terraformKind": "resource",
             "isContainer": false
