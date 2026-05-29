@@ -729,8 +729,8 @@ export default function CenterPanel({
       }
     };
 
-    window.addEventListener("ddf-open-edge-mapper", handler);
-    return () => window.removeEventListener("ddf-open-edge-mapper", handler);
+    window.addEventListener("lurastack-open-edge-mapper", handler);
+    return () => window.removeEventListener("lurastack-open-edge-mapper", handler);
   }, [edges, openEdgeMapper]);
 
   useEffect(() => {
@@ -953,7 +953,6 @@ export default function CenterPanel({
             }}
             onClick={(event) => event.stopPropagation()}
           >
-            {/* Header */}
             <div
               className="flex items-center justify-between border-b border-slate-100 px-4 py-3 cursor-move"
               onMouseDown={(event) => {
@@ -978,7 +977,6 @@ export default function CenterPanel({
             </div>
 
             <div className="p-4 grid grid-cols-2 gap-6">
-              {/* From Node Section (Left) */}
               <div className="space-y-3">
                 <label className="block">
                   <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Source</span>
@@ -1056,7 +1054,6 @@ export default function CenterPanel({
                 </label>
               </div>
 
-              {/* To Node Section (Right) */}
               <div className="space-y-3">
                 <label className="block">
                   <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Destination</span>
@@ -1118,7 +1115,6 @@ export default function CenterPanel({
               </div>
             </div>
 
-            {/* Footer */}
             <div className="flex justify-end gap-2 border-t border-slate-100 px-4 py-3">
               <button
                 type="button"

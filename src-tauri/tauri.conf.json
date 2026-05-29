@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "DDF",
+  "productName": "LuraStack",
   "version": "0.1.0",
-  "identifier": "com.omarantoniocornejo.ddf",
+  "identifier": "com.omarantoniocornejo.lurastack",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "DDF",
+        "title": "LuraStack",
         "width": 800,
         "height": 600,
         "minWidth": 640,

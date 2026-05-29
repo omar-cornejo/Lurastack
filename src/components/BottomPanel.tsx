@@ -36,8 +36,8 @@ type BottomPanelProps = {
 
 type BottomPanelTab = "terminal" | "mapper" | "logs";
 
-const OBJECT_MAPPER_REF_MIME = "application/x-ddf-object-mapper-ref";
-const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
+const OBJECT_MAPPER_REF_MIME = "application/x-lurastack-object-mapper-ref";
+const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 const BOTTOM_PANEL_MIN_HEIGHT = 100;
 const BOTTOM_PANEL_MAX_HEIGHT = 300;
 const BOTTOM_PANEL_HEADER_HEIGHT = 40;
@@ -582,7 +582,6 @@ export default function BottomPanel({
           />
         )}
 
-        {/* Header — stays dark */}
         <header className="h-10 shrink-0 border-b border-slate-700 bg-[#252526] flex items-center justify-between px-2">
           <div className="flex h-full items-center gap-0.5">
             {!suppressTerminal && tabBtn("terminal", "Terminal")}
@@ -605,7 +604,6 @@ export default function BottomPanel({
 
         <div id="bottom-panel-content" className="relative flex-1 min-h-0 overflow-hidden">
 
-          {/* ── Terminal ── */}
           <div
             className="absolute inset-0 overflow-hidden"
             style={{ display: activeTab === "terminal" ? "block" : "none" }}
@@ -624,16 +622,13 @@ export default function BottomPanel({
             </div>
           </div>
 
-          {/* ── Object Mapper ── */}
           <div
             className="absolute inset-0 overflow-hidden bg-white"
             style={{ display: activeTab === "mapper" ? "flex" : "none", willChange: "transform" }}
           >
             <div className="flex h-full w-full gap-0 overflow-hidden">
 
-              {/* Resource list — left panel */}
               <div className="w-56 shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col overflow-hidden">
-                {/* Search */}
                 <div className="border-b border-gray-200 p-2">
                   <input
                     value={resourceSearch}
@@ -668,7 +663,6 @@ export default function BottomPanel({
                 </div>
               </div>
 
-              {/* Attribute detail — right panel */}
               <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gray-50">
                 {!activeMapperItem ? (
                   <div className="flex h-full items-center justify-center text-xs text-gray-400">
@@ -676,9 +670,7 @@ export default function BottomPanel({
                   </div>
                 ) : (
                   <>
-                    {/* Sub-toolbar */}
                     <div className="shrink-0 border-b border-gray-200 bg-white">
-                      {/* Row 1: identity + tabs always at right */}
                       <div className="flex items-center gap-3 px-3 py-1.5">
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 shrink-0">
@@ -709,7 +701,6 @@ export default function BottomPanel({
                         </div>
                       </div>
 
-                      {/* Row 2: filter chips — properties only */}
                       {mapperSourceFilter === "properties" && (
                         <div className="border-t border-gray-100 px-3 py-1.5 flex items-center gap-1 flex-wrap">
                           <input
@@ -741,7 +732,6 @@ export default function BottomPanel({
                             );
                           })}
 
-                          {/* Type filter */}
                           <div className="relative">
                             <button
                               type="button"
@@ -795,10 +785,8 @@ export default function BottomPanel({
                       )}
                     </div>
 
-                    {/* Scrollable content */}
                     <div className="flex-1 min-h-0 overflow-auto p-2">
 
-                      {/* Properties */}
                       {mapperSourceFilter === "properties" && (
                         <div className="space-y-2">
                           {groupedMapperProperties.length === 0 ? (
@@ -831,7 +819,6 @@ export default function BottomPanel({
                                         key={property.name}
                                         className="group rounded border border-gray-200 bg-white p-2 shadow-sm hover:shadow transition-shadow"
                                       >
-                                        {/* Header row */}
                                         <div className="mb-1 flex items-center gap-1 min-w-0">
                                           <span className="flex-1 truncate text-[11px] font-semibold text-gray-900" title={property.name}>
                                             {fieldName}
@@ -846,12 +833,10 @@ export default function BottomPanel({
                                           )}
                                         </div>
 
-                                        {/* Type */}
                                         <div className="mb-1.5 truncate text-[10px] text-gray-400 font-mono" title={property.type}>
                                           {property.type}
                                         </div>
 
-                                        {/* Drag chip + copy */}
                                         <div className="flex items-center gap-1">
                                           <div
                                             className="flex-1 min-w-0 flex items-center gap-1 rounded border border-dashed border-sky-300 bg-sky-50 px-1.5 py-1 text-[10px] text-sky-700 cursor-grab hover:border-sky-400 hover:bg-sky-100 transition-colors"
@@ -888,7 +873,6 @@ export default function BottomPanel({
                         </div>
                       )}
 
-                      {/* Connections */}
                       {mapperSourceFilter === "connections" && (
                         <div>
                           {mapperIncomingGrouped.length === 0 ? (
@@ -925,7 +909,6 @@ export default function BottomPanel({
                         </div>
                       )}
 
-                      {/* Container */}
                       {mapperSourceFilter === "container" && (
                         <div>
                           {mapperInheritedFromContainer.length === 0 ? (
@@ -961,7 +944,6 @@ export default function BottomPanel({
                         </div>
                       )}
 
-                      {/* Zones */}
                       {mapperSourceFilter === "zones" && (
                         <div>
                           {mapperInheritedFromZones.length === 0 ? (
@@ -1004,7 +986,6 @@ export default function BottomPanel({
             </div>
           </div>
 
-          {/* ── Logs ── */}
           <div
             className="absolute inset-0 overflow-auto bg-white p-2"
             style={{ display: activeTab === "logs" ? "block" : "none" }}

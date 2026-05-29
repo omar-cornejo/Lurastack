@@ -41,12 +41,10 @@ for (const entry of fs.readdirSync(srcRoot, { withFileTypes: true })){
     fs.copyFileSync(srcFile, destFile);
   });
 
-  // Save filenames relative to the group
   groups[groupName] = files.sort();
   console.log(`Copied ${files.length} files for group ${groupName}`);
 }
 
-// write manifest
 const manifestPath = path.join(outRoot, 'manifest.json');
 fs.writeFileSync(manifestPath, JSON.stringify(groups, null, 2), 'utf8');
 console.log('Wrote manifest at', manifestPath);

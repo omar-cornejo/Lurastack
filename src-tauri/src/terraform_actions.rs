@@ -141,7 +141,6 @@ fn terraform_init_for_deploy(
             Ok(line) => emit_output(window, &line),
             Err(mpsc::RecvTimeoutError::Timeout) => {
                 if child.try_wait().map(|s| s.is_some()).unwrap_or(false) {
-                    // drain remaining
                     while let Ok(line) = rx.try_recv() {
                         emit_output(window, &line);
                     }
@@ -1105,10 +1104,10 @@ fn terraform_lsp_diagnostics_sync(
             "method": "initialize",
             "params": {
                 "processId": std::process::id(),
-                "clientInfo": { "name": "ddf", "version": "0.1.0" },
+                "clientInfo": { "name": "lurastack", "version": "0.1.0" },
                 "rootUri": root_uri,
                 "workspaceFolders": [
-                    { "uri": to_file_uri(&project_dir_path), "name": "ddf" }
+                    { "uri": to_file_uri(&project_dir_path), "name": "lurastack" }
                 ],
                 "capabilities": {}
             }

@@ -1,4 +1,4 @@
-# DDF — Visual Terraform Editor
+# LuraStack — Visual Infrastructure-as-Code Platform
 
 > Drag-and-drop AWS / GCP architectures, get real Terraform you can `plan` and `apply` from the same window.
 
@@ -7,11 +7,11 @@
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg)](https://www.typescriptlang.org/)
 
-![DDF main UI](docs/screenshots/main-ui.png)
+![LuraStack main UI](docs/screenshots/main-ui.png)
 
-## What is DDF?
+## What is LuraStack?
 
-DDF is a desktop application that lets you design cloud infrastructure visually and emits real Terraform HCL in real time. You drag VPCs, subnets, EC2 instances, Lambdas, Pub/Sub topics, BigQuery tables — and DDF generates a syntactically valid `main.tf` you can immediately `terraform plan` or `terraform apply` against your account. Edits flow in both directions: hand-written HCL is parsed back into the visual canvas, so the diagram and the code never drift.
+LuraStack is a visual platform for designing, generating, and deploying infrastructure stacks through Infrastructure as Code (IaC). You drag VPCs, subnets, EC2 instances, Lambdas, Pub/Sub topics, BigQuery tables — and LuraStack generates a syntactically valid `main.tf` you can immediately `terraform plan` or `terraform apply` against your account. Edits flow in both directions: hand-written HCL is parsed back into the visual canvas, so the diagram and the code never drift.
 
 It runs entirely on your machine (Tauri + Rust + React), reads your usual `~/.aws/credentials` or `gcloud` setup, and shells out to your local `terraform` binary. No cloud account is required to try it; nothing leaves your laptop unless you choose to `apply`.
 
@@ -23,7 +23,7 @@ It runs entirely on your machine (Tauri + Rust + React), reads your usual `~/.aw
 - **Templates gallery**: 8 ready-to-deploy architectures (basic VPC + VM, classic ALB + ASG + RDS, serverless Lambda + S3 + DynamoDB, etc.) for AWS and GCP.
 - **Four projection views** of the same project: Canvas, Code, Diff (plan output), Cloud (state).
 - **Embedded terminal** (xterm.js + portable-pty) — run any shell command in the project directory without leaving the app.
-- **Project history** stored as a `.ddf` JSON snapshot plus `.tf` files on disk. Open it later, share it, version-control it.
+- **Project history** stored as a `.lura` JSON snapshot plus `.tf` files on disk. Open it later, share it, version-control it.
 
 ## Quick start
 
@@ -37,8 +37,8 @@ It runs entirely on your machine (Tauri + Rust + React), reads your usual `~/.aw
 ### Run from source
 
 ```bash
-git clone https://github.com/omar-cornejo/ddfib.git
-cd ddfib
+git clone https://github.com/omar-cornejo/lurastack.git
+cd lurastack
 npm install
 npm run tauri dev
 ```
@@ -56,7 +56,7 @@ The platform-native bundle (`.AppImage`, `.dmg`, `.msi`) lands under `src-tauri/
 ## Project structure
 
 ```
-ddfib/
+lurastack/
 ├── src/                    # React + TypeScript frontend
 │   ├── components/         # Panels (Canvas, Code, Diff, Cloud, sidebar, inspector)
 │   ├── canvas/             # ReactFlow custom nodes and edges
@@ -112,16 +112,16 @@ Bug reports, feature ideas, and pull requests are welcome. See [CONTRIBUTING.md]
 
 ## License
 
-DDF is licensed under the [Apache License 2.0](LICENSE). Third-party attributions are listed in [NOTICE](NOTICE) and [public/icons/ATTRIBUTIONS.md](public/icons/ATTRIBUTIONS.md).
+LuraStack is licensed under the [Apache License 2.0](LICENSE). Third-party attributions are listed in [NOTICE](NOTICE) and [public/icons/ATTRIBUTIONS.md](public/icons/ATTRIBUTIONS.md).
 
 ## Citation
 
-If you use DDF in academic work, please cite the originating Bachelor's thesis:
+If you use LuraStack in academic work, please cite the originating Bachelor's thesis:
 
 ```bibtex
-@thesis{cornejo2026ddf,
+@thesis{cornejo2026lurastack,
   author = {Cornejo, Omar},
-  title  = {DDF: A Visual Editor for Cloud Infrastructure as Code},
+  title  = {LuraStack: A Visual Editor for Cloud Infrastructure as Code},
   school = {Universitat Polit\`{e}cnica de Catalunya, Facultat d'Inform\`{a}tica de Barcelona},
   year   = {2026},
   type   = {Bachelor's Thesis}

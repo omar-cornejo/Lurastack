@@ -118,7 +118,6 @@ export default function AwsCredentialsModal({ provider = "aws", initial, onSave,
 function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCredentials; onSave: (c: AwsStoredCredentials) => void; onClose: () => void }) {
   const [activeTab, setActiveTab] = useState<CredentialMode>(initial.mode ?? "manual");
 
-  // Manual tab state
   const [accessKeyId, setAccessKeyId] = useState(initial.accessKeyId ?? "");
   const [secretAccessKey, setSecretAccessKey] = useState(initial.secretAccessKey ?? "");
   const [sessionToken, setSessionToken] = useState(initial.sessionToken ?? "");
@@ -126,7 +125,6 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
   const [showSecret, setShowSecret] = useState(false);
   const [showSessionToken, setShowSessionToken] = useState(false);
 
-  // Profile tab state
   const [profiles, setProfiles] = useState<AwsProfile[]>([]);
   const [profilesLoading, setProfilesLoading] = useState(false);
   const [profilesError, setProfilesError] = useState<string | null>(null);
@@ -138,7 +136,6 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
   const [credentialsPathExists, setCredentialsPathExists] = useState<boolean | null>(null);
   const [configPathExists, setConfigPathExists] = useState<boolean | null>(null);
 
-  // Env tab state
   const [envCreds, setEnvCreds] = useState<AwsEnvCredentials | null>(null);
   const [envLoading, setEnvLoading] = useState(false);
   const [envError, setEnvError] = useState<string | null>(null);

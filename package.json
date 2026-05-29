@@ -1,17 +1,17 @@
 {
-  "name": "ddf",
+  "name": "lurastack",
   "private": true,
   "version": "0.1.0",
-  "description": "Visual Terraform editor with bidirectional HCL generation, built with Tauri + React.",
+  "description": "LuraStack — a visual platform for designing, generating, and deploying infrastructure stacks through Infrastructure as Code (IaC).",
   "author": "Omar Cornejo <omarcornejovargas@gmail.com>",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/omar-cornejo/ddfib#readme",
+  "homepage": "https://github.com/omar-cornejo/lurastack#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/omar-cornejo/ddfib"
+    "url": "https://github.com/omar-cornejo/lurastack"
   },
   "bugs": {
-    "url": "https://github.com/omar-cornejo/ddfib/issues"
+    "url": "https://github.com/omar-cornejo/lurastack/issues"
   },
   "type": "module",
   "scripts": {

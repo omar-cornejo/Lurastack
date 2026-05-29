@@ -1,4 +1,4 @@
-import type { DdfViewSnapshot } from "./project";
+import type { ViewSnapshot } from "./project";
 
 export type HistoryAction =
   | "terraform_plan"
@@ -24,8 +24,8 @@ export type HistoryEntry = {
   summary: HistorySummary;
   changes?: HistoryChange[];
   message?: string;
-  snapshotBefore: DdfViewSnapshot;
-  snapshotAfter: DdfViewSnapshot;
+  snapshotBefore: ViewSnapshot;
+  snapshotAfter: ViewSnapshot;
 };
 
 export type HistoryIndex = {

@@ -121,7 +121,6 @@ export default function Header({
       </div>
 
       <nav className="flex items-center gap-2">
-        {/* Provider credentials button */}
         <button
           type="button"
           onClick={onOpenAwsConfig}
@@ -138,7 +137,6 @@ export default function Header({
           {badge.label}
         </button>
 
-        {/* Plan button */}
         <button
           type="button"
           onClick={onPlan}
@@ -149,7 +147,6 @@ export default function Header({
           {isDeploying ? "..." : "Plan"}
         </button>
 
-        {/* Apply button */}
         <button
           type="button"
           onClick={isApplyConfirming ? onConfirmApply : onApply}
@@ -180,7 +177,6 @@ export default function Header({
           </button>
         )}
 
-        {/* Destroy button */}
         <button
           type="button"
           onClick={isDestroyConfirming ? onConfirmDestroy : onDestroy}

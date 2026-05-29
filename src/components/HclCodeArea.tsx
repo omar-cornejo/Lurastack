@@ -85,7 +85,6 @@ export function HclCodeArea({
 
   return (
     <div className={`relative overflow-hidden ${containerClassName}`}>
-      {/* Highlighted layer */}
       <pre
         ref={preRef}
         aria-hidden
@@ -94,7 +93,6 @@ export function HclCodeArea({
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: highlighted + "\n\u200B" }}
       />
-      {/* Editable layer */}
       <textarea
         ref={textareaRef}
         value={value}

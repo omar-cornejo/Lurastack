@@ -502,7 +502,6 @@ export const applyManualContainerResizeEffects = (
     const prevRight = prev.position.x + prevSize.width;
     const prevBottom = prev.position.y + prevSize.height;
 
-    // === HORIZONTAL ===
     let newLeft: number;
     let newWidth: number;
 
@@ -541,7 +540,6 @@ export const applyManualContainerResizeEffects = (
       newWidth = Math.min(newWidth, MAX_CONTAINER_DIMENSION);
     }
 
-    // === VERTICAL ===
     let newTop: number;
     let newHeight: number;
 

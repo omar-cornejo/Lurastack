@@ -134,12 +134,10 @@ export default function GlobalBar({
       className="flex items-stretch bg-gray-950 text-gray-300 text-xs select-none z-50 shrink-0"
       style={{ height: 26 }}
     >
-      {/* Brand */}
       <div className="flex items-center px-3 text-white font-bold tracking-widest border-r border-gray-800 text-[11px] shrink-0">
-        ddf
+        LuraStack
       </div>
 
-      {/* Project name badge */}
       {projectName && (
         <div className="flex items-center px-3 text-[10px] text-gray-500 border-r border-gray-800 shrink-0 max-w-[200px] truncate gap-1.5">
           <Icon icon="mdi:layers-outline" className="text-blue-500 shrink-0" />
@@ -147,7 +145,6 @@ export default function GlobalBar({
         </div>
       )}
 
-      {/* Dropdown menus */}
       <div className="flex items-stretch shrink-0">
         {menus.map((menu) => (
           <div key={menu.name} className="relative">
@@ -195,10 +192,8 @@ export default function GlobalBar({
         ))}
       </div>
 
-      {/* Separator */}
       {hasProject && <div className="w-px bg-gray-800 mx-1 self-stretch shrink-0" />}
 
-      {/* View tabs */}
       {hasProject && (
         <div className="flex items-stretch flex-1 overflow-x-auto min-w-0">
           {views.map((view) => {
@@ -270,7 +265,6 @@ export default function GlobalBar({
         </div>
       )}
 
-      {/* Autosave indicator */}
       {hasProject && autosave && (
         <div className="flex items-center px-3 text-[10px] text-gray-600 gap-1 shrink-0">
           <Icon icon="mdi:content-save-outline" className="text-[12px] text-green-600" />

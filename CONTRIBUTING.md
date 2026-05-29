@@ -1,4 +1,4 @@
-# Contributing to DDF
+# Contributing to LuraStack
 
 Thanks for considering a contribution. This document covers the day-to-day mechanics; the high-level architecture lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
@@ -6,12 +6,12 @@ By participating you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## Reporting bugs
 
-Open an issue at https://github.com/omar-cornejo/ddfib/issues with:
+Open an issue at https://github.com/omar-cornejo/lurastack/issues with:
 
 - What you did (steps to reproduce)
 - What you expected
 - What actually happened (with the relevant output from the embedded terminal or `npm run tauri dev` logs)
-- OS, Node and Rust versions, and DDF git SHA
+- OS, Node and Rust versions, and LuraStack git SHA
 
 For UI bugs, a screenshot or short screen recording helps enormously.
 
@@ -35,7 +35,7 @@ npm run tauri dev
 - `src/` — TypeScript / React. Most contributions land here.
 - `src-tauri/src/` — Rust. Edit only if you need new commands exposed to the frontend or new subprocess behaviour.
 - `src/schemas/` — Terraform resource schemas (JSON) plus HCL templates (`*.tf.tpl`). Adding a resource means adding both files; Vite picks them up via `import.meta.glob` at build time, no code edit needed.
-- `public/templates/` — gallery templates. Each is `<provider>/<id>/{manifest.json, project.ddf}`.
+- `public/templates/` — gallery templates. Each is `<provider>/<id>/{manifest.json, project.lura}`.
 - `scripts/` — build-time helpers (icon import, template index generation).
 
 ## Coding conventions
@@ -98,10 +98,10 @@ No code change is required for the resource to appear in the sidebar; the regist
 Each template is a directory under `public/templates/<provider>/<id>/` with two files:
 
 - `manifest.json` — `TemplateManifest` shape (see `src/types/templates.ts`).
-- `project.ddf` — a full `DdfProject` (see `src/types/project.ts`) with the desired resources, nodes and edges.
+- `project.lura` — a full `LuraProject` (see `src/types/project.ts`) with the desired resources, nodes and edges.
 
 Then run `npm run templates:index` to rebuild `public/templates/index.json`. The pre-render hook in `src/commands/templateManager.ts` will write a valid `main.tf` to each view directory on instantiation so `terraform plan` works immediately.
 
 ## Questions
 
-Open a discussion at https://github.com/omar-cornejo/ddfib/discussions or email omarcornejovargas@gmail.com.
+Open a discussion at https://github.com/omar-cornejo/lurastack/discussions or email omarcornejovargas@gmail.com.

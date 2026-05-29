@@ -85,7 +85,6 @@ export function MappingEdge({
   const controlY = 2 * desiredMidY - (sourceY + targetY) / 2;
   const edgePath = `M ${sourceX},${sourceY} Q ${controlX},${controlY} ${targetX},${targetY}`;
 
-  // Get node labels from ReactFlow or from mappings
   const allNodes = getNodes();
   const sourceNodeLabel = allNodes.find((n) => n.id === source)?.data?.label ?? source;
   const targetNodeLabel = allNodes.find((n) => n.id === target)?.data?.label ?? target;
@@ -139,7 +138,7 @@ export function MappingEdge({
 
   const handleRemoveMapping = (mapping: (typeof uniqueMappings)[number]) => {
     window.dispatchEvent(
-      new CustomEvent("ddf-remove-edge-mapping", {
+      new CustomEvent("lurastack-remove-edge-mapping", {
         detail: {
           edgeId: id,
           fromNodeId: mapping.fromNodeId,
@@ -153,7 +152,7 @@ export function MappingEdge({
 
   const handleAddMapping = () => {
     window.dispatchEvent(
-      new CustomEvent("ddf-open-edge-mapper", {
+      new CustomEvent("lurastack-open-edge-mapper", {
         detail: {
           edgeId: id,
         },
@@ -161,7 +160,6 @@ export function MappingEdge({
     );
   };
 
-  // Node labels for the header (from mappings or from store)
   const fromLabel =
     uniqueMappings.find((m) => m.fromNodeId === source)?.fromNodeLabel ??
     sourceNodeLabel;
@@ -196,10 +194,8 @@ export function MappingEdge({
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Card */}
           <div className="rounded-lg border border-slate-200 bg-white shadow-md overflow-hidden select-none">
 
-            {/* Header */}
             <button
               type="button"
               className="w-full flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-slate-50 transition-colors"
@@ -208,10 +204,8 @@ export function MappingEdge({
                 setCollapsed((c) => !c);
               }}
             >
-              {/* Dot indicator */}
               <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-sky-400" />
 
-              {/* Node names */}
               <div className="flex-1 min-w-0 flex items-center gap-1 text-[11px]">
                 <span className="truncate font-medium text-slate-700" title={fromLabel}>
                   {fromLabel}
@@ -222,7 +216,6 @@ export function MappingEdge({
                 </span>
               </div>
 
-              {/* Count badge + toggle */}
               <div className="shrink-0 flex items-center gap-1">
                 <span className="rounded-full bg-sky-100 px-1.5 text-[9px] font-semibold text-sky-700">
                   {uniqueMappings.length}
@@ -231,7 +224,6 @@ export function MappingEdge({
               </div>
             </button>
 
-            {/* Mapping rows */}
             {!collapsed && (
               <div className="border-t border-slate-100">
                 {uniqueMappings.map((mapping) => {
@@ -242,7 +234,6 @@ export function MappingEdge({
                       key={routeKey(mapping)}
                       className="group flex items-center gap-2 px-2.5 py-1 hover:bg-slate-50 transition-colors"
                     >
-                      {/* Source node */}
                       <span
                         className="truncate text-[10px] font-semibold text-slate-700 flex-1 min-w-0"
                         title={mappingFromLabel}
@@ -252,7 +243,6 @@ export function MappingEdge({
 
                       <span className="shrink-0 text-[9px] text-slate-400">:</span>
 
-                      {/* Source attribute */}
                       <span
                         className="truncate text-[11px] font-mono text-sky-700 flex-1 min-w-0"
                         title={mapping.sourceExpression}
@@ -262,7 +252,6 @@ export function MappingEdge({
 
                       <span className="shrink-0 text-[11px] text-slate-400">→</span>
 
-                      {/* Target node */}
                       <span
                         className="truncate text-[10px] font-semibold text-slate-700 flex-1 min-w-0"
                         title={mappingToLabel}
@@ -272,7 +261,6 @@ export function MappingEdge({
 
                       <span className="shrink-0 text-[9px] text-slate-400">:</span>
 
-                      {/* Target attribute */}
                       <span
                         className="truncate text-[11px] font-mono text-violet-700 flex-1 min-w-0"
                         title={mapping.targetAttribute}
@@ -280,7 +268,6 @@ export function MappingEdge({
                         {mapping.targetAttribute}
                       </span>
 
-                      {/* Delete button */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -296,7 +283,6 @@ export function MappingEdge({
                   );
                 })}
 
-                {/* Add mapping button */}
                 <button
                   type="button"
                   onClick={(e) => {
@@ -311,7 +297,6 @@ export function MappingEdge({
               </div>
             )}
 
-            {/* Empty state with add button */}
             {collapsed && uniqueMappings.length === 0 && (
               <button
                 type="button"

@@ -8,7 +8,7 @@ import type { TerraformResource } from "../models/terraform";
 import { NODE_SCHEMAS } from "../models/nodeRegistry";
 import type { BottomPanelLogEntry } from "../types/logs";
 
-const BOTTOM_PANEL_CHANNEL = "ddf-bottompanel-sync";
+const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 const POPOUT_HEARTBEAT_INTERVAL_MS = 300;
 
 const readQueryParam = (key: string) => {

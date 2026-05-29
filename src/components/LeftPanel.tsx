@@ -296,7 +296,6 @@ export const LeftPanel = ({
       style={{ width: visible ? width : 0 }}
       className={`absolute left-0 top-0 z-30 h-full flex flex-col bg-white border-r border-slate-200 ${isResizing ? "" : "transition-all duration-200"}`}
     >
-      {/* Resize handle */}
       {visible && (
         <div className="absolute right-0 top-0 z-10 h-full w-3 translate-x-1/2 cursor-col-resize">
           <button
@@ -319,7 +318,6 @@ export const LeftPanel = ({
         </div>
       )}
 
-      {/* Toggle button */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -340,7 +338,6 @@ export const LeftPanel = ({
       </button>
 
       <div className="overflow-hidden flex flex-col h-full w-full min-w-0">
-          {/* Provider header — title acts as provider selector */}
           <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3.5">
             <div ref={providerMenuRef} className="relative flex items-center gap-3">
               <button
@@ -412,7 +409,6 @@ export const LeftPanel = ({
               )}
             </div>
 
-            {/* Search */}
             <div className="relative mt-3">
               <Icon
                 icon="mdi:magnify"
@@ -439,7 +435,6 @@ export const LeftPanel = ({
             </div>
           </div>
 
-          {/* Scrollable content */}
           <div
             id="left-panel-content"
             className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50/60 py-3"
@@ -464,7 +459,6 @@ export const LeftPanel = ({
                 .filter((groupKey) => groupTotal(groupKey) > 0 || !hasSearch)
                 .map((groupKey) => (
                   <section key={groupKey} className="px-3">
-                    {/* Group header */}
                     <div className="mb-2.5 flex items-center gap-2">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                         {GROUP_LABELS[groupKey]}
