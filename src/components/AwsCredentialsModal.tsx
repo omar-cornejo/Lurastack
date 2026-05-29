@@ -295,10 +295,10 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] p-6 flex flex-col gap-5">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] max-h-full overflow-y-auto p-6 flex flex-col gap-5">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-base font-semibold">{t(PROVIDER_TITLE_KEY.aws)}</h2>
           <button
@@ -629,10 +629,10 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
     : "bg-sky-600 hover:bg-sky-500";
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] p-6 flex flex-col gap-5">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] max-h-full overflow-y-auto p-6 flex flex-col gap-5">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-base font-semibold">{title}</h2>
           <button

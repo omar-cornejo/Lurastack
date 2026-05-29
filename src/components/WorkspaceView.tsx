@@ -152,6 +152,7 @@ export default function WorkspaceView({
   const [isDivergent, setIsDivergent] = useState(false);
   const planChangesRef = useRef<Map<string, ResourcePlanChange>>(new Map());
   const [showAwsConfig, setShowAwsConfig] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [rightPanelOverlayOffset, setRightPanelOverlayOffset] = useState(0);
   const [isRightPanelOverlayResizing, setIsRightPanelOverlayResizing] = useState(false);
   const [leftPanelWidth, setLeftPanelWidth] = useState(0);
@@ -1038,6 +1039,11 @@ export default function WorkspaceView({
     await saveProjectToHCL(updatedProject);
   };
 
+  const confirmClearCanvas = async () => {
+    setShowClearConfirm(false);
+    await clearCanvas();
+  };
+
   const selectedNode = selectedNodeId
     ? nodes.find((node) => node.id === selectedNodeId)
     : undefined;
@@ -1515,8 +1521,44 @@ export default function WorkspaceView({
           onClose={() => setShowAwsConfig(false)}
         />
       )}
+
+      {showClearConfirm && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-6"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowClearConfirm(false); }}
+        >
+          <div className="w-[420px] max-w-full rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/15 ring-1 ring-red-500/30">
+                <Icon icon="mdi:trash-can-outline" className="text-lg text-red-400" />
+              </div>
+              <h3 className="text-[15px] font-semibold text-white">{t("clearCanvas.title")}</h3>
+            </div>
+            <p className="mt-3 text-[13px] leading-relaxed text-slate-300">
+              {t("clearCanvas.message")}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="rounded-lg border border-slate-700 px-4 py-2 text-[13px] font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmClearCanvas()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-red-500 transition-colors"
+              >
+                {t("clearCanvas.confirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Header
-        onClearCanvas={clearCanvas}
+        onClearCanvas={() => setShowClearConfirm(true)}
         activeSection={activeSection}
         onSectionChange={setActiveSection}
         cloudProvider={cloudProvider}

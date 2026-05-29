@@ -139,16 +139,16 @@ export default function GlobalBar({
   return (
     <div
       ref={barRef}
-      className="flex items-stretch bg-gray-950 text-gray-300 text-xs select-none z-50 shrink-0"
-      style={{ height: 26 }}
+      className="flex items-stretch bg-slate-950 text-slate-300 text-xs select-none z-50 shrink-0 border-b border-slate-800"
+      style={{ height: 30 }}
     >
-      <div className="flex items-center px-3 text-white font-bold tracking-widest border-r border-gray-800 text-[11px] shrink-0">
+      <div className="flex items-center px-3.5 text-white font-bold tracking-widest border-r border-slate-800 text-xs shrink-0">
         LuraStack
       </div>
 
       {projectName && (
-        <div className="flex items-center px-3 text-[10px] text-gray-500 border-r border-gray-800 shrink-0 max-w-[200px] truncate gap-1.5">
-          <Icon icon="mdi:layers-outline" className="text-blue-500 shrink-0" />
+        <div className="flex items-center px-3 text-[11px] text-slate-400 border-r border-slate-800 shrink-0 max-w-[200px] truncate gap-1.5">
+          <Icon icon="mdi:layers-outline" className="text-blue-400 shrink-0" />
           <span className="truncate">{projectName}</span>
         </div>
       )}
@@ -158,22 +158,22 @@ export default function GlobalBar({
           <div key={menu.id} className="relative">
             <button
               onClick={() => toggleMenu(menu.id)}
-              className={`h-full px-3 hover:bg-gray-800 transition-colors ${
-                openMenu === menu.id ? "bg-gray-800 text-white" : ""
+              className={`h-full px-3.5 text-[12px] hover:bg-slate-800 transition-colors ${
+                openMenu === menu.id ? "bg-slate-800 text-white" : ""
               }`}
             >
               {menu.label}
             </button>
 
             {openMenu === menu.id && (
-              <div className="absolute left-0 top-full mt-0 bg-gray-900 border border-gray-700 shadow-xl z-50 min-w-[190px] py-1">
+              <div className="absolute left-0 top-full mt-0 bg-slate-900 border border-slate-700 rounded-b-lg shadow-xl z-50 min-w-[200px] py-1.5 text-[13px]">
                 {menu.entries.map((entry, i) => {
                   if (entry.kind === "separator") {
-                    return <div key={`sep-${i}`} className="my-1 border-t border-gray-800" />;
+                    return <div key={`sep-${i}`} className="my-1 border-t border-slate-800" />;
                   }
                   if (entry.disabled) {
                     return (
-                      <div key={entry.label} className="px-4 py-1.5 text-gray-600 cursor-not-allowed">
+                      <div key={entry.label} className="px-4 py-1.5 text-slate-600 cursor-not-allowed">
                         {entry.label}
                       </div>
                     );
@@ -182,13 +182,13 @@ export default function GlobalBar({
                     <button
                       key={entry.label}
                       onClick={entry.action}
-                      className="w-full text-left px-4 py-1.5 hover:bg-gray-700 hover:text-white transition-colors flex items-center justify-between"
+                      className="w-full text-left px-4 py-1.5 hover:bg-slate-700 hover:text-white transition-colors flex items-center justify-between"
                     >
                       <span>{entry.label}</span>
                       {entry.check !== undefined && (
                         <Icon
                           icon="mdi:check"
-                          className={`text-[12px] ml-4 ${entry.check ? "text-blue-400" : "opacity-0"}`}
+                          className={`text-[13px] ml-4 ${entry.check ? "text-blue-400" : "opacity-0"}`}
                         />
                       )}
                     </button>
@@ -200,7 +200,7 @@ export default function GlobalBar({
         ))}
       </div>
 
-      {hasProject && <div className="w-px bg-gray-800 mx-1 self-stretch shrink-0" />}
+      {hasProject && <div className="w-px bg-slate-800 mx-1 self-stretch shrink-0" />}
 
       {hasProject && (
         <div className="flex items-stretch flex-1 overflow-x-auto min-w-0">
@@ -211,15 +211,15 @@ export default function GlobalBar({
                 key={view.id}
                 onClick={() => onSwitchView(view.id)}
                 className={`
-                  group flex items-center gap-1.5 px-3 cursor-pointer border-r border-gray-800
+                  group flex items-center gap-1.5 px-3.5 cursor-pointer border-r border-slate-800
                   transition-colors whitespace-nowrap shrink-0
                   ${isActive
-                    ? "bg-gray-700 text-white border-b-2 border-b-blue-400"
-                    : "hover:bg-gray-800 text-gray-400 hover:text-gray-200"}
+                    ? "bg-slate-800 text-white border-b-2 border-b-blue-400"
+                    : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200"}
                 `}
-                style={{ minWidth: 90, maxWidth: 180 }}
+                style={{ minWidth: 96, maxWidth: 190 }}
               >
-                <Icon icon="mdi:layers-outline" className="text-[13px] shrink-0 opacity-60" />
+                <Icon icon="mdi:layers-outline" className="text-[14px] shrink-0 opacity-60" />
                 {editingViewId === view.id ? (
                   <input
                     autoFocus
@@ -237,11 +237,11 @@ export default function GlobalBar({
                         cancelViewRename();
                       }
                     }}
-                    className="min-w-0 flex-1 rounded border border-blue-500 bg-gray-900 px-1.5 py-0.5 text-[11px] text-white outline-none"
+                    className="min-w-0 flex-1 rounded border border-blue-500 bg-slate-900 px-1.5 py-0.5 text-[12px] text-white outline-none"
                   />
                 ) : (
                   <span
-                    className="truncate text-[11px] flex-1"
+                    className="truncate text-[12px] flex-1"
                     onClick={(event) => {
                       event.stopPropagation();
                       startEditingView(view);
@@ -256,7 +256,7 @@ export default function GlobalBar({
                     onClick={(e) => { e.stopPropagation(); onCloseView(view.id); }}
                     className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity ml-1 shrink-0"
                   >
-                    <Icon icon="mdi:close" className="text-[12px]" />
+                    <Icon icon="mdi:close" className="text-[13px]" />
                   </button>
                 )}
               </div>
@@ -266,16 +266,16 @@ export default function GlobalBar({
           <button
             onClick={onCreateView}
             title={t("globalbar.newView")}
-            className="flex items-center px-2.5 hover:bg-gray-800 hover:text-white transition-colors text-gray-500 shrink-0"
+            className="flex items-center px-3 hover:bg-slate-800 hover:text-white transition-colors text-slate-500 shrink-0"
           >
-            <Icon icon="mdi:plus" className="text-[14px]" />
+            <Icon icon="mdi:plus" className="text-[15px]" />
           </button>
         </div>
       )}
 
       {hasProject && autosave && (
-        <div className="flex items-center px-3 text-[10px] text-gray-600 gap-1 shrink-0">
-          <Icon icon="mdi:content-save-outline" className="text-[12px] text-green-600" />
+        <div className="flex items-center px-3 text-[11px] text-slate-500 gap-1.5 shrink-0">
+          <Icon icon="mdi:content-save-outline" className="text-[13px] text-emerald-500" />
           {t("globalbar.autosave")}
         </div>
       )}

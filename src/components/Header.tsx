@@ -6,17 +6,17 @@ type CloudProvider = "aws" | "gcp" | "azure";
 const PROVIDER_BADGE: Record<CloudProvider, { label: string; configuredClass: string; dotConfiguredClass: string }> = {
   aws: {
     label: "AWS",
-    configuredClass: "border-orange-500 text-orange-300 hover:bg-orange-900/30",
+    configuredClass: "border-orange-500/60 bg-orange-500/10 text-orange-300 hover:bg-orange-500/20",
     dotConfiguredClass: "bg-orange-400",
   },
   gcp: {
     label: "GCP",
-    configuredClass: "border-blue-500 text-blue-300 hover:bg-blue-900/30",
+    configuredClass: "border-blue-500/60 bg-blue-500/10 text-blue-300 hover:bg-blue-500/20",
     dotConfiguredClass: "bg-blue-400",
   },
   azure: {
     label: "Azure",
-    configuredClass: "border-sky-500 text-sky-300 hover:bg-sky-900/30",
+    configuredClass: "border-sky-500/60 bg-sky-500/10 text-sky-300 hover:bg-sky-500/20",
     dotConfiguredClass: "bg-sky-400",
   },
 };
@@ -64,55 +64,27 @@ export default function Header({
   const { t } = useTranslation();
   const isConfigured = credentialsConfigured ?? awsConfigured;
   const badge = PROVIDER_BADGE[cloudProvider];
+  const sections: Array<"canvas" | "code" | "diff" | "cloud"> = ["canvas", "code", "diff", "cloud"];
+  const sectionLabels: Record<string, string> = { canvas: "Canvas", code: "Code", diff: "Diff", cloud: "Cloud" };
   return (
-    <header className="bg-gray-800 text-white p-2 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="text-lg font-semibold">{t("header.workspace")}</div>
-        <nav className="flex items-center gap-1 rounded bg-gray-700 p-1">
-          <button
-            type="button"
-            onClick={() => onSectionChange?.("canvas")}
-            className={`rounded px-3 py-1 text-sm font-medium ${
-              activeSection === "canvas"
-                ? "bg-white text-gray-800"
-                : "text-gray-200 hover:bg-gray-600"
-            }`}
-          >
-            Canvas
-          </button>
-          <button
-            type="button"
-            onClick={() => onSectionChange?.("code")}
-            className={`rounded px-3 py-1 text-sm font-medium ${
-              activeSection === "code"
-                ? "bg-white text-gray-800"
-                : "text-gray-200 hover:bg-gray-600"
-            }`}
-          >
-            Code
-          </button>
-          <button
-            type="button"
-            onClick={() => onSectionChange?.("diff")}
-            className={`rounded px-3 py-1 text-sm font-medium ${
-              activeSection === "diff"
-                ? "bg-white text-gray-800"
-                : "text-gray-200 hover:bg-gray-600"
-            }`}
-          >
-            Diff
-          </button>
-          <button
-            type="button"
-            onClick={() => onSectionChange?.("cloud")}
-            className={`rounded px-3 py-1 text-sm font-medium ${
-              activeSection === "cloud"
-                ? "bg-white text-gray-800"
-                : "text-gray-200 hover:bg-gray-600"
-            }`}
-          >
-            Cloud
-          </button>
+    <header className="flex items-center justify-between gap-4 border-b border-slate-800 bg-slate-900 px-4 py-2.5">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className="text-[17px] font-semibold tracking-tight text-slate-100 truncate">{t("header.workspace")}</div>
+        <nav className="flex items-center gap-0.5 rounded-lg bg-slate-800/80 p-1 ring-1 ring-slate-700/60">
+          {sections.map((section) => (
+            <button
+              key={section}
+              type="button"
+              onClick={() => onSectionChange?.(section)}
+              className={`rounded-md px-4 py-1.5 text-[14px] font-medium transition-colors ${
+                activeSection === section
+                  ? "bg-slate-100 text-slate-900 shadow-sm"
+                  : "text-slate-300 hover:bg-slate-700/70 hover:text-white"
+              }`}
+            >
+              {sectionLabels[section]}
+            </button>
+          ))}
         </nav>
       </div>
 
@@ -121,24 +93,26 @@ export default function Header({
           type="button"
           onClick={onOpenAwsConfig}
           title={isConfigured ? t("header.credentials.configured", { provider: badge.label }) : t("header.credentials.configure", { provider: badge.label })}
-          className={`flex items-center gap-1.5 rounded px-3 py-1 text-sm font-medium border ${
+          className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] font-medium border transition-colors ${
             isConfigured
               ? badge.configuredClass
-              : "border-gray-500 text-gray-300 hover:bg-gray-700"
+              : "border-slate-700 text-slate-300 hover:bg-slate-800"
           }`}
         >
           <span
-            className={`inline-block w-2 h-2 rounded-full ${isConfigured ? badge.dotConfiguredClass : "bg-gray-500"}`}
+            className={`inline-block w-2 h-2 rounded-full ${isConfigured ? badge.dotConfiguredClass : "bg-slate-500"}`}
           />
           {badge.label}
         </button>
+
+        <div className="h-5 w-px bg-slate-700/70" />
 
         <button
           type="button"
           onClick={onPlan}
           disabled={isDeploying || !isConfigured}
           title={!isConfigured ? t("header.configureFirst", { provider: badge.label }) : t("header.tooltip.plan")}
-          className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg px-3.5 py-1.5 text-[14px] font-medium border border-slate-700 text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isDeploying ? "..." : "Plan"}
         </button>
@@ -154,10 +128,10 @@ export default function Header({
               ? t("header.configureFirst", { provider: badge.label })
               : t("header.tooltip.apply")
           }
-          className={`rounded px-3 py-1 text-sm font-medium border transition-colors ${
+          className={`rounded-lg px-3.5 py-1.5 text-[14px] font-medium border transition-colors ${
             isApplyConfirming
-              ? "border-green-500 text-green-300 hover:bg-green-900/40"
-              : "border-gray-500 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              ? "border-emerald-500 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+              : "border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
           }`}
         >
           {isApplyConfirming ? t("header.btn.yes") : isDeploying ? t("header.btn.running") : "Apply"}
@@ -167,7 +141,7 @@ export default function Header({
             type="button"
             onClick={onCancelApply}
             title={t("header.tooltip.cancelApply")}
-            className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-300 hover:bg-gray-700"
+            className="rounded-lg px-3.5 py-1.5 text-[14px] font-medium border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
           >
             {t("header.btn.no")}
           </button>
@@ -184,10 +158,10 @@ export default function Header({
               ? t("header.configureFirst", { provider: badge.label })
               : t("header.tooltip.destroy")
           }
-          className={`rounded px-3 py-1 text-sm font-medium border transition-colors ${
+          className={`rounded-lg px-3.5 py-1.5 text-[14px] font-medium border transition-colors ${
             isDestroyConfirming
-              ? "border-green-500 text-green-300 hover:bg-green-900/40"
-              : "border-red-500 text-red-200 hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
+              ? "border-emerald-500 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+              : "border-red-500/60 text-red-300 hover:bg-red-500/15 disabled:opacity-40 disabled:cursor-not-allowed"
           }`}
         >
           {isDestroyConfirming ? t("header.btn.yes") : isDeploying ? t("header.btn.running") : "Destroy"}
@@ -197,16 +171,18 @@ export default function Header({
             type="button"
             onClick={onCancelDestroy}
             title={t("header.tooltip.cancelDestroy")}
-            className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-300 hover:bg-gray-700"
+            className="rounded-lg px-3.5 py-1.5 text-[14px] font-medium border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
           >
             {t("header.btn.no")}
           </button>
         )}
 
+        <div className="h-5 w-px bg-slate-700/70" />
+
         <button
           type="button"
           onClick={onClearCanvas}
-          className="rounded bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-500"
+          className="rounded-lg bg-red-600 px-3.5 py-1.5 text-[14px] font-medium text-white hover:bg-red-500 transition-colors"
         >
           {t("header.clearCanvas")}
         </button>
