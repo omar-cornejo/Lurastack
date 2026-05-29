@@ -298,13 +298,13 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] max-h-full overflow-y-auto p-6 flex flex-col gap-5">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[640px] max-w-full max-h-full p-5 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-white text-base font-semibold">{t(PROVIDER_TITLE_KEY.aws)}</h2>
+          <h2 className="text-white text-lg font-semibold">{t(PROVIDER_TITLE_KEY.aws)}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-xl leading-none"
+            className="text-gray-400 hover:text-white text-2xl leading-none"
           >
             ×
           </button>
@@ -316,7 +316,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+              className={`flex-1 rounded px-2 py-1.5 text-[13px] font-medium transition-colors ${
                 activeTab === tab.id
                   ? "bg-gray-700 text-white"
                   : "text-gray-400 hover:text-white"
@@ -328,41 +328,56 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
         </div>
 
         {activeTab === "manual" && (
-          <div className="flex flex-col gap-4">
-            <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
+          <div className="flex flex-col gap-2.5">
+            <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-[13px] text-gray-300">
               <p>{t("credentials.manual.storageNote")}</p>
-              <ol className="mt-2 list-decimal pl-4 text-gray-400 space-y-1">
+              <ol className="mt-1.5 list-decimal pl-4 text-gray-400 space-y-0.5">
                 <li>{t("credentials.manual.step1")}</li>
                 <li>{t("credentials.manual.step2")}</li>
                 <li>{t("credentials.manual.step3")}</li>
               </ol>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">{t("credentials.field.accessKeyId")}</label>
-              <input
-                type="text"
-                value={accessKeyId}
-                onChange={(e) => setAccessKeyId(e.target.value)}
-                placeholder="AKIAIOSFODNN7EXAMPLE"
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              {hasAccessKeyError && (
-                <span className="text-[11px] text-amber-300">{t("credentials.field.accessKeyIdError")}</span>
-              )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.accessKeyId")}</label>
+                <input
+                  type="text"
+                  value={accessKeyId}
+                  onChange={(e) => setAccessKeyId(e.target.value)}
+                  placeholder="AKIAIOSFODNN7EXAMPLE"
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                {hasAccessKeyError && (
+                  <span className="text-[11px] text-amber-300">{t("credentials.field.accessKeyIdError")}</span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.region")}</label>
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
+                >
+                  {AWS_REGIONS.map((r) => (
+                    <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">{t("credentials.field.secretAccessKey")}</label>
+              <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.secretAccessKey")}</label>
               <div className="relative">
                 <input
                   type={showSecret ? "text" : "password"}
                   value={secretAccessKey}
                   onChange={(e) => setSecretAccessKey(e.target.value)}
                   placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                  className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full"
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full"
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -380,14 +395,14 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">{t("credentials.field.sessionToken")}</label>
+              <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.sessionToken")}</label>
               <div className="relative">
                 <input
                   type={showSessionToken ? "text" : "password"}
                   value={sessionToken}
                   onChange={(e) => setSessionToken(e.target.value)}
                   placeholder="IQoJb3JpZ2luX2VjEOz//////////wEaCXVzLWVhc3QtMSJHMEUC..."
-                  className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full"
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full"
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -401,24 +416,11 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
               </div>
               <span className="text-[11px] text-gray-500">{t("credentials.field.sessionTokenHelp")}</span>
             </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">{t("credentials.field.region")}</label>
-              <select
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
-              >
-                {AWS_REGIONS.map((r) => (
-                  <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
-                ))}
-              </select>
-            </div>
           </div>
         )}
 
         {activeTab === "profile" && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2.5">
             <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
               <p>{t("credentials.profile.intro")}</p>
               <p className="mt-1 text-gray-400">{t("credentials.profile.createHint")} <code className="text-gray-200">aws configure --profile NOMBRE</code>.</p>
@@ -479,7 +481,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                 <select
                   value={selectedProfile}
                   onChange={(e) => setSelectedProfile(e.target.value)}
-                  className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
                 >
                   <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>{t("credentials.profile.selectPlaceholder")}</option>
                   {profiles.map((p) => (
@@ -496,7 +498,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
               <select
                 value={profileRegionOverride}
                 onChange={(e) => setProfileRegionOverride(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+                className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
               >
                 <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>{t("credentials.profile.useProfileRegion")}</option>
                 {AWS_REGIONS.map((r) => (
@@ -513,14 +515,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
         )}
 
         {activeTab === "env" && (
-          <div className="flex flex-col gap-4">
-            <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
-              <p>{t("credentials.env.introBefore")} <code className="text-gray-200">.env</code>.</p>
-              <p className="mt-1 text-gray-400">
-                {t("credentials.env.introNote")}
-              </p>
-            </div>
-
+          <div className="flex flex-col gap-2.5">
             <div className="flex flex-col gap-2 rounded border border-gray-700 bg-gray-800/40 p-3">
               <div className="flex flex-col gap-0.5 text-[11px]">
                 <span className="text-gray-400">{t("credentials.env.cwdLabel")}</span>
@@ -570,7 +565,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
               <select
                 value={envRegion}
                 onChange={(e) => setEnvRegion(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+                className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
               >
                 <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>{t("credentials.env.useEnvRegion")}</option>
                 {AWS_REGIONS.map((r) => (
@@ -585,7 +580,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded text-sm text-gray-300 hover:text-white hover:bg-gray-700"
+            className="px-5 py-2 rounded text-[15px] text-gray-300 hover:text-white hover:bg-gray-700"
           >
             {t("credentials.button.cancel")}
           </button>
@@ -593,7 +588,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="px-4 py-1.5 rounded text-sm bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+            className="px-5 py-2 rounded text-[15px] bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
           >
             {t("credentials.button.save")}
           </button>
@@ -632,7 +627,7 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] max-h-full overflow-y-auto p-6 flex flex-col gap-5">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[640px] max-w-full max-h-full p-5 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-base font-semibold">{title}</h2>
           <button
@@ -648,7 +643,7 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded text-sm text-gray-300 hover:text-white hover:bg-gray-700"
+            className="px-5 py-2 rounded text-[15px] text-gray-300 hover:text-white hover:bg-gray-700"
           >
             {t("credentials.button.cancel")}
           </button>
@@ -656,7 +651,7 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
             type="button"
             onClick={onSave}
             disabled={!canSave}
-            className={`px-4 py-1.5 rounded text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed font-medium ${saveBtnClass}`}
+            className={`px-5 py-2 rounded text-[15px] text-white disabled:opacity-40 disabled:cursor-not-allowed font-medium ${saveBtnClass}`}
           >
             {t("credentials.button.save")}
           </button>
@@ -708,7 +703,7 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
     <ModalShell title={t(PROVIDER_TITLE_KEY.gcp)} accent="blue" onClose={onClose} onSave={handleSave} canSave={canSave}>
       <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
         <p>{t("credentials.gcp.storageNote")}</p>
-        <ol className="mt-2 list-decimal pl-4 text-gray-400 space-y-1">
+        <ol className="mt-1.5 list-decimal pl-4 text-gray-400 space-y-0.5">
           <li>{t("credentials.gcp.step1")}</li>
           <li>{t("credentials.gcp.step2")}</li>
           <li>{t("credentials.gcp.step3")}</li>
@@ -722,7 +717,7 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           placeholder="my-gcp-project-123456"
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
           autoComplete="off"
           spellCheck={false}
         />
@@ -769,7 +764,7 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
         >
           {GCP_REGIONS.map((r) => (
             <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
@@ -817,7 +812,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
     <ModalShell title={t(PROVIDER_TITLE_KEY.azure)} accent="sky" onClose={onClose} onSave={handleSave} canSave={canSave}>
       <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
         <p>{t("credentials.azure.storageNote")}</p>
-        <ol className="mt-2 list-decimal pl-4 text-gray-400 space-y-1">
+        <ol className="mt-1.5 list-decimal pl-4 text-gray-400 space-y-0.5">
           <li>{t("credentials.azure.step1")}</li>
           <li>{t("credentials.azure.step2")}</li>
           <li>{t("credentials.azure.step3")}</li>
@@ -831,7 +826,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
           value={subscriptionId}
           onChange={(e) => setSubscriptionId(e.target.value)}
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
         {subError && <span className="text-[11px] text-amber-300">{subError}</span>}
@@ -844,7 +839,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
           value={tenantId}
           onChange={(e) => setTenantId(e.target.value)}
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
         {tenantError && <span className="text-[11px] text-amber-300">{tenantError}</span>}
@@ -857,7 +852,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
           value={clientId}
           onChange={(e) => setClientId(e.target.value)}
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
         {clientError && <span className="text-[11px] text-amber-300">{clientError}</span>}
@@ -871,7 +866,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
             value={clientSecret}
             onChange={(e) => setClientSecret(e.target.value)}
             placeholder="•••••••"
-            className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 w-full"
+            className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 w-full"
             autoComplete="off"
             spellCheck={false}
           />
@@ -890,7 +885,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-sky-500"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-sky-500"
         >
           {AZURE_REGIONS.map((r) => (
             <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>

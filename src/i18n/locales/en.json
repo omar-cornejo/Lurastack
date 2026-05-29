@@ -128,8 +128,6 @@
   "credentials.env.fileLabel": ".env file (optional)",
   "credentials.env.filePlaceholder": "/path/to/.env  — read before the process env vars",
   "credentials.env.incomplete": "Required AWS_* variables are missing. Terraform will fail with an authentication error.",
-  "credentials.env.introBefore": "Use the AWS_* variables from the app process or from a",
-  "credentials.env.introNote": "Note: on macOS/Linux, apps launched from the icon may not inherit the shell variables. If they are missing, launch the app from the terminal or use a .env file.",
   "credentials.env.loadingPlaceholder": "(loading…)",
   "credentials.env.notSet": "not set",
   "credentials.env.reading": "Reading environment…",

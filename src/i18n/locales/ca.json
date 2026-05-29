@@ -128,8 +128,6 @@
   "credentials.env.fileLabel": "Fitxer .env (opcional)",
   "credentials.env.filePlaceholder": "/ruta/al/.env  — llegit abans que les env vars del procés",
   "credentials.env.incomplete": "Falten variables AWS_* obligatòries. Terraform fallarà amb un error d'autenticació.",
-  "credentials.env.introBefore": "Fes servir les variables AWS_* del procés de l'app o d'un fitxer",
-  "credentials.env.introNote": "Nota: a macOS/Linux les apps llançades des de la icona poden no heretar les variables de la shell. Si en falten, llança l'app des del terminal o fes servir un fitxer .env.",
   "credentials.env.loadingPlaceholder": "(s'està carregant…)",
   "credentials.env.notSet": "no establerta",
   "credentials.env.reading": "S'està llegint l'entorn…",
