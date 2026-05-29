@@ -1,0 +1,88 @@
+import { useEffect, useRef, useState } from "react";
+import { Icon } from "@iconify/react";
+import { useTranslation } from "react-i18next";
+import { LANGUAGES, setStoredLanguage, type Language } from "../i18n/language";
+
+type LanguageSwitcherProps = {
+  variant?: "dark" | "light";
+};
+
+export default function LanguageSwitcher({ variant = "dark" }: LanguageSwitcherProps) {
+  const { t, i18n } = useTranslation();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const current = (i18n.resolvedLanguage ?? i18n.language ?? "en") as Language;
+  const activeLabel = LANGUAGES.find((l) => l.code === current)?.code.toUpperCase() ?? "EN";
+
+  const changeLanguage = (code: Language) => {
+    void i18n.changeLanguage(code);
+    setStoredLanguage(code);
+    setOpen(false);
+  };
+
+  const isDark = variant === "dark";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        title={t("language.label")}
+        className={
+          isDark
+            ? `flex h-full items-center gap-1 px-3 transition-colors ${open ? "bg-gray-800 text-white" : "hover:bg-gray-800"}`
+            : `flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-medium transition-colors ${
+                open
+                  ? "border-slate-300 bg-slate-100 text-slate-900"
+                  : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+              }`
+        }
+      >
+        <Icon icon="mdi:translate" className={isDark ? "text-[13px]" : "text-sm"} />
+        <span className={isDark ? "text-[11px]" : ""}>{activeLabel}</span>
+        <Icon icon="mdi:chevron-down" className={isDark ? "text-[12px] opacity-70" : "text-xs opacity-70"} />
+      </button>
+
+      {open && (
+        <div
+          className={
+            isDark
+              ? "absolute right-0 top-full z-50 mt-0 min-w-[150px] border border-gray-700 bg-gray-900 py-1 text-xs text-gray-300 shadow-xl"
+              : "absolute right-0 top-full z-50 mt-1 min-w-[150px] rounded-lg border border-slate-200 bg-white py-1 text-xs text-slate-700 shadow-lg"
+          }
+        >
+          {LANGUAGES.map((lang) => {
+            const active = lang.code === current;
+            return (
+              <button
+                key={lang.code}
+                type="button"
+                onClick={() => changeLanguage(lang.code)}
+                className={
+                  isDark
+                    ? "flex w-full items-center justify-between px-3 py-1.5 text-left transition-colors hover:bg-gray-700 hover:text-white"
+                    : "flex w-full items-center justify-between px-3 py-1.5 text-left transition-colors hover:bg-slate-100 hover:text-slate-900"
+                }
+              >
+                <span>{lang.label}</span>
+                <Icon
+                  icon="mdi:check"
+                  className={`text-[12px] ml-4 ${active ? (isDark ? "text-blue-400" : "text-indigo-500") : "opacity-0"}`}
+                />
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

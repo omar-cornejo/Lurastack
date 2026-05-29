@@ -8,10 +8,10 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from "react";
 import { Icon } from '@iconify/react';
+import { useTranslation } from "react-i18next";
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import {
   CATEGORY_ORDER,
-  CATEGORY_LABELS,
   getCategoryForType,
   type ServiceCategory,
 } from "../models/categoryRegistry";
@@ -39,11 +39,23 @@ const GROUP_ORDER: Array<TerraformNodeSchema["schemaGroup"]> = [
 ];
 
 const GROUP_LABELS: Record<TerraformNodeSchema["schemaGroup"], string> = {
-  resources: "Resources",
-  data_sources: "Data Sources",
-  ephemeral_resources: "Ephemeral Resources",
-  functions: "Functions",
-  provider: "Provider",
+  resources: "leftpanel.group.resources",
+  data_sources: "leftpanel.group.dataSources",
+  ephemeral_resources: "leftpanel.group.ephemeralResources",
+  functions: "leftpanel.group.functions",
+  provider: "leftpanel.group.provider",
+};
+
+const CATEGORY_LABEL_KEYS: Record<ServiceCategory, string> = {
+  compute: "leftpanel.category.compute",
+  networking: "leftpanel.category.networking",
+  storage: "leftpanel.category.storage",
+  database: "leftpanel.category.database",
+  security: "leftpanel.category.security",
+  serverless: "leftpanel.category.serverless",
+  integration: "leftpanel.category.integration",
+  observability: "leftpanel.category.observability",
+  other: "leftpanel.category.other",
 };
 
 const LEFT_PANEL_MIN_WIDTH = 200;
@@ -148,6 +160,7 @@ export const LeftPanel = ({
   schemas,
   onWidthChange,
 }: LeftPanelProps) => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [width, setWidth] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
@@ -303,7 +316,7 @@ export const LeftPanel = ({
             onMouseDown={startPanelResize}
             onKeyDown={resizePanelWithKeyboard}
             role="separator"
-            aria-label="Resize left panel"
+            aria-label={t("leftpanel.aria.resize")}
             aria-orientation="vertical"
             aria-valuemin={LEFT_PANEL_MIN_WIDTH}
             aria-valuemax={LEFT_PANEL_MAX_WIDTH}
@@ -326,7 +339,7 @@ export const LeftPanel = ({
         className="absolute right-0 top-1/2 z-20 flex h-10 w-[18px] -translate-y-1/2 translate-x-full cursor-pointer items-center justify-center rounded-r-md border border-l-0 border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50"
         aria-expanded={visible}
         aria-controls="left-panel-content"
-        aria-label={visible ? "Close left panel" : "Show left panel"}
+        aria-label={visible ? t("leftpanel.aria.close") : t("leftpanel.aria.show")}
         type="button"
       >
         <Icon
@@ -366,7 +379,7 @@ export const LeftPanel = ({
                       width={14}
                     />
                   </div>
-                  <p className="mt-0.5 text-[10px] text-slate-400">Resource library</p>
+                  <p className="mt-0.5 text-[10px] text-slate-400">{t("leftpanel.resourceLibrary")}</p>
                 </div>
               </button>
 
@@ -417,7 +430,7 @@ export const LeftPanel = ({
               />
               <input
                 type="text"
-                placeholder="Search resources…"
+                placeholder={t("leftpanel.search")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-7 text-[11px] text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
@@ -427,7 +440,7 @@ export const LeftPanel = ({
                   onClick={() => setSearch("")}
                   className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-700"
                   type="button"
-                  aria-label="Clear search"
+                  aria-label={t("leftpanel.clearSearch")}
                 >
                   <Icon icon="mdi:close" width={13} />
                 </button>
@@ -446,9 +459,9 @@ export const LeftPanel = ({
                   <Icon icon="mdi:magnify-remove-outline" className="text-slate-400" width={22} />
                 </div>
                 <div>
-                  <p className="text-[12px] font-medium text-slate-600">No results found</p>
+                  <p className="text-[12px] font-medium text-slate-600">{t("leftpanel.noResults")}</p>
                   <p className="mt-0.5 text-[11px] text-slate-400">
-                    Nothing matches <span className="font-semibold">"{search}"</span>
+                    {t("leftpanel.noResultsBody")} <span className="font-semibold">"{search}"</span>
                   </p>
                 </div>
               </div>
@@ -461,7 +474,7 @@ export const LeftPanel = ({
                   <section key={groupKey} className="px-3">
                     <div className="mb-2.5 flex items-center gap-2">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
-                        {GROUP_LABELS[groupKey]}
+                        {t(GROUP_LABELS[groupKey])}
                       </span>
                       <div className="h-px flex-1 bg-slate-200" />
                       {groupTotal(groupKey) > 0 && (
@@ -472,7 +485,7 @@ export const LeftPanel = ({
                     </div>
 
                     {groupTotal(groupKey) === 0 ? (
-                      <p className="px-1 text-[11px] text-slate-400">None available</p>
+                      <p className="px-1 text-[11px] text-slate-400">{t("leftpanel.noneAvailable")}</p>
                     ) : (
                       <div className="space-y-4">
                         {CATEGORY_ORDER
@@ -481,7 +494,7 @@ export const LeftPanel = ({
                             <div key={cat}>
                               <div className="mb-1.5 flex items-center gap-2 pl-1">
                                 <span className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500">
-                                  {CATEGORY_LABELS[cat]}
+                                  {t(CATEGORY_LABEL_KEYS[cat])}
                                 </span>
                                 <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8.5px] font-medium tabular-nums text-slate-400">
                                   {groupedNodes[groupKey][cat].length}

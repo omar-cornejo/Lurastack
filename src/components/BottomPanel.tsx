@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useDeferredValue } from "react";
+import { useTranslation } from "react-i18next";
 import { Terminal } from "xterm";
 import { FitAddon } from "xterm-addon-fit";
 import "xterm/css/xterm.css";
@@ -64,6 +65,7 @@ export default function BottomPanel({
   isTerraformRunning = false,
   hideMapper = false,
 }: BottomPanelProps) {
+  const { t } = useTranslation();
   const showMapperTab = (mode === "canvas" || mode === "code") && !hideMapper;
   const [open, setOpen] = useState(true);
   const [height, setHeight] = useState(288);
@@ -280,7 +282,7 @@ export default function BottomPanel({
     return Array.from(sectionMap.entries())
       .map(([key, properties]) => ({
         key,
-        title: key === "root" ? "Main" : key,
+        title: key === "root" ? t("bottompanel.mapper.mainSection") : key,
         properties: properties.sort((left, right) => left.name.localeCompare(right.name)),
       }))
       .sort((left, right) => {
@@ -288,7 +290,7 @@ export default function BottomPanel({
         if (right.key === "root") return 1;
         return left.key.localeCompare(right.key);
       });
-  }, [filteredMapperProperties]);
+  }, [filteredMapperProperties, t]);
 
   const mapperIncomingConnectionMappings = useMemo(() => {
     if (!activeMapperItem) return [] as Array<{ edgeId: string; fromNodeId: string; fromNodeLabel: string; sourceExpression: string; targetAttribute: string }>;
@@ -537,7 +539,7 @@ export default function BottomPanel({
             ? "text-slate-600 cursor-not-allowed"
             : "text-slate-400 hover:text-slate-200"
       }`}
-      title={disabled ? "Terminal is detached to external window" : undefined}
+      title={disabled ? t("bottompanel.terminalDetachedTitle") : undefined}
     >
       {label}
       {tab === "logs" && logs.length > 0 && (
@@ -564,7 +566,7 @@ export default function BottomPanel({
         onClick={(e) => { e.stopPropagation(); setOpen((o) => !o); }}
         edge="top"
         ariaControls="bottom-panel-content"
-        ariaLabel={open ? "Close bottom panel" : "Show bottom panel"}
+        ariaLabel={open ? t("bottompanel.aria.close") : t("bottompanel.aria.show")}
         style={{ left: leftOffset + 16, transition: "left 0.2s ease-out" }}
       />
 
@@ -584,10 +586,10 @@ export default function BottomPanel({
 
         <header className="h-10 shrink-0 border-b border-slate-700 bg-[#252526] flex items-center justify-between px-2">
           <div className="flex h-full items-center gap-0.5">
-            {!suppressTerminal && tabBtn("terminal", "Terminal")}
-            {showMapperTab && tabBtn("mapper", "Object Mapper")}
-            {tabBtn("logs", "Logs")}
-            {suppressTerminal && tabBtn("terminal", "Terminal", true)}
+            {!suppressTerminal && tabBtn("terminal", t("bottompanel.tab.terminal"))}
+            {showMapperTab && tabBtn("mapper", t("bottompanel.tab.mapper"))}
+            {tabBtn("logs", t("bottompanel.tab.logs"))}
+            {suppressTerminal && tabBtn("terminal", t("bottompanel.tab.terminal"), true)}
           </div>
 
           {showPopoutButton && (
@@ -595,9 +597,9 @@ export default function BottomPanel({
               type="button"
               onClick={() => void openDetachedTerminalWindow()}
               className="rounded px-2 py-1 text-[11px] text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-colors"
-              title="Open terminal in external window"
+              title={t("bottompanel.popoutTitle")}
             >
-              Popout ↗
+              {t("bottompanel.popout")} ↗
             </button>
           )}
         </header>
@@ -614,7 +616,7 @@ export default function BottomPanel({
             >
               {suppressTerminal ? (
                 <div className="h-full w-full bg-[#111827] text-slate-400 flex items-center justify-center text-xs">
-                  Terminal is detached to an external window.
+                  {t("bottompanel.terminalDetachedMessage")}
                 </div>
               ) : (
                 <div ref={terminalRef} className="h-full w-full" />
@@ -633,14 +635,14 @@ export default function BottomPanel({
                   <input
                     value={resourceSearch}
                     onChange={(e) => setResourceSearch(e.target.value)}
-                    placeholder="Search resources…"
+                    placeholder={t("bottompanel.mapper.searchResources")}
                     className="w-full rounded border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 placeholder:text-gray-400 outline-none focus:ring-1 focus:ring-sky-400/60 focus:border-sky-300"
                   />
                 </div>
 
                 <div className="flex-1 overflow-auto p-1.5 space-y-0.5">
                   {filteredResourcesInCanvas.length === 0 ? (
-                    <div className="px-2 py-3 text-xs text-gray-400">No resources in canvas.</div>
+                    <div className="px-2 py-3 text-xs text-gray-400">{t("bottompanel.mapper.noResources")}</div>
                   ) : (
                     filteredResourcesInCanvas.map(({ resource }) => {
                       const isActive = activeMapperItem?.resource.id === resource.id;
@@ -666,7 +668,7 @@ export default function BottomPanel({
               <div className="flex-1 min-w-0 flex flex-col overflow-hidden bg-gray-50">
                 {!activeMapperItem ? (
                   <div className="flex h-full items-center justify-center text-xs text-gray-400">
-                    Select a resource to view its attributes.
+                    {t("bottompanel.mapper.selectResource")}
                   </div>
                 ) : (
                   <>
@@ -689,13 +691,13 @@ export default function BottomPanel({
                               key={src}
                               type="button"
                               onClick={() => setMapperSourceFilter(src)}
-                              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors capitalize ${
+                              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
                                 mapperSourceFilter === src
                                   ? "bg-white text-gray-900 shadow-sm"
                                   : "text-gray-500 hover:text-gray-700"
                               }`}
                             >
-                              {src}
+                              {t(`bottompanel.mapper.source.${src}`)}
                             </button>
                           ))}
                         </div>
@@ -706,7 +708,7 @@ export default function BottomPanel({
                           <input
                             value={attributeSearch}
                             onChange={(e) => setAttributeSearch(e.target.value)}
-                            placeholder="Filter…"
+                            placeholder={t("bottompanel.mapper.filter")}
                             className="w-24 rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-700 placeholder:text-gray-400 outline-none focus:ring-1 focus:ring-sky-400/60"
                           />
                           {(["required", "optional", "computed"] as const).map((state) => {
@@ -725,9 +727,9 @@ export default function BottomPanel({
                                     cur.includes(state) ? cur.filter((i) => i !== state) : [...cur, state],
                                   )
                                 }
-                                className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors capitalize ring-1 ring-transparent ${colors}`}
+                                className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ring-1 ring-transparent ${colors}`}
                               >
-                                {state}
+                                {t(`bottompanel.mapper.state.${state}`)}
                               </button>
                             );
                           })}
@@ -742,18 +744,18 @@ export default function BottomPanel({
                                   : "text-gray-500 hover:text-gray-700"
                               }`}
                             >
-                              Type{attributeTypeFilters.length > 0 ? ` (${attributeTypeFilters.length})` : ""}
+                              {t("bottompanel.mapper.type")}{attributeTypeFilters.length > 0 ? ` (${attributeTypeFilters.length})` : ""}
                             </button>
                             {showTypeMenu && (
                               <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded border border-gray-200 bg-white p-2 shadow-lg">
                                 <div className="mb-1.5 flex items-center justify-between">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Types</span>
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{t("bottompanel.mapper.types")}</span>
                                   <button
                                     type="button"
                                     onClick={() => setAttributeTypeFilters([])}
                                     className="text-[10px] text-sky-600 hover:text-sky-500"
                                   >
-                                    Clear
+                                    {t("bottompanel.mapper.clear")}
                                   </button>
                                 </div>
                                 <div className="max-h-40 space-y-1 overflow-auto">
@@ -791,7 +793,7 @@ export default function BottomPanel({
                         <div className="space-y-2">
                           {groupedMapperProperties.length === 0 ? (
                             <div className="rounded border border-dashed border-gray-300 p-3 text-center text-xs text-gray-400">
-                              No attributes match the current filters.
+                              {t("bottompanel.mapper.noAttributesMatch")}
                             </div>
                           ) : (
                             groupedMapperProperties.map((group) => (
@@ -824,11 +826,11 @@ export default function BottomPanel({
                                             {fieldName}
                                           </span>
                                           <span className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${property.required ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
-                                            {property.required ? "req" : "opt"}
+                                            {property.required ? t("bottompanel.mapper.badge.required") : t("bottompanel.mapper.badge.optional")}
                                           </span>
                                           {property.computed && (
                                             <span className="shrink-0 rounded bg-amber-50 px-1 py-0.5 text-[9px] font-semibold uppercase text-amber-600">
-                                              computed
+                                              {t("bottompanel.mapper.badge.computed")}
                                             </span>
                                           )}
                                         </div>
@@ -847,7 +849,7 @@ export default function BottomPanel({
                                               event.dataTransfer.setData("text/plain", mapperValue);
                                               event.dataTransfer.effectAllowed = "copy";
                                             }}
-                                            title={`Drag into a field · ${mapperValue}`}
+                                            title={t("bottompanel.mapper.dragHint", { value: mapperValue })}
                                           >
                                             <span className="shrink-0 text-sky-400 select-none">⠿</span>
                                             <span className="truncate font-mono">{mapperValue}</span>
@@ -858,7 +860,7 @@ export default function BottomPanel({
                                               try { await navigator.clipboard.writeText(mapperValue); } catch {}
                                             }}
                                             className="shrink-0 rounded border border-gray-200 px-1.5 py-1 text-[10px] text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                                            title="Copy reference"
+                                            title={t("bottompanel.mapper.copyReference")}
                                           >
                                             ⎘
                                           </button>
@@ -877,7 +879,7 @@ export default function BottomPanel({
                         <div>
                           {mapperIncomingGrouped.length === 0 ? (
                             <div className="rounded border border-dashed border-gray-300 p-3 text-center text-xs text-gray-400">
-                              No incoming mapped attributes for this resource.
+                              {t("bottompanel.mapper.noIncoming")}
                             </div>
                           ) : (
                             <div className="space-y-2">
@@ -913,7 +915,7 @@ export default function BottomPanel({
                         <div>
                           {mapperInheritedFromContainer.length === 0 ? (
                             <div className="rounded border border-dashed border-gray-300 p-3 text-center text-xs text-gray-400">
-                              This resource is not inside a container or no inherited attributes are available.
+                              {t("bottompanel.mapper.noContainer")}
                             </div>
                           ) : (
                             <div className="space-y-2">
@@ -948,7 +950,7 @@ export default function BottomPanel({
                         <div>
                           {mapperInheritedFromZones.length === 0 ? (
                             <div className="rounded border border-dashed border-gray-300 p-3 text-center text-xs text-gray-400">
-                              This resource is not inside any zone or no zone attributes are available.
+                              {t("bottompanel.mapper.noZones")}
                             </div>
                           ) : (
                             <div className="space-y-2">
@@ -992,7 +994,7 @@ export default function BottomPanel({
           >
             {sortedLogs.length === 0 ? (
               <div className="rounded border border-dashed border-gray-200 p-3 text-center text-xs text-gray-400">
-                No logs yet.
+                {t("bottompanel.logs.empty")}
               </div>
             ) : (
               <div className="space-y-1.5">
