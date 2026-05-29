@@ -285,17 +285,17 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
     <div className="flex w-full h-full bg-slate-100 overflow-hidden">
 
       {/* Left sidebar */}
-      <div className="flex flex-col w-[220px] shrink-0 border-r border-slate-200 bg-white p-5">
-        <div className="mb-7">
-          <div className="text-[22px] font-bold tracking-[0.12em] text-slate-900 leading-tight">LuraStack</div>
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-0.5">
+      <div className="flex flex-col w-[280px] shrink-0 border-r border-slate-200 bg-white p-7">
+        <div className="mb-9">
+          <div className="text-[26px] font-bold tracking-[0.12em] text-slate-900 leading-tight">LuraStack</div>
+          <div className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mt-1">
             {t("welcome.tagline")}
           </div>
         </div>
 
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">{t("welcome.sidebar.start")}</div>
+        <div className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2.5">{t("welcome.sidebar.start")}</div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <SideAction
             icon="mdi:folder-plus-outline"
             label={t("welcome.sidebar.newProject")}
@@ -329,26 +329,26 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
         <div className="flex-1" />
 
         {error && (
-          <div className="mb-3 p-2.5 rounded-lg bg-red-50 border border-red-200 text-[10px] text-red-600 leading-relaxed">
+          <div className="mb-3 p-3 rounded-lg bg-red-50 border border-red-200 text-[11px] text-red-600 leading-relaxed">
             {error}
           </div>
         )}
 
-        <div className="mb-3">
+        <div className="mb-4">
           <LanguageSwitcher variant="light" />
         </div>
 
-        <div className="pt-3 border-t border-slate-100">
-          <div className="flex items-center gap-1.5">
-            <Icon icon="mdi:layers-outline" className="text-slate-400 text-[13px] shrink-0" />
-            <span className="text-[10px] text-slate-400 font-medium">LuraStack</span>
-            <span className="ml-auto text-[10px] text-slate-300 tabular-nums">v0.1</span>
+        <div className="pt-4 border-t border-slate-100">
+          <div className="flex items-center gap-2">
+            <Icon icon="mdi:layers-outline" className="text-slate-400 text-[15px] shrink-0" />
+            <span className="text-[11px] text-slate-400 font-medium">LuraStack</span>
+            <span className="ml-auto text-[11px] text-slate-300 tabular-nums">v0.1</span>
           </div>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 min-w-0 p-8 overflow-y-auto">
+      <div className="flex flex-col flex-1 min-w-0 p-11 overflow-y-auto">
 
         {/* New project form — full-width, two-column layout */}
         {view === "new" && (
@@ -356,8 +356,8 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
             <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
               <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr]">
                 {/* Form column */}
-                <div className="p-7">
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
+                <div className="p-9">
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2">
                     {t("welcome.form.projectName")}
                   </label>
                   <input
@@ -372,15 +372,15 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                     placeholder={t("welcome.form.namePlaceholder")}
                     className={`w-full rounded-lg border ${
                       nameError ? "border-red-300" : "border-slate-200"
-                    } bg-white px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-slate-300 transition-colors`}
+                    } bg-white px-3.5 py-3 text-[15px] text-slate-800 placeholder-slate-400 outline-none focus:border-slate-300 transition-colors`}
                   />
-                  {nameError && <p className="text-[10px] text-red-500 mt-1">{nameError}</p>}
+                  {nameError && <p className="text-[11px] text-red-500 mt-1.5">{nameError}</p>}
 
-                  <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5 mt-6">
+                  <label className="block text-[11px] font-semibold uppercase tracking-widest text-slate-400 mb-2 mt-7">
                     {t("welcome.form.saveLocation")}
                   </label>
-                  <div className="flex gap-2 items-center">
-                    <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-[11px] text-slate-600 truncate min-w-0">
+                  <div className="flex gap-2.5 items-center">
+                    <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3.5 py-3 text-[13px] text-slate-600 truncate min-w-0">
                       {selectedDirectoryPath ?? (
                         <span className="text-slate-400 italic">{t("welcome.form.noLocation")}</span>
                       )}
@@ -388,28 +388,28 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                     <button
                       onClick={handlePickSavePath}
                       disabled={pickingDir}
-                      className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 text-[11px] rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 transition-colors disabled:opacity-40"
+                      className="shrink-0 flex items-center gap-2 px-4 py-3 text-[13px] rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 transition-colors disabled:opacity-40"
                     >
                       {pickingDir ? (
-                        <Icon icon="mdi:loading" className="animate-spin text-sm" />
+                        <Icon icon="mdi:loading" className="animate-spin text-base" />
                       ) : (
-                        <Icon icon="mdi:folder-search-outline" className="text-sm" />
+                        <Icon icon="mdi:folder-search-outline" className="text-base" />
                       )}
                       {t("welcome.form.browse")}
                     </button>
                   </div>
 
-                  <div className="flex gap-3 mt-8">
+                  <div className="flex gap-3 mt-10">
                     <button
                       onClick={() => setView("recent")}
-                      className="px-5 py-2.5 text-xs rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
+                      className="px-6 py-3 text-sm rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
                     >
                       {t("common.cancel")}
                     </button>
                     <button
                       onClick={handleCreateProject}
                       disabled={!chosenPath || !newName.trim()}
-                      className="flex-1 py-2.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-medium transition-colors"
+                      className="flex-1 py-3 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-medium transition-colors"
                     >
                       {t("welcome.form.create")}
                     </button>
@@ -417,24 +417,24 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 </div>
 
                 {/* Decorative / info column */}
-                <div className="hidden lg:flex flex-col justify-center gap-4 border-l border-slate-100 bg-slate-50/60 p-7">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-50 ring-1 ring-indigo-100">
-                    <Icon icon="mdi:folder-plus-outline" className="text-indigo-600 text-2xl" />
+                <div className="hidden lg:flex flex-col justify-center gap-5 border-l border-slate-100 bg-slate-50/60 p-9">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-indigo-50 ring-1 ring-indigo-100">
+                    <Icon icon="mdi:folder-plus-outline" className="text-indigo-600 text-3xl" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">{t("welcome.form.scratchTitle")}</h3>
-                    <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
+                    <h3 className="text-base font-semibold text-slate-900">{t("welcome.form.scratchTitle")}</h3>
+                    <p className="text-[13px] text-slate-500 leading-relaxed mt-1.5">
                       {t("welcome.form.scratchBody")}
                     </p>
                   </div>
-                  <div className="flex flex-col gap-2 mt-1">
+                  <div className="flex flex-col gap-2.5 mt-1">
                     {[
                       { icon: "mdi:vector-square", text: t("welcome.form.feature.canvas") },
                       { icon: "mdi:code-braces", text: t("welcome.form.feature.hcl") },
                       { icon: "mdi:cloud-outline", text: "AWS · GCP · Azure" },
                     ].map((f) => (
-                      <div key={f.text} className="flex items-center gap-2 text-[11px] text-slate-500">
-                        <Icon icon={f.icon} className="text-slate-400 text-sm shrink-0" />
+                      <div key={f.text} className="flex items-center gap-2.5 text-[13px] text-slate-500">
+                        <Icon icon={f.icon} className="text-slate-400 text-base shrink-0" />
                         {f.text}
                       </div>
                     ))}
@@ -458,28 +458,28 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
         {/* Recent projects — dedicated section */}
         {view === "recent" && (
           <div className="flex-1 min-h-0 flex flex-col">
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest shrink-0">
+            <div className="flex items-center gap-4 mb-6">
+              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest shrink-0">
                 {t("welcome.recent.title")}
               </h2>
-              <div className="flex-1 relative max-w-xs">
+              <div className="flex-1 relative max-w-md">
                 <Icon
                   icon="mdi:magnify"
-                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"
-                  width={12}
+                  className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  width={15}
                 />
                 <input
                   value={recentSearch}
                   onChange={(e) => setRecentSearch(e.target.value)}
                   placeholder={t("welcome.recent.filter")}
-                  className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-7 pr-3 text-[11px] text-slate-700 placeholder-slate-400 outline-none focus:border-slate-300 transition-colors"
+                  className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-[13px] text-slate-700 placeholder-slate-400 outline-none focus:border-slate-300 transition-colors"
                 />
               </div>
               <div className="flex-1" />
               {recent.length > 0 && (
                 <button
                   onClick={handleClearAllRecent}
-                  className="shrink-0 text-[10px] text-slate-400 hover:text-red-500 transition-colors font-medium"
+                  className="shrink-0 text-xs text-slate-400 hover:text-red-500 transition-colors font-medium"
                 >
                   {t("welcome.recent.clearAll")}
                 </button>
@@ -487,15 +487,15 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
             </div>
 
             {filteredRecent.length === 0 && (
-              <div className="flex flex-col items-center justify-center flex-1 gap-4 py-12">
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200/60 border border-slate-200">
-                  <Icon icon="mdi:folder-open-outline" className="text-4xl text-slate-400" />
+              <div className="flex flex-col items-center justify-center flex-1 gap-5 py-16">
+                <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-200/60 border border-slate-200">
+                  <Icon icon="mdi:folder-open-outline" className="text-5xl text-slate-400" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-slate-600">
+                  <p className="text-base font-medium text-slate-600">
                     {recentSearch.trim() ? t("welcome.recent.emptySearch") : t("welcome.recent.empty")}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="text-sm text-slate-400 mt-1.5">
                     {recentSearch.trim()
                       ? t("welcome.recent.noMatch", { query: recentSearch })
                       : t("welcome.recent.emptyHint")}
@@ -504,9 +504,9 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 {!recentSearch.trim() && (
                   <button
                     onClick={openNewForm}
-                    className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                    className="flex items-center gap-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
                   >
-                    <Icon icon="mdi:plus" className="text-sm" />
+                    <Icon icon="mdi:plus" className="text-base" />
                     {t("welcome.recent.createFirst")}
                   </button>
                 )}
@@ -515,8 +515,8 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
 
             {filteredRecent.length > 0 && (
               <div
-                className="grid gap-2 overflow-y-auto pr-1"
-                style={{ gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))" }}
+                className="grid gap-3 overflow-y-auto pr-1"
+                style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 380px), 1fr))" }}
               >
                 {filteredRecent.map((entry) => (
                   <RecentCard
@@ -637,7 +637,7 @@ function SideAction({
   return (
     <button
       onClick={onClick}
-      className={`group flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-left transition-colors w-full
+      className={`group flex items-center gap-3 px-3.5 py-3 rounded-lg text-left transition-colors w-full
         ${active
           ? "bg-slate-100 text-slate-900 border border-slate-200"
           : "hover:bg-slate-50 text-slate-600 hover:text-slate-900 border border-transparent"
@@ -645,18 +645,18 @@ function SideAction({
     >
       <Icon
         icon={icon}
-        className={`text-[17px] shrink-0 transition-colors ${
+        className={`text-[20px] shrink-0 transition-colors ${
           active ? "text-indigo-600" : "text-slate-400 group-hover:text-slate-600"
         }`}
       />
       <div className="flex-1 min-w-0">
-        <div className="text-xs font-medium truncate">{label}</div>
+        <div className="text-sm font-medium truncate">{label}</div>
         {description && (
-          <div className="text-[10px] text-slate-400 mt-px">{description}</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">{description}</div>
         )}
       </div>
       {shortcut && (
-        <kbd className="shrink-0 text-[10px] font-mono font-normal text-slate-400 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 leading-none">
+        <kbd className="shrink-0 text-[11px] font-mono font-normal text-slate-400 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 leading-none">
           {shortcut}
         </kbd>
       )}
@@ -685,24 +685,24 @@ function RecentCard({
           onClick();
         }
       }}
-      className="group w-full text-left flex items-center gap-3.5 px-4 py-3.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-300/70 hover:shadow-sm hover:shadow-indigo-100/50 transition-all cursor-pointer"
+      className="group w-full text-left flex items-center gap-4 px-5 py-4 rounded-xl bg-white border border-slate-200 hover:border-indigo-300/70 hover:shadow-sm hover:shadow-indigo-100/50 transition-all cursor-pointer"
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
-        <Icon icon="mdi:layers-outline" className="text-indigo-500 text-lg" />
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
+        <Icon icon="mdi:layers-outline" className="text-indigo-500 text-xl" />
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-[13px] text-slate-900 font-semibold truncate leading-snug">{entry.name}</div>
-        <div className="text-[10px] text-slate-400 truncate mt-0.5">{entry.path}</div>
+        <div className="text-sm text-slate-900 font-semibold truncate leading-snug">{entry.name}</div>
+        <div className="text-[11px] text-slate-400 truncate mt-0.5">{entry.path}</div>
       </div>
       <div className="flex flex-col items-end gap-2 shrink-0">
-        <span className="text-[10px] text-slate-400 tabular-nums">{formatDate(entry.updatedAt)}</span>
+        <span className="text-[11px] text-slate-400 tabular-nums">{formatDate(entry.updatedAt)}</span>
         <button
           type="button"
           onClick={onRemove}
           title={t("welcome.recent.remove")}
           className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"
         >
-          <Icon icon="mdi:close" className="text-xs" />
+          <Icon icon="mdi:close" className="text-sm" />
         </button>
       </div>
     </div>
@@ -723,17 +723,17 @@ function TemplatesGallery({
   const { t } = useTranslation();
   return (
     <div className="flex-1 min-h-0 flex flex-col">
-      <div className="flex items-center gap-3 mb-4">
-        <h2 className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest shrink-0">
+      <div className="flex items-center gap-4 mb-6">
+        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-widest shrink-0">
           {t("welcome.templates.title")}
         </h2>
         <div className="h-px flex-1 bg-slate-200" />
-        <span className="text-[10px] text-slate-400 tabular-nums">
+        <span className="text-xs text-slate-400 tabular-nums">
           {t("welcome.templates.count", { count: templates.length })}
         </span>
       </div>
 
-      <div className="flex gap-1.5 mb-5 flex-wrap">
+      <div className="flex gap-2 mb-6 flex-wrap">
         {PROVIDERS.map((p) => {
           const active = providerFilter === p.id;
           const colors = PROVIDER_CHIP_COLORS[p.id];
@@ -741,7 +741,7 @@ function TemplatesGallery({
             <button
               key={p.id}
               onClick={() => onChangeFilter(p.id)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium border transition-colors
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium border transition-colors
                 ${active ? colors.active : colors.inactive}`}
             >
               {p.logo ? (
@@ -749,10 +749,10 @@ function TemplatesGallery({
                   src={p.logo}
                   alt=""
                   draggable={false}
-                  className="h-4 w-4 object-contain"
+                  className="h-5 w-5 object-contain"
                 />
               ) : (
-                <Icon icon={p.icon!} className="text-[13px]" />
+                <Icon icon={p.icon!} className="text-base" />
               )}
               {p.id === "all" ? t("welcome.templates.all") : p.label}
             </button>
@@ -761,16 +761,16 @@ function TemplatesGallery({
       </div>
 
       {templates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center flex-1 gap-4 py-12">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200/60 border border-slate-200">
-            <Icon icon="mdi:view-grid-outline" className="text-4xl text-slate-400" />
+        <div className="flex flex-col items-center justify-center flex-1 gap-5 py-16">
+          <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-slate-200/60 border border-slate-200">
+            <Icon icon="mdi:view-grid-outline" className="text-5xl text-slate-400" />
           </div>
-          <p className="text-sm font-medium text-slate-500">{t("welcome.templates.empty")}</p>
+          <p className="text-base font-medium text-slate-500">{t("welcome.templates.empty")}</p>
         </div>
       ) : (
         <div
-          className="grid gap-3 overflow-y-auto pr-1"
-          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
+          className="grid gap-4 overflow-y-auto pr-1"
+          style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 300px), 1fr))" }}
         >
           {templates.map((tpl) => (
             <TemplateCard key={tpl.id} template={tpl} onClick={() => onPickTemplate(tpl)} />
@@ -793,10 +793,10 @@ function TemplateCard({
   return (
     <button
       onClick={onClick}
-      className={`text-left flex flex-col gap-3 p-4 rounded-xl bg-white border border-slate-200 ${accent.hoverBorder} hover:shadow-sm transition-all`}
+      className={`text-left flex flex-col gap-3.5 p-5 rounded-xl bg-white border border-slate-200 ${accent.hoverBorder} hover:shadow-sm transition-all`}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
+      <div className="flex items-start gap-3.5">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
           <img
             src={providerLogo(template.provider)}
             alt={providerLabel(template.provider)}
@@ -805,23 +805,23 @@ function TemplateCard({
           />
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
-          <div className="text-[13px] text-slate-900 font-semibold truncate leading-snug">{template.name}</div>
-          <div className={`text-[10px] font-semibold uppercase tracking-widest mt-px ${providerAccent(template.provider)}`}>
+          <div className="text-sm text-slate-900 font-semibold truncate leading-snug">{template.name}</div>
+          <div className={`text-[11px] font-semibold uppercase tracking-widest mt-0.5 ${providerAccent(template.provider)}`}>
             {providerLabel(template.provider)}
           </div>
         </div>
       </div>
-      <p className="text-[11px] text-slate-500 leading-relaxed line-clamp-2">
+      <p className="text-[13px] text-slate-500 leading-relaxed line-clamp-2">
         {template.description}
       </p>
-      <div className="flex items-center gap-1.5 mt-auto flex-wrap">
-        <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${accent.tagBg}`}>
+      <div className="flex items-center gap-2 mt-auto flex-wrap">
+        <span className={`text-[11px] px-2 py-0.5 rounded border font-medium ${accent.tagBg}`}>
           {t("welcome.templates.resources", { count: template.resourceCount })}
         </span>
         {template.tags.slice(0, 2).map((tag) => (
           <span
             key={tag}
-            className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200"
+            className="text-[11px] px-2 py-0.5 rounded bg-slate-100 text-slate-500 border border-slate-200"
           >
             {tag}
           </span>
