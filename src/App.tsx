@@ -22,6 +22,7 @@ import {
   pickOpenPath,
 } from "./commands/projectManager";
 import { Toaster, sileo } from "sileo";
+import { useTranslation, Trans } from "react-i18next";
 
 let viewCounter = 1;
 
@@ -41,6 +42,7 @@ export default function App() {
     return <DetachedTerminalWindow />;
   }
 
+  const { t } = useTranslation();
   const [project, setProject] = useState<LuraProject | null>(null);
   const [projectFilePath, setProjectFilePath] = useState<string | null>(null);
   const [autosave, setAutosave] = useState(false);
@@ -104,7 +106,7 @@ export default function App() {
       void persistProjectBundle(snapshot, projectFilePath)
         .then(() => setProject(snapshot))
         .catch(() => {
-          sileo.error({ title: "Failed to autosave view changes." });
+          sileo.error({ title: t("toast.autosaveFailed") });
         });
     },
     [autosave, projectFilePath, persistProjectBundle],
@@ -132,7 +134,7 @@ export default function App() {
             await writeMainTf(getViewDir(projectDir, firstView.name), "");
           }
         } catch {
-          sileo.error({ title: "Could not save project." });
+          sileo.error({ title: t("toast.saveFailed") });
           return;
         }
         applyLoadedProject(newProject, filePath);
@@ -143,11 +145,11 @@ export default function App() {
           await ensureProjectLayout(getProjectDir(filePath), loaded.views.map((view) => view.name));
           applyLoadedProject(loaded, filePath);
         } catch {
-          sileo.error({ title: "Failed to load project." });
+          sileo.error({ title: t("toast.loadFailed") });
         }
       }
     },
-    [applyLoadedProject],
+    [applyLoadedProject, t],
   );
 
   const handleSaveProject = useCallback(async () => {
@@ -156,11 +158,11 @@ export default function App() {
       const snap = assembleSave();
       await persistProjectBundle(snap, projectFilePath);
       setProject(snap);
-      sileo.success({ title: "Project saved." });
+      sileo.success({ title: t("toast.projectSaved") });
     } catch {
-      sileo.error({ title: "Failed to save project." });
+      sileo.error({ title: t("toast.saveProjectFailed") });
     }
-  }, [project, projectFilePath, assembleSave, persistProjectBundle]);
+  }, [project, projectFilePath, assembleSave, persistProjectBundle, t]);
 
   const handleSaveProjectAs = useCallback(async () => {
     if (!project) return;
@@ -178,11 +180,11 @@ export default function App() {
       await persistProjectBundle(snap, newPath);
       setProject(snap);
       setProjectFilePath(newPath);
-      sileo.success({ title: `Saved as "${newName}".` });
+      sileo.success({ title: t("toast.savedAs", { name: newName }) });
     } catch {
-      sileo.error({ title: "Failed to save project." });
+      sileo.error({ title: t("toast.saveProjectFailed") });
     }
-  }, [project, assembleSave, persistProjectBundle]);
+  }, [project, assembleSave, persistProjectBundle, t]);
 
   const handleOpenProject = useCallback(async () => {
     const path = await pickOpenPath();
@@ -192,13 +194,13 @@ export default function App() {
       await ensureProjectLayout(getProjectDir(path), loaded.views.map((view) => view.name));
       applyLoadedProject(loaded, path);
     } catch {
-      sileo.error({ title: "Failed to load project." });
+      sileo.error({ title: t("toast.loadFailed") });
     }
-  }, [applyLoadedProject]);
+  }, [applyLoadedProject, t]);
 
   const handleExportHcl = useCallback(() => {
-    sileo.info({ title: "Switch to Code view to copy or export HCL." });
-  }, []);
+    sileo.info({ title: t("toast.exportHclHint") });
+  }, [t]);
 
   const handleToggleAutosave = useCallback(() => {
     setAutosave((prev) => {
@@ -216,7 +218,7 @@ export default function App() {
 
         if (projectFilePath) {
           void persistProjectBundle(updated, projectFilePath).catch(() => {
-            sileo.error({ title: "Failed to save autosave setting." });
+            sileo.error({ title: t("toast.autosaveSettingFailed") });
           });
 
           if (next) {
@@ -226,7 +228,7 @@ export default function App() {
                 viewSnapshotsRef.current,
               );
               void persistProjectBundle(refreshed, projectFilePath).catch(() => {
-                sileo.error({ title: "Failed to capture autosave snapshot." });
+                sileo.error({ title: t("toast.autosaveSnapshotFailed") });
               });
             }, 900);
           }
@@ -236,7 +238,7 @@ export default function App() {
       });
       return next;
     });
-  }, [activeViewId, projectFilePath, persistProjectBundle]);
+  }, [activeViewId, projectFilePath, persistProjectBundle, t]);
 
   // Called (debounced) by each WorkspaceView when its state changes
   const handleViewStateChange = useCallback(
@@ -330,11 +332,11 @@ export default function App() {
       });
       setPendingCloseViewId(null);
     } catch {
-      sileo.error({ title: "Failed to remove view folder." });
+      sileo.error({ title: t("toast.removeViewFailed") });
     } finally {
       setIsClosingView(false);
     }
-  }, [activeViewId, pendingCloseViewId, persistIfAutosave, projectFilePath, views]);
+  }, [activeViewId, pendingCloseViewId, persistIfAutosave, projectFilePath, views, t]);
 
   const handleRenameView = useCallback(
     async (id: string, nextName: string) => {
@@ -349,7 +351,7 @@ export default function App() {
           (view) => view.id !== id && view.name.toLowerCase() === trimmed.toLowerCase(),
         )
       ) {
-        sileo.error({ title: "A view with that name already exists." });
+        sileo.error({ title: t("toast.viewNameExists") });
         return;
       }
 
@@ -357,7 +359,7 @@ export default function App() {
         try {
           await renameViewDir(getProjectDir(projectFilePath), currentView.name, trimmed);
         } catch {
-          sileo.error({ title: "Failed to rename view folder." });
+          sileo.error({ title: t("toast.renameViewFailed") });
           return;
         }
       }
@@ -385,7 +387,7 @@ export default function App() {
         },
       );
     },
-    [activeViewId, persistIfAutosave, projectFilePath, views],
+    [activeViewId, persistIfAutosave, projectFilePath, views, t],
   );
 
   const hasProject = project !== null;
@@ -448,9 +450,13 @@ export default function App() {
       {pendingCloseView ? (
         <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/45">
           <div className="w-[420px] max-w-[92vw] rounded-lg border border-gray-700 bg-gray-900 p-4 text-sm text-gray-200 shadow-2xl">
-            <h3 className="text-base font-semibold text-white">Close view</h3>
+            <h3 className="text-base font-semibold text-white">{t("closeView.title")}</h3>
             <p className="mt-2 text-xs text-gray-300">
-              Are you sure you want to close <span className="font-semibold text-white">{pendingCloseView.name}</span>? Its folder will be removed from disk.
+              <Trans
+                i18nKey="closeView.message"
+                values={{ name: pendingCloseView.name }}
+                components={{ b: <span className="font-semibold text-white" /> }}
+              />
             </p>
 
             <div className="mt-4 flex justify-end gap-2">
@@ -460,7 +466,7 @@ export default function App() {
                 disabled={isClosingView}
                 className="rounded border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-800 disabled:opacity-60"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 type="button"
@@ -468,7 +474,7 @@ export default function App() {
                 disabled={isClosingView}
                 className="rounded border border-red-500/70 bg-red-600/20 px-3 py-1.5 text-xs text-red-200 hover:bg-red-600/35 disabled:opacity-60"
               >
-                {isClosingView ? "Closing..." : "Close view"}
+                {isClosingView ? t("closeView.closing") : t("closeView.confirm")}
               </button>
             </div>
           </div>

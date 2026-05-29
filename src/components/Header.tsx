@@ -1,26 +1,21 @@
+import { useTranslation } from "react-i18next";
 import type { AwsCredentials } from "../hooks/useAwsCredentials";
 
 type CloudProvider = "aws" | "gcp" | "azure";
 
-const PROVIDER_BADGE: Record<CloudProvider, { label: string; tooltipConfigured: string; tooltipUnconfigured: string; configuredClass: string; dotConfiguredClass: string }> = {
+const PROVIDER_BADGE: Record<CloudProvider, { label: string; configuredClass: string; dotConfiguredClass: string }> = {
   aws: {
     label: "AWS",
-    tooltipConfigured: "Credenciales AWS configuradas",
-    tooltipUnconfigured: "Configurar credenciales AWS",
     configuredClass: "border-orange-500 text-orange-300 hover:bg-orange-900/30",
     dotConfiguredClass: "bg-orange-400",
   },
   gcp: {
     label: "GCP",
-    tooltipConfigured: "Credenciales GCP configuradas",
-    tooltipUnconfigured: "Configurar credenciales GCP",
     configuredClass: "border-blue-500 text-blue-300 hover:bg-blue-900/30",
     dotConfiguredClass: "bg-blue-400",
   },
   azure: {
     label: "Azure",
-    tooltipConfigured: "Credenciales Azure configuradas",
-    tooltipUnconfigured: "Configurar credenciales Azure",
     configuredClass: "border-sky-500 text-sky-300 hover:bg-sky-900/30",
     dotConfiguredClass: "bg-sky-400",
   },
@@ -66,12 +61,13 @@ export default function Header({
   onCancelDestroy,
   isDeploying = false,
 }: HeaderProps) {
+  const { t } = useTranslation();
   const isConfigured = credentialsConfigured ?? awsConfigured;
   const badge = PROVIDER_BADGE[cloudProvider];
   return (
     <header className="bg-gray-800 text-white p-2 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="text-lg font-semibold">Workspace</div>
+        <div className="text-lg font-semibold">{t("header.workspace")}</div>
         <nav className="flex items-center gap-1 rounded bg-gray-700 p-1">
           <button
             type="button"
@@ -124,7 +120,7 @@ export default function Header({
         <button
           type="button"
           onClick={onOpenAwsConfig}
-          title={isConfigured ? badge.tooltipConfigured : badge.tooltipUnconfigured}
+          title={isConfigured ? t("header.credentials.configured", { provider: badge.label }) : t("header.credentials.configure", { provider: badge.label })}
           className={`flex items-center gap-1.5 rounded px-3 py-1 text-sm font-medium border ${
             isConfigured
               ? badge.configuredClass
@@ -141,7 +137,7 @@ export default function Header({
           type="button"
           onClick={onPlan}
           disabled={isDeploying || !isConfigured}
-          title={!isConfigured ? `Configura las credenciales ${badge.label} primero` : "Ejecutar terraform plan"}
+          title={!isConfigured ? t("header.configureFirst", { provider: badge.label }) : t("header.tooltip.plan")}
           className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isDeploying ? "..." : "Plan"}
@@ -153,10 +149,10 @@ export default function Header({
           disabled={!isApplyConfirming && (isDeploying || !isConfigured)}
           title={
             isApplyConfirming
-              ? "Confirmar: enviar 'yes' a terraform apply"
+              ? t("header.tooltip.confirmApply")
               : !isConfigured
-              ? `Configura las credenciales ${badge.label} primero`
-              : "Ejecutar terraform apply"
+              ? t("header.configureFirst", { provider: badge.label })
+              : t("header.tooltip.apply")
           }
           className={`rounded px-3 py-1 text-sm font-medium border transition-colors ${
             isApplyConfirming
@@ -164,16 +160,16 @@ export default function Header({
               : "border-gray-500 text-gray-200 hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed"
           }`}
         >
-          {isApplyConfirming ? "Yes" : isDeploying ? "Ejecutando..." : "Apply"}
+          {isApplyConfirming ? t("header.btn.yes") : isDeploying ? t("header.btn.running") : "Apply"}
         </button>
         {isApplyConfirming && (
           <button
             type="button"
             onClick={onCancelApply}
-            title="Cancelar: enviar 'no' a terraform apply"
+            title={t("header.tooltip.cancelApply")}
             className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-300 hover:bg-gray-700"
           >
-            No
+            {t("header.btn.no")}
           </button>
         )}
 
@@ -183,10 +179,10 @@ export default function Header({
           disabled={!isDestroyConfirming && (isDeploying || !isConfigured)}
           title={
             isDestroyConfirming
-              ? "Confirmar: enviar 'yes' a terraform destroy"
+              ? t("header.tooltip.confirmDestroy")
               : !isConfigured
-              ? `Configura las credenciales ${badge.label} primero`
-              : "Ejecutar terraform destroy"
+              ? t("header.configureFirst", { provider: badge.label })
+              : t("header.tooltip.destroy")
           }
           className={`rounded px-3 py-1 text-sm font-medium border transition-colors ${
             isDestroyConfirming
@@ -194,16 +190,16 @@ export default function Header({
               : "border-red-500 text-red-200 hover:bg-red-900/40 disabled:opacity-40 disabled:cursor-not-allowed"
           }`}
         >
-          {isDestroyConfirming ? "Yes" : isDeploying ? "Ejecutando..." : "Destroy"}
+          {isDestroyConfirming ? t("header.btn.yes") : isDeploying ? t("header.btn.running") : "Destroy"}
         </button>
         {isDestroyConfirming && (
           <button
             type="button"
             onClick={onCancelDestroy}
-            title="Cancelar: enviar 'no' a terraform destroy"
+            title={t("header.tooltip.cancelDestroy")}
             className="rounded px-3 py-1 text-sm font-medium border border-gray-500 text-gray-300 hover:bg-gray-700"
           >
-            No
+            {t("header.btn.no")}
           </button>
         )}
 
@@ -212,7 +208,7 @@ export default function Header({
           onClick={onClearCanvas}
           className="rounded bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-500"
         >
-          Borrar canvas
+          {t("header.clearCanvas")}
         </button>
       </nav>
     </header>

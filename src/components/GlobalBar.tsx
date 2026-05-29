@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "@iconify/react";
+import { useTranslation } from "react-i18next";
 import { ViewInfo } from "../types/views";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 type GlobalBarProps = {
   views: ViewInfo[];
@@ -25,6 +27,8 @@ type MenuEntry =
   | { kind?: "item"; label: string; disabled: true; action?: never; check?: boolean }
   | { kind: "separator" };
 
+type MenuDef = { id: string; label: string; entries: MenuEntry[] };
+
 export default function GlobalBar({
   views,
   activeViewId,
@@ -42,6 +46,7 @@ export default function GlobalBar({
   onExportHcl,
   onToggleAutosave,
 }: GlobalBarProps) {
+  const { t } = useTranslation();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [editingViewId, setEditingViewId] = useState<string | null>(null);
   const [editingViewName, setEditingViewName] = useState("");
@@ -79,49 +84,52 @@ export default function GlobalBar({
     setEditingViewName("");
   };
 
-  const menus: { name: string; entries: MenuEntry[] }[] = [
+  const menus: MenuDef[] = [
     {
-      name: "File",
+      id: "File",
+      label: t("globalbar.menu.file"),
       entries: [
         {
-          label: "New Project",
+          label: t("globalbar.item.newProject"),
           action: () => { onNewProject(); closeMenu(); },
         },
         {
-          label: "Open Project…",
+          label: t("globalbar.item.openProject"),
           action: () => { void onOpenProject(); closeMenu(); },
         },
         { kind: "separator" },
         hasProject
-          ? { label: "Save", action: () => { void onSaveProject(); closeMenu(); } }
-          : { label: "Save", disabled: true },
+          ? { label: t("globalbar.item.save"), action: () => { void onSaveProject(); closeMenu(); } }
+          : { label: t("globalbar.item.save"), disabled: true },
         hasProject
-          ? { label: "Save As…", action: () => { void onSaveProjectAs(); closeMenu(); } }
-          : { label: "Save As…", disabled: true },
+          ? { label: t("globalbar.item.saveAs"), action: () => { void onSaveProjectAs(); closeMenu(); } }
+          : { label: t("globalbar.item.saveAs"), disabled: true },
         { kind: "separator" },
         hasProject
-          ? { label: "Export HCL", action: () => { onExportHcl(); closeMenu(); } }
-          : { label: "Export HCL", disabled: true },
+          ? { label: t("globalbar.item.exportHcl"), action: () => { onExportHcl(); closeMenu(); } }
+          : { label: t("globalbar.item.exportHcl"), disabled: true },
         { kind: "separator" },
         {
-          label: "Autosave",
+          label: t("globalbar.item.autosave"),
           check: autosave,
           action: () => { onToggleAutosave(); closeMenu(); },
         },
       ],
     },
     {
-      name: "View",
+      id: "View",
+      label: t("globalbar.menu.view"),
       entries: [
-        { label: "Zoom +", disabled: true },
-        { label: "Zoom −", disabled: true },
-        { label: "Fit to canvas", disabled: true },
+        { label: t("globalbar.item.zoomIn"), disabled: true },
+        { label: t("globalbar.item.zoomOut"), disabled: true },
+        { label: t("globalbar.item.fitToCanvas"), disabled: true },
       ],
     },
     {
-      name: "Tools",
+      id: "Tools",
+      label: t("globalbar.menu.tools"),
       entries: [
-        { label: "Validate Terraform", disabled: true },
+        { label: t("globalbar.item.validateTerraform"), disabled: true },
         { label: "Plan", disabled: true },
         { label: "Apply", disabled: true },
       ],
@@ -147,17 +155,17 @@ export default function GlobalBar({
 
       <div className="flex items-stretch shrink-0">
         {menus.map((menu) => (
-          <div key={menu.name} className="relative">
+          <div key={menu.id} className="relative">
             <button
-              onClick={() => toggleMenu(menu.name)}
+              onClick={() => toggleMenu(menu.id)}
               className={`h-full px-3 hover:bg-gray-800 transition-colors ${
-                openMenu === menu.name ? "bg-gray-800 text-white" : ""
+                openMenu === menu.id ? "bg-gray-800 text-white" : ""
               }`}
             >
-              {menu.name}
+              {menu.label}
             </button>
 
-            {openMenu === menu.name && (
+            {openMenu === menu.id && (
               <div className="absolute left-0 top-full mt-0 bg-gray-900 border border-gray-700 shadow-xl z-50 min-w-[190px] py-1">
                 {menu.entries.map((entry, i) => {
                   if (entry.kind === "separator") {
@@ -238,7 +246,7 @@ export default function GlobalBar({
                       event.stopPropagation();
                       startEditingView(view);
                     }}
-                    title="Click to rename"
+                    title={t("globalbar.clickToRename")}
                   >
                     {view.name}
                   </span>
@@ -257,7 +265,7 @@ export default function GlobalBar({
 
           <button
             onClick={onCreateView}
-            title="New view"
+            title={t("globalbar.newView")}
             className="flex items-center px-2.5 hover:bg-gray-800 hover:text-white transition-colors text-gray-500 shrink-0"
           >
             <Icon icon="mdi:plus" className="text-[14px]" />
@@ -268,9 +276,13 @@ export default function GlobalBar({
       {hasProject && autosave && (
         <div className="flex items-center px-3 text-[10px] text-gray-600 gap-1 shrink-0">
           <Icon icon="mdi:content-save-outline" className="text-[12px] text-green-600" />
-          autosave
+          {t("globalbar.autosave")}
         </div>
       )}
+
+      <div className="ml-auto flex items-stretch shrink-0">
+        <LanguageSwitcher variant="dark" />
+      </div>
     </div>
   );
 }

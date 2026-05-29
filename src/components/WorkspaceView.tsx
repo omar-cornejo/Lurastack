@@ -65,6 +65,7 @@ import {
 } from "../models/providerConfig";
 import { buildMultiProviderHcl } from "../models/hclEmitter";
 import { sileo } from "sileo";
+import { useTranslation } from "react-i18next";
 import { importHclBlocksToResources } from "../commands/hclImporter";
 import { appendHistoryEntry, summarizePlanChanges } from "../commands/historyManager";
 import type { HistoryEntry } from "../types/history";
@@ -98,6 +99,7 @@ export default function WorkspaceView({
   initialState,
   onStateChange,
 }: WorkspaceViewProps) {
+  const { t } = useTranslation();
   const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff" | "cloud">("canvas");
   const [cloudProvider, setCloudProvider] = useState<CloudProvider>(
     () => initialState?.activeProvider ?? "aws",
@@ -528,7 +530,7 @@ export default function WorkspaceView({
       if (summary.created !== 0) parts.push(`+${summary.created}`);
       if (summary.changed !== 0) parts.push(`~${summary.changed}`);
       if (summary.destroyed !== 0) parts.push(`-${summary.destroyed}`);
-      const message = parts.join(" ") || "cambio local";
+      const message = parts.join(" ") || t("history.localChange");
 
       const entry: HistoryEntry = {
         id: crypto.randomUUID(),
@@ -878,7 +880,7 @@ export default function WorkspaceView({
         hclPersistenceDisabledRef.current = true;
       }
       warn(
-        "No se pudo guardar el archivo HCL (revisa permisos Tauri fs).",
+        t("toast.hclSaveFailed"),
         "TAURI_FS_PERSIST",
       );
       console.warn("Failed to persist HCL file via Tauri fs plugin:", error);
@@ -1373,8 +1375,8 @@ export default function WorkspaceView({
           if (!cloudStaleNoticeShownRef.current) {
             cloudStaleNoticeShownRef.current = true;
             sileo.warning({
-              title: "El state ha cambiado",
-              description: "Pulsa el botón Refrescar para ver el último terraform show.",
+              title: t("toast.stateChanged"),
+              description: t("toast.stateChangedBody"),
             });
           }
         }
@@ -1424,17 +1426,18 @@ export default function WorkspaceView({
           },
           extraEnv: extraEnvForTerraform,
         });
+        const wentWrong = t("toast.wentWrong");
         const successMessages: Record<string, { title: string; description: string }> = {
-          terraform_plan: { title: "Plan completado", description: "Revisa los cambios en el panel diff." },
-          terraform_plan_destroy: { title: "Plan destroy completado", description: "Revisa los cambios en el panel diff." },
-          terraform_apply: { title: "Apply completado", description: "La infraestructura se ha aplicado correctamente." },
-          terraform_destroy: { title: "Destroy completado", description: "La infraestructura se ha destruido correctamente." },
+          terraform_plan: { title: t("toast.plan.successTitle"), description: t("toast.plan.successBody") },
+          terraform_plan_destroy: { title: t("toast.planDestroy.successTitle"), description: t("toast.plan.successBody") },
+          terraform_apply: { title: t("toast.apply.successTitle"), description: t("toast.apply.successBody") },
+          terraform_destroy: { title: t("toast.destroy.successTitle"), description: t("toast.destroy.successBody") },
         };
         const failureMessages: Record<string, { title: string; description: string }> = {
-          terraform_plan: { title: "Plan ha fallado", description: "Ha salido mal, revisa los logs en el terminal." },
-          terraform_plan_destroy: { title: "Plan destroy ha fallado", description: "Ha salido mal, revisa los logs en el terminal." },
-          terraform_apply: { title: "Apply ha fallado", description: "Ha salido mal, revisa los logs en el terminal." },
-          terraform_destroy: { title: "Destroy ha fallado", description: "Ha salido mal, revisa los logs en el terminal." },
+          terraform_plan: { title: t("toast.plan.failTitle"), description: wentWrong },
+          terraform_plan_destroy: { title: t("toast.planDestroy.failTitle"), description: wentWrong },
+          terraform_apply: { title: t("toast.apply.failTitle"), description: wentWrong },
+          terraform_destroy: { title: t("toast.destroy.failTitle"), description: wentWrong },
         };
         if (ok) {
           const msg = successMessages[action];
@@ -1449,7 +1452,7 @@ export default function WorkspaceView({
         }
       } catch (error) {
         console.error(`${action} error:`, error);
-        sileo.error({ title: "Error en la operación", description: "Ha salido mal, revisa los logs en el terminal." });
+        sileo.error({ title: t("toast.operationError"), description: t("toast.wentWrong") });
       } finally {
         setIsDeploying(false);
         setPendingDeployConfirmation(null);
@@ -1568,12 +1571,12 @@ export default function WorkspaceView({
                     />
                     <span className="text-[11px] font-medium text-slate-600">
                       {cloudStateLoading
-                        ? "Cargando estado del cloud..."
+                        ? t("cloud.loading")
                         : cloudStateStale
-                          ? "El state ha cambiado — refresca"
+                          ? t("cloud.stale")
                           : cloudStateAvailable
-                            ? "Cloud sincronizado"
-                            : "Sin state disponible"}
+                            ? t("cloud.synced")
+                            : t("cloud.noState")}
                     </span>
                     <button
                       type="button"
@@ -1584,10 +1587,10 @@ export default function WorkspaceView({
                           ? "bg-amber-500 text-white hover:bg-amber-600"
                           : "border border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
                       }`}
-                      title="Refrescar terraform show"
+                      title={t("cloud.refreshTooltip")}
                     >
                       <Icon icon="lucide:refresh-cw" className={`h-3 w-3 ${cloudStateLoading ? "animate-spin" : ""}`} />
-                      Refrescar
+                      {t("cloud.refresh")}
                     </button>
                   </div>
                 </div>

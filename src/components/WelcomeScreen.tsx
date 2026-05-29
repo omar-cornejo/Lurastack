@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
+import { useTranslation } from "react-i18next";
+import LanguageSwitcher from "./LanguageSwitcher";
 import {
   getRecentProjects,
   removeFromRecent,
@@ -100,6 +102,7 @@ function providerCardAccent(provider: TemplateProvider): {
 }
 
 export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
+  const { t } = useTranslation();
   const [view, setView] = useState<View>("recent");
   const [recent, setRecent] = useState<RecentProject[]>([]);
   const [error, setError] = useState("");
@@ -166,7 +169,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
 
   const handlePickSavePath = async () => {
     const trimmed = newName.trim();
-    if (!trimmed) { setNameError("Project name is required"); return; }
+    if (!trimmed) { setNameError(t("welcome.error.nameRequired")); return; }
     setPickingDir(true);
     try {
       const path = await pickSavePath(trimmed);
@@ -180,8 +183,8 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
 
   const handleCreateProject = () => {
     const trimmed = newName.trim();
-    if (!trimmed) { setNameError("Project name is required"); return; }
-    if (!chosenPath) { setNameError("Choose a save location first"); return; }
+    if (!trimmed) { setNameError(t("welcome.error.nameRequired")); return; }
+    if (!chosenPath) { setNameError(t("welcome.error.chooseLocation")); return; }
     onProjectReady({ name: trimmed, filePath: chosenPath, isNew: true });
   };
 
@@ -208,7 +211,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
       const project = await loadProjectFromPath(path);
       onProjectReady({ name: project.meta.name, filePath: path, isNew: false });
     } catch (e) {
-      setError(`Could not open project: ${String(e)}`);
+      setError(t("welcome.error.openFailed", { error: String(e) }));
     }
   };
 
@@ -218,7 +221,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
       const project = await loadProjectFromPath(entry.path);
       onProjectReady({ name: project.meta.name, filePath: entry.path, isNew: false });
     } catch (e) {
-      setError(`Could not load "${entry.name}": ${String(e)}`);
+      setError(t("welcome.error.loadFailed", { name: entry.name, error: String(e) }));
       removeFromRecent(entry.path);
       setRecent(getRecentProjects());
     }
@@ -246,7 +249,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
 
   const handlePickTemplatePath = async () => {
     const trimmed = templateName.trim();
-    if (!trimmed) { setTemplateNameError("Project name is required"); return; }
+    if (!trimmed) { setTemplateNameError(t("welcome.error.nameRequired")); return; }
     setPickingDir(true);
     try {
       const path = await pickTemplateDestination(trimmed);
@@ -261,15 +264,15 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
   const handleCreateFromTemplate = async () => {
     if (!selectedTemplate) return;
     const trimmed = templateName.trim();
-    if (!trimmed) { setTemplateNameError("Project name is required"); return; }
-    if (!templatePath) { setTemplateNameError("Choose a destination first"); return; }
+    if (!trimmed) { setTemplateNameError(t("welcome.error.nameRequired")); return; }
+    if (!templatePath) { setTemplateNameError(t("welcome.error.chooseDestination")); return; }
 
     setCreatingFromTemplate(true);
     try {
       await createProjectFromTemplate(selectedTemplate.id, trimmed, templatePath);
       onProjectReady({ name: trimmed, filePath: templatePath, isNew: false });
     } catch (e) {
-      setError(`Could not create project from template: ${String(e)}`);
+      setError(t("welcome.error.templateFailed", { error: String(e) }));
     } finally {
       setCreatingFromTemplate(false);
     }
@@ -286,38 +289,38 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
         <div className="mb-7">
           <div className="text-[22px] font-bold tracking-[0.12em] text-slate-900 leading-tight">LuraStack</div>
           <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mt-0.5">
-            Infrastructure Designer
+            {t("welcome.tagline")}
           </div>
         </div>
 
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">Start</div>
+        <div className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-2">{t("welcome.sidebar.start")}</div>
 
         <div className="flex flex-col gap-1">
           <SideAction
             icon="mdi:folder-plus-outline"
-            label="New Project"
+            label={t("welcome.sidebar.newProject")}
             shortcut="N"
             onClick={openNewForm}
             active={view === "new"}
           />
           <SideAction
             icon="mdi:view-grid-outline"
-            label="Templates"
+            label={t("welcome.sidebar.templates")}
             shortcut="T"
-            description="Browse by provider"
+            description={t("welcome.sidebar.templatesDesc")}
             onClick={() => { setView("templates"); setError(""); }}
             active={view === "templates"}
           />
           <SideAction
             icon="mdi:folder-open-outline"
-            label="Open Project"
+            label={t("welcome.sidebar.openProject")}
             shortcut="O"
-            description=".lura file"
+            description={t("welcome.sidebar.openProjectDesc")}
             onClick={handleImport}
           />
           <SideAction
             icon="mdi:history"
-            label="Recent"
+            label={t("welcome.sidebar.recent")}
             onClick={() => { setView("recent"); setError(""); }}
             active={view === "recent"}
           />
@@ -330,6 +333,10 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
             {error}
           </div>
         )}
+
+        <div className="mb-3">
+          <LanguageSwitcher variant="light" />
+        </div>
 
         <div className="pt-3 border-t border-slate-100">
           <div className="flex items-center gap-1.5">
@@ -351,7 +358,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 {/* Form column */}
                 <div className="p-7">
                   <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
-                    Project name
+                    {t("welcome.form.projectName")}
                   </label>
                   <input
                     autoFocus
@@ -362,7 +369,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                       if (e.key === "Escape") setView("recent");
                       if (e.key === "Enter" && chosenPath && newName.trim()) handleCreateProject();
                     }}
-                    placeholder="My Infrastructure"
+                    placeholder={t("welcome.form.namePlaceholder")}
                     className={`w-full rounded-lg border ${
                       nameError ? "border-red-300" : "border-slate-200"
                     } bg-white px-3 py-2.5 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-slate-300 transition-colors`}
@@ -370,12 +377,12 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                   {nameError && <p className="text-[10px] text-red-500 mt-1">{nameError}</p>}
 
                   <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5 mt-6">
-                    Save location
+                    {t("welcome.form.saveLocation")}
                   </label>
                   <div className="flex gap-2 items-center">
                     <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2.5 text-[11px] text-slate-600 truncate min-w-0">
                       {selectedDirectoryPath ?? (
-                        <span className="text-slate-400 italic">No location chosen</span>
+                        <span className="text-slate-400 italic">{t("welcome.form.noLocation")}</span>
                       )}
                     </div>
                     <button
@@ -388,7 +395,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                       ) : (
                         <Icon icon="mdi:folder-search-outline" className="text-sm" />
                       )}
-                      Browse…
+                      {t("welcome.form.browse")}
                     </button>
                   </div>
 
@@ -397,14 +404,14 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                       onClick={() => setView("recent")}
                       className="px-5 py-2.5 text-xs rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
                     >
-                      Cancel
+                      {t("common.cancel")}
                     </button>
                     <button
                       onClick={handleCreateProject}
                       disabled={!chosenPath || !newName.trim()}
                       className="flex-1 py-2.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-medium transition-colors"
                     >
-                      Create Project
+                      {t("welcome.form.create")}
                     </button>
                   </div>
                 </div>
@@ -415,16 +422,15 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                     <Icon icon="mdi:folder-plus-outline" className="text-indigo-600 text-2xl" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-900">Start from scratch</h3>
+                    <h3 className="text-sm font-semibold text-slate-900">{t("welcome.form.scratchTitle")}</h3>
                     <p className="text-[11px] text-slate-500 leading-relaxed mt-1">
-                      Create an empty project and design your infrastructure visually on the canvas.
-                      You can switch to a template anytime from the sidebar.
+                      {t("welcome.form.scratchBody")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 mt-1">
                     {[
-                      { icon: "mdi:vector-square", text: "Visual drag-and-drop canvas" },
-                      { icon: "mdi:code-braces", text: "Generates Terraform HCL" },
+                      { icon: "mdi:vector-square", text: t("welcome.form.feature.canvas") },
+                      { icon: "mdi:code-braces", text: t("welcome.form.feature.hcl") },
                       { icon: "mdi:cloud-outline", text: "AWS · GCP · Azure" },
                     ].map((f) => (
                       <div key={f.text} className="flex items-center gap-2 text-[11px] text-slate-500">
@@ -454,7 +460,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
           <div className="flex-1 min-h-0 flex flex-col">
             <div className="flex items-center gap-3 mb-4">
               <h2 className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest shrink-0">
-                Recent
+                {t("welcome.recent.title")}
               </h2>
               <div className="flex-1 relative max-w-xs">
                 <Icon
@@ -465,7 +471,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 <input
                   value={recentSearch}
                   onChange={(e) => setRecentSearch(e.target.value)}
-                  placeholder="Filter projects…"
+                  placeholder={t("welcome.recent.filter")}
                   className="w-full rounded-lg border border-slate-200 bg-white py-1.5 pl-7 pr-3 text-[11px] text-slate-700 placeholder-slate-400 outline-none focus:border-slate-300 transition-colors"
                 />
               </div>
@@ -475,7 +481,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                   onClick={handleClearAllRecent}
                   className="shrink-0 text-[10px] text-slate-400 hover:text-red-500 transition-colors font-medium"
                 >
-                  Clear all
+                  {t("welcome.recent.clearAll")}
                 </button>
               )}
             </div>
@@ -487,12 +493,12 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 </div>
                 <div className="text-center">
                   <p className="text-sm font-medium text-slate-600">
-                    {recentSearch.trim() ? "No matching projects" : "No recent projects"}
+                    {recentSearch.trim() ? t("welcome.recent.emptySearch") : t("welcome.recent.empty")}
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
                     {recentSearch.trim()
-                      ? `No projects match "${recentSearch}"`
-                      : "Create a new project or open an existing one"}
+                      ? t("welcome.recent.noMatch", { query: recentSearch })
+                      : t("welcome.recent.emptyHint")}
                   </p>
                 </div>
                 {!recentSearch.trim() && (
@@ -501,7 +507,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                     className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
                   >
                     <Icon icon="mdi:plus" className="text-sm" />
-                    Create your first project
+                    {t("welcome.recent.createFirst")}
                   </button>
                 )}
               </div>
@@ -552,7 +558,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
             </div>
 
             <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5">
-              Project name
+              {t("welcome.form.projectName")}
             </label>
             <input
               autoFocus
@@ -560,7 +566,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
               value={templateName}
               onChange={(e) => { setTemplateName(e.target.value); setTemplateNameError(""); }}
               onKeyDown={(e) => { if (e.key === "Escape") closeTemplateModal(); }}
-              placeholder="My Infrastructure"
+              placeholder={t("welcome.form.namePlaceholder")}
               className={`w-full rounded-lg border ${
                 templateNameError ? "border-red-300" : "border-slate-200"
               } bg-white px-3 py-2 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-slate-300 transition-colors mb-1`}
@@ -568,12 +574,12 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
             {templateNameError && <p className="text-[10px] text-red-500 mb-3">{templateNameError}</p>}
 
             <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400 mb-1.5 mt-4">
-              Destination
+              {t("welcome.form.destination")}
             </label>
             <div className="flex gap-2 items-center">
               <div className="flex-1 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[11px] text-slate-600 truncate min-w-0">
                 {selectedTemplateDirectoryPath ?? (
-                  <span className="text-slate-400 italic">No location chosen</span>
+                  <span className="text-slate-400 italic">{t("welcome.form.noLocation")}</span>
                 )}
               </div>
               <button
@@ -586,7 +592,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 ) : (
                   <Icon icon="mdi:folder-search-outline" className="text-sm" />
                 )}
-                Browse…
+                {t("welcome.form.browse")}
               </button>
             </div>
 
@@ -595,7 +601,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 onClick={closeTemplateModal}
                 className="flex-1 py-2 text-xs rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600 transition-colors"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => void handleCreateFromTemplate()}
@@ -603,7 +609,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 className="flex-1 py-2 text-xs rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-medium transition-colors flex items-center justify-center gap-1.5"
               >
                 {creatingFromTemplate && <Icon icon="mdi:loading" className="animate-spin text-sm" />}
-                Create from template
+                {t("welcome.form.createFromTemplate")}
               </button>
             </div>
           </div>
@@ -667,6 +673,7 @@ function RecentCard({
   onClick: () => void;
   onRemove: (e: React.MouseEvent) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div
       role="button"
@@ -692,7 +699,7 @@ function RecentCard({
         <button
           type="button"
           onClick={onRemove}
-          title="Remove from recent"
+          title={t("welcome.recent.remove")}
           className="opacity-0 group-hover:opacity-100 text-slate-300 hover:text-red-500 transition-all"
         >
           <Icon icon="mdi:close" className="text-xs" />
@@ -711,17 +718,18 @@ function TemplatesGallery({
   templates: TemplateManifest[];
   providerFilter: TemplateProvider | "all";
   onChangeFilter: (p: TemplateProvider | "all") => void;
-  onPickTemplate: (t: TemplateManifest) => void;
+  onPickTemplate: (tpl: TemplateManifest) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex-1 min-h-0 flex flex-col">
       <div className="flex items-center gap-3 mb-4">
         <h2 className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest shrink-0">
-          Templates
+          {t("welcome.templates.title")}
         </h2>
         <div className="h-px flex-1 bg-slate-200" />
         <span className="text-[10px] text-slate-400 tabular-nums">
-          {templates.length} template{templates.length !== 1 ? "s" : ""}
+          {t("welcome.templates.count", { count: templates.length })}
         </span>
       </div>
 
@@ -746,7 +754,7 @@ function TemplatesGallery({
               ) : (
                 <Icon icon={p.icon!} className="text-[13px]" />
               )}
-              {p.label}
+              {p.id === "all" ? t("welcome.templates.all") : p.label}
             </button>
           );
         })}
@@ -757,15 +765,15 @@ function TemplatesGallery({
           <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-200/60 border border-slate-200">
             <Icon icon="mdi:view-grid-outline" className="text-4xl text-slate-400" />
           </div>
-          <p className="text-sm font-medium text-slate-500">No templates for this filter</p>
+          <p className="text-sm font-medium text-slate-500">{t("welcome.templates.empty")}</p>
         </div>
       ) : (
         <div
           className="grid gap-3 overflow-y-auto pr-1"
           style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}
         >
-          {templates.map((t) => (
-            <TemplateCard key={t.id} template={t} onClick={() => onPickTemplate(t)} />
+          {templates.map((tpl) => (
+            <TemplateCard key={tpl.id} template={tpl} onClick={() => onPickTemplate(tpl)} />
           ))}
         </div>
       )}
@@ -780,6 +788,7 @@ function TemplateCard({
   template: TemplateManifest;
   onClick: () => void;
 }) {
+  const { t } = useTranslation();
   const accent = providerCardAccent(template.provider);
   return (
     <button
@@ -807,7 +816,7 @@ function TemplateCard({
       </p>
       <div className="flex items-center gap-1.5 mt-auto flex-wrap">
         <span className={`text-[10px] px-1.5 py-0.5 rounded border font-medium ${accent.tagBg}`}>
-          {template.resourceCount} resources
+          {t("welcome.templates.resources", { count: template.resourceCount })}
         </span>
         {template.tags.slice(0, 2).map((tag) => (
           <span

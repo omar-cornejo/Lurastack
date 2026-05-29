@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { HclCodeArea } from "./HclCodeArea";
 import type { TypeHintResolver } from "../utils/hclHighlight";
 import { invoke } from "@tauri-apps/api/core";
@@ -305,6 +306,7 @@ export default function CodePanel({
   isFreeEditMode: isFreeEditModeProp,
   onFreeEditModeChange,
 }: CodePanelProps) {
+  const { t } = useTranslation();
   const [activeFilePath, setActiveFilePath] = useState<string>("main.tf");
   const [fileTree, setFileTree] = useState<ExplorerNode[]>([]);
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set());
@@ -818,8 +820,8 @@ export default function CodePanel({
           id: `validate-${Date.now()}-runtime`,
           timestamp: new Date().toISOString(),
           level: "error",
-          title: "Validate no disponible",
-          message: "terraform validate solo está disponible en la app de escritorio (Tauri).",
+          title: t("code.validate.unavailableTitle"),
+          message: t("code.validate.desktopOnly"),
         },
       ]);
       return;
@@ -831,8 +833,8 @@ export default function CodePanel({
           id: `validate-${Date.now()}-project`,
           timestamp: new Date().toISOString(),
           level: "error",
-          title: "Validate no disponible",
-          message: "Abre o guarda un proyecto para ejecutar terraform validate.",
+          title: t("code.validate.unavailableTitle"),
+          message: t("code.validate.openProjectFirst"),
         },
       ]);
       return;
@@ -843,8 +845,8 @@ export default function CodePanel({
         id: `validate-${Date.now()}-start`,
         timestamp: new Date().toISOString(),
         level: "info",
-        title: "Ejecutando validate",
-        message: "Iniciando terraform validate...",
+        title: t("code.validate.runningTitle"),
+        message: t("code.validate.starting"),
       },
     ]);
 
@@ -853,8 +855,8 @@ export default function CodePanel({
         id: `lsp-${Date.now()}-start`,
         timestamp: new Date().toISOString(),
         level: "info",
-        title: "Ejecutando terraform-ls",
-        message: "Solicitando diagnósticos LSP...",
+        title: t("code.validate.runningLs"),
+        message: t("code.validate.requestingLsp"),
       },
     ]);
 
@@ -902,8 +904,8 @@ export default function CodePanel({
             id: `lsp-${Date.now()}-${index}`,
             timestamp: new Date().toISOString(),
             level,
-            title: `[terraform-ls] ${diagnostic.summary || "Diagnóstico"}`,
-            message: diagnostic.detail || diagnostic.summary || "Sin detalle.",
+            title: `[terraform-ls] ${diagnostic.summary || t("code.validate.diagnostic")}`,
+            message: diagnostic.detail || diagnostic.summary || t("code.validate.noDetail"),
             fileName: basename(diagnostic.filename),
             line: diagnostic.startLine,
           } satisfies BottomPanelLogEntry;
@@ -916,8 +918,8 @@ export default function CodePanel({
               id: `lsp-${Date.now()}-summary`,
               timestamp: new Date().toISOString(),
               level: "info",
-              title: "terraform-ls finalizado",
-              message: `Diagnósticos LSP: ${lspLogs.length}.`,
+              title: t("code.validate.lsFinished"),
+              message: t("code.validate.lspDiagnosticsCount", { count: lspLogs.length }),
             },
           ]);
         } else {
@@ -926,8 +928,8 @@ export default function CodePanel({
               id: `lsp-${Date.now()}-empty`,
               timestamp: new Date().toISOString(),
               level: "info",
-              title: "terraform-ls finalizado",
-              message: "Sin diagnósticos LSP para el contenido actual.",
+              title: t("code.validate.lsFinished"),
+              message: t("code.validate.noLspDiagnostics"),
             },
           ]);
         }
@@ -937,7 +939,7 @@ export default function CodePanel({
             id: `lsp-${Date.now()}-error`,
             timestamp: new Date().toISOString(),
             level: "warning",
-            title: "terraform-ls no disponible",
+            title: t("code.validate.lsUnavailable"),
             message: String(lspError),
           },
         ]);
@@ -962,8 +964,8 @@ export default function CodePanel({
           id: `validate-${Date.now()}-${index}`,
           timestamp: now,
           level,
-          title: diagnostic.summary || "Diagnóstico de Terraform",
-          message: diagnostic.detail || diagnostic.summary || "Sin detalle.",
+          title: diagnostic.summary || t("code.validate.terraformDiagnostic"),
+          message: diagnostic.detail || diagnostic.summary || t("code.validate.noDetail"),
           fileName: basename(diagnostic.filename),
           line: diagnostic.startLine,
         } satisfies BottomPanelLogEntry;
@@ -975,12 +977,12 @@ export default function CodePanel({
             id: `validate-${Date.now()}-ok`,
             timestamp: now,
             level: result.ok ? "success" : "error",
-            title: result.ok ? "Terraform válido" : "Terraform inválido",
+            title: result.ok ? t("code.validate.validTitle") : t("code.validate.invalidTitle"),
             message: result.ok
               ? result.initRan
-                ? "terraform init + validate completados sin errores."
-                : "terraform validate completado sin errores."
-              : "terraform validate devolvió error sin diagnósticos detallados.",
+                ? t("code.validate.initOk")
+                : t("code.validate.validateOk")
+              : t("code.validate.errorNoDiagnostics"),
           },
         ]);
       } else {
@@ -992,8 +994,8 @@ export default function CodePanel({
           id: `validate-${Date.now()}-summary`,
           timestamp: now,
           level: "info",
-          title: "Resumen validate",
-          message: `Finalizado. Diagnósticos: ${result.diagnostics?.length ?? 0}${result.initRan ? ", con init" : ""}.`,
+          title: t("code.validate.summaryTitle"),
+          message: `${t("code.validate.summary", { count: result.diagnostics?.length ?? 0 })}${result.initRan ? t("code.validate.summaryWithInit") : ""}`,
         },
       ]);
     } catch (error) {
@@ -1002,7 +1004,7 @@ export default function CodePanel({
           id: `validate-${Date.now()}-exception`,
           timestamp: new Date().toISOString(),
           level: "error",
-          title: "Error ejecutando validate",
+          title: t("code.validate.errorTitle"),
           message: String(error),
         },
       ]);
@@ -1094,7 +1096,7 @@ export default function CodePanel({
                 setFocusedNodePath(node.relativePath);
               }}
               className="text-[11px] text-slate-400 hover:text-slate-100"
-              title={isExpanded ? "Collapse folder" : "Expand folder"}
+              title={isExpanded ? t("code.explorer.collapseFolder") : t("code.explorer.expandFolder")}
             >
               {isExpanded ? "▾" : "▸"}
             </button>
@@ -1143,7 +1145,7 @@ export default function CodePanel({
               type="button"
               onClick={() => beginRename(node.relativePath)}
               className="rounded px-1 text-[10px] text-slate-400 hover:bg-slate-600 hover:text-slate-100"
-              title="Rename"
+              title={t("code.explorer.rename")}
             >
               ✎
             </button>
@@ -1152,7 +1154,7 @@ export default function CodePanel({
                 type="button"
                 onClick={() => confirmDeleteNode(node.relativePath)}
                 className="rounded px-1 text-[10px] text-slate-400 hover:bg-slate-600 hover:text-slate-100"
-                title="Delete"
+                title={t("code.explorer.delete")}
               >
                 ✕
               </button>
@@ -1172,13 +1174,13 @@ export default function CodePanel({
       <div className="flex h-full min-h-0 w-full">
         <aside className="w-72 shrink-0 border-r border-slate-700 bg-[#252526] p-2">
           <div className="mb-2 flex items-center justify-between px-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Explorer</div>
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("code.explorer.title")}</div>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => openCreatePrompt("file")}
                 className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
-                title="New file"
+                title={t("code.explorer.newFile")}
               >
                 +F
               </button>
@@ -1186,7 +1188,7 @@ export default function CodePanel({
                 type="button"
                 onClick={() => openCreatePrompt("folder")}
                 className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
-                title="New folder"
+                title={t("code.explorer.newFolder")}
               >
                 +D
               </button>
@@ -1194,7 +1196,7 @@ export default function CodePanel({
                 type="button"
                 onClick={() => void refreshExplorerTree()}
                 className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
-                title="Refresh"
+                title={t("code.explorer.refresh")}
               >
                 ↻
               </button>
@@ -1204,13 +1206,15 @@ export default function CodePanel({
           {createMode ? (
             <div className="mb-2 rounded border border-slate-700 bg-[#1e1e1e] p-2 text-xs">
               <div className="mb-1 text-slate-400">
-                New {createMode === "file" ? "file" : "folder"} in {createParentPath || "/"}
+                {createMode === "file"
+                  ? t("code.explorer.newFileIn", { path: createParentPath || "/" })
+                  : t("code.explorer.newFolderIn", { path: createParentPath || "/" })}
               </div>
               <input
                 autoFocus
                 value={createName}
                 onChange={(event) => setCreateName(event.target.value)}
-                placeholder={createMode === "file" ? "example.tf" : "modules"}
+                placeholder={createMode === "file" ? t("code.explorer.fileNamePlaceholder") : t("code.explorer.folderNamePlaceholder")}
                 className="w-full rounded border border-slate-600 bg-[#252526] px-2 py-1 text-xs text-slate-200 outline-none focus:border-slate-400"
               />
               <div className="mt-2 flex justify-end gap-1">
@@ -1222,14 +1226,14 @@ export default function CodePanel({
                   }}
                   className="rounded border border-slate-600 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700/40"
                 >
-                  Cancel
+                  {t("code.common.cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={() => void submitCreate()}
                   className="rounded border border-slate-500 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-700/60"
                 >
-                  Create
+                  {t("code.common.create")}
                 </button>
               </div>
             </div>
@@ -1237,9 +1241,9 @@ export default function CodePanel({
 
           <div className="max-h-[calc(100%-5rem)] overflow-auto">
             {isExplorerBusy ? (
-              <div className="px-2 py-2 text-xs text-slate-500">Loading explorer...</div>
+              <div className="px-2 py-2 text-xs text-slate-500">{t("code.explorer.loading")}</div>
             ) : fileTree.length === 0 ? (
-              <div className="px-2 py-2 text-xs text-slate-500">No files found in this view folder.</div>
+              <div className="px-2 py-2 text-xs text-slate-500">{t("code.explorer.noFiles")}</div>
             ) : (
               fileTree.map((node) => renderExplorerNode(node, 0))
             )}
@@ -1255,8 +1259,8 @@ export default function CodePanel({
                 </h2>
                 <p className="text-xs text-slate-400">
                   {activeFilePath === "main.tf"
-                    ? "Generated from templates. Edit attributes in the inspector."
-                    : "Editable HCL draft file."}
+                    ? t("code.editor.mainTfSubtitle")
+                    : t("code.editor.draftSubtitle")}
                 </p>
               </div>
 
@@ -1265,9 +1269,9 @@ export default function CodePanel({
                   type="button"
                   onClick={regenerateMainTfFromCanvas}
                   className="rounded border border-sky-500/70 px-2 py-1 text-xs text-sky-200 hover:bg-sky-700/20"
-                  title="Regenerar main.tf desde los recursos actuales del canvas"
+                  title={t("code.editor.regenerateHclTitle")}
                 >
-                  Regenerar HCL
+                  {t("code.editor.regenerateHcl")}
                 </button>
 
                 <button
@@ -1276,7 +1280,7 @@ export default function CodePanel({
                   disabled={isValidatingTerraform}
                   className="rounded border border-slate-600 px-2 py-1 text-xs text-slate-200 hover:bg-slate-700/50 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {isValidatingTerraform ? "Validating..." : "Terraform validate"}
+                  {isValidatingTerraform ? t("code.validate.validating") : t("code.validate.button")}
                 </button>
 
                 <button
@@ -1287,9 +1291,9 @@ export default function CodePanel({
                       ? "border-emerald-500 text-emerald-200 hover:bg-emerald-700/20"
                       : "border-slate-600 text-slate-200 hover:bg-slate-700/50"
                   }`}
-                  title={isFreeEditMode ? "Switch to attribute-safe mode" : "Switch to full free-text editor"}
+                  title={isFreeEditMode ? t("code.editor.switchToAttributeMode") : t("code.editor.switchToFreeMode")}
                 >
-                  {isFreeEditMode ? "Modo libre" : "Modo atributos"}
+                  {isFreeEditMode ? t("code.editor.freeMode") : t("code.editor.attributeMode")}
                 </button>
               </div>
             </div>
@@ -1299,7 +1303,7 @@ export default function CodePanel({
             {activeFilePath === "main.tf" ? (
               resourcesWithSchemas.length === 0 ? (
                 <div className="rounded border border-dashed border-slate-600 bg-[#252526] p-4 text-center text-slate-400">
-                  No resources in canvas yet.
+                  {t("code.editor.noResources")}
                 </div>
               ) : (
                 <div className="grid h-full min-h-0 grid-cols-[48px_1fr] overflow-hidden rounded bg-[#1e1e1e]">
@@ -1350,9 +1354,11 @@ export default function CodePanel({
       {pendingDelete ? (
         <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/45">
           <div className="w-[420px] max-w-[92vw] rounded-lg border border-gray-700 bg-gray-900 p-4 text-sm text-gray-200 shadow-2xl">
-            <h3 className="text-base font-semibold text-white">Delete {pendingDelete.isDirectory ? "folder" : "file"}</h3>
+            <h3 className="text-base font-semibold text-white">
+              {pendingDelete.isDirectory ? t("code.delete.titleFolder") : t("code.delete.titleFile")}
+            </h3>
             <p className="mt-2 text-xs text-gray-300">
-              Are you sure you want to delete <span className="font-semibold text-white">{pendingDelete.name}</span>? This action cannot be undone.
+              {t("code.delete.confirmPrefix")}<span className="font-semibold text-white">{pendingDelete.name}</span>{t("code.delete.confirmSuffix")}
             </p>
 
             <div className="mt-4 flex justify-end gap-2">
@@ -1361,14 +1367,14 @@ export default function CodePanel({
                 onClick={() => setPendingDelete(null)}
                 className="rounded border border-gray-600 px-3 py-1.5 text-xs text-gray-300 hover:bg-gray-800"
               >
-                Cancel
+                {t("code.common.cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => void executeDelete()}
                 className="rounded border border-red-500/70 bg-red-600/20 px-3 py-1.5 text-xs text-red-200 hover:bg-red-600/35"
               >
-                Delete
+                {t("code.common.delete")}
               </button>
             </div>
           </div>
