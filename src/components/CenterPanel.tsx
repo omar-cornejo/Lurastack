@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Icon } from "@iconify/react";
 import {
   Background,
   BackgroundVariant,
@@ -135,6 +136,7 @@ export default function CenterPanel({
     y: number;
   } | null>(null);
   const [activeLayer, setActiveLayer] = useState(0);
+  const [showGrid, setShowGrid] = useState(true);
   const lastSelectionRef = useRef<string | undefined>(undefined);
   const lastDragUpdateRef = useRef<number>(0);
 
@@ -866,15 +868,24 @@ export default function CenterPanel({
             >
               {activeLayer}
             </ControlButton>
+            <ControlButton
+              onClick={() => setShowGrid((v) => !v)}
+              title={t(showGrid ? "centerpanel.hideGrid" : "centerpanel.showGrid")}
+              aria-label={t(showGrid ? "centerpanel.hideGrid" : "centerpanel.showGrid")}
+            >
+              <Icon icon={showGrid ? "mdi:dots-grid" : "mdi:grid-off"} />
+            </ControlButton>
           </Controls>
 
-          <Background
-            id="primary-grid"
-            gap={20}
-            size={1}
-            color="#94a3b8"
-            variant={BackgroundVariant.Dots}
-          />
+          {showGrid ? (
+            <Background
+              id="primary-grid"
+              gap={20}
+              size={1}
+              color="#94a3b8"
+              variant={BackgroundVariant.Dots}
+            />
+          ) : null}
         </ReactFlow>
 
         {edgeContextMenu ? (
