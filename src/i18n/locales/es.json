@@ -337,6 +337,7 @@
   "toast.renameViewFailed": "No se pudo renombrar la carpeta de la vista.",
   "toast.saveFailed": "No se pudo guardar el proyecto.",
   "toast.saveProjectFailed": "No se pudo guardar el proyecto.",
+  "toast.secretsMigrated": "Credenciales movidas al almacenamiento seguro del sistema.",
   "toast.savedAs": "Guardado como \"{{name}}\".",
   "toast.stateChanged": "El state ha cambiado",
   "toast.stateChangedBody": "Pulsa el botón Refrescar para ver el último terraform show.",

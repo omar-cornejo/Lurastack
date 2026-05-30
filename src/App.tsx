@@ -1,5 +1,5 @@
 import "./App.css";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import GlobalBar from "./components/GlobalBar";
 import WorkspaceView from "./components/WorkspaceView";
 import WelcomeScreen from "./components/WelcomeScreen";
@@ -54,6 +54,16 @@ export default function App() {
 
   // Per-view snapshot cache (used for save)
   const viewSnapshotsRef = useRef<Map<string, ViewSnapshot>>(new Map());
+
+  useEffect(() => {
+    const onMigrated = () => {
+      sileo.success({ title: t("toast.secretsMigrated") });
+    };
+    window.addEventListener("lurastack:secrets-migrated", onMigrated as EventListener);
+    return () => {
+      window.removeEventListener("lurastack:secrets-migrated", onMigrated as EventListener);
+    };
+  }, [t]);
 
   const applyLoadedProject = useCallback(
     (loaded: LuraProject, filePath: string) => {

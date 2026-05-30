@@ -167,6 +167,7 @@ export default function WorkspaceView({
     aws: awsCredentials,
     gcp: gcpCredentials,
     azure: azureCredentials,
+    loading: credentialsLoading,
   } = useProviderCredentials(cloudProvider);
 
   const providersInUse = useMemo(
@@ -1341,10 +1342,15 @@ export default function WorkspaceView({
         projectDir,
         files: [],
         awsCredentials: {
+          mode: awsCredentials.mode,
           accessKeyId: awsCredentials.accessKeyId,
           secretAccessKey: awsCredentials.secretAccessKey,
           sessionToken: awsCredentials.sessionToken,
           region: awsCredentials.region,
+          profile: awsCredentials.profile,
+          credentialsPath: awsCredentials.credentialsPath,
+          configPath: awsCredentials.configPath,
+          envFilePath: awsCredentials.envFilePath,
         },
         extraEnv: extraEnvForTerraform,
       });
@@ -1425,10 +1431,15 @@ export default function WorkspaceView({
           projectDir,
           files: [],
           awsCredentials: {
+            mode: awsCredentials.mode,
             accessKeyId: awsCredentials.accessKeyId,
             secretAccessKey: awsCredentials.secretAccessKey,
             sessionToken: awsCredentials.sessionToken,
             region: awsCredentials.region,
+            profile: awsCredentials.profile,
+            credentialsPath: awsCredentials.credentialsPath,
+            configPath: awsCredentials.configPath,
+            envFilePath: awsCredentials.envFilePath,
           },
           extraEnv: extraEnvForTerraform,
         });
@@ -1562,7 +1573,7 @@ export default function WorkspaceView({
         activeSection={activeSection}
         onSectionChange={setActiveSection}
         cloudProvider={cloudProvider}
-        credentialsConfigured={providerConfigured}
+        credentialsConfigured={providerConfigured && !credentialsLoading}
         onOpenAwsConfig={() => setShowAwsConfig(true)}
         onPlan={() => { setActiveSection("diff"); void runTerraformAction("terraform_plan"); }}
         onApply={() => triggerDeployAction("terraform_apply")}

@@ -57,10 +57,81 @@ pub fn terraform_cancel(
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AwsCredentials {
+    #[serde(default)]
+    pub mode: Option<String>,
+    #[serde(default)]
     pub access_key_id: String,
+    #[serde(default)]
     pub secret_access_key: String,
+    #[serde(default)]
     pub session_token: Option<String>,
+    #[serde(default)]
     pub region: String,
+    #[serde(default)]
+    pub profile: Option<String>,
+    #[serde(default)]
+    pub credentials_path: Option<String>,
+    #[serde(default)]
+    pub config_path: Option<String>,
+    #[serde(default)]
+    pub env_file_path: Option<String>,
+}
+
+impl AwsCredentials {
+    fn resolve(mut self) -> Result<Self, String> {
+        let mode = self.mode.as_deref().unwrap_or("manual");
+        match mode {
+            "profile" => {
+                let profile = self
+                    .profile
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .ok_or_else(|| "Falta el nombre del perfil AWS".to_string())?;
+                let resolved = crate::aws_credentials::resolve_profile_credentials_sync(
+                    profile,
+                    self.credentials_path.as_deref(),
+                    self.config_path.as_deref(),
+                )?;
+                self.access_key_id = resolved.access_key_id;
+                self.secret_access_key = resolved.secret_access_key;
+                self.session_token = resolved
+                    .session_token
+                    .or(self.session_token);
+                if self.region.trim().is_empty() {
+                    if let Some(r) = resolved.region {
+                        self.region = r;
+                    }
+                }
+            }
+            "env" => {
+                let resolved = crate::aws_credentials::resolve_env_credentials_sync(
+                    self.env_file_path.as_deref(),
+                )?;
+                self.access_key_id = resolved.access_key_id;
+                self.secret_access_key = resolved.secret_access_key;
+                self.session_token = resolved
+                    .session_token
+                    .or(self.session_token);
+                if self.region.trim().is_empty() {
+                    if let Some(r) = resolved.region {
+                        self.region = r;
+                    }
+                }
+            }
+            _ => {}
+        }
+        if self.access_key_id.trim().is_empty() {
+            return Err("AWS_ACCESS_KEY_ID vacío tras resolución de credenciales".to_string());
+        }
+        if self.secret_access_key.trim().is_empty() {
+            return Err("AWS_SECRET_ACCESS_KEY vacío tras resolución de credenciales".to_string());
+        }
+        if self.region.trim().is_empty() {
+            return Err("AWS region vacía tras resolución de credenciales".to_string());
+        }
+        Ok(self)
+    }
 }
 
 #[derive(Clone, Serialize)]
@@ -387,6 +458,7 @@ pub async fn terraform_plan(
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
         }
+        let aws_credentials = aws_credentials.resolve()?;
         let project_dir_path = PathBuf::from(project_dir.trim());
         if !project_dir_path.exists() {
             return Err("El directorio del proyecto no existe.".to_string());
@@ -435,6 +507,7 @@ pub async fn terraform_plan_destroy(
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
         }
+        let aws_credentials = aws_credentials.resolve()?;
         let project_dir_path = PathBuf::from(project_dir.trim());
         if !project_dir_path.exists() {
             return Err("El directorio del proyecto no existe.".to_string());
@@ -484,6 +557,7 @@ pub async fn terraform_apply(
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
         }
+        let aws_credentials = aws_credentials.resolve()?;
         let project_dir_path = PathBuf::from(project_dir.trim());
         if !project_dir_path.exists() {
             return Err("El directorio del proyecto no existe.".to_string());
@@ -534,6 +608,7 @@ pub async fn terraform_destroy(
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
         }
+        let aws_credentials = aws_credentials.resolve()?;
         let project_dir_path = PathBuf::from(project_dir.trim());
         if !project_dir_path.exists() {
             return Err("El directorio del proyecto no existe.".to_string());
@@ -658,6 +733,7 @@ pub async fn terraform_show(
         if project_dir.trim().is_empty() {
             return Err("No se recibió directorio de proyecto.".to_string());
         }
+        let aws_credentials = aws_credentials.resolve()?;
         let project_dir_path = PathBuf::from(project_dir.trim());
         if !project_dir_path.exists() {
             return Err("El directorio del proyecto no existe.".to_string());

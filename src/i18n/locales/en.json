@@ -337,6 +337,7 @@
   "toast.renameViewFailed": "Failed to rename view folder.",
   "toast.saveFailed": "Could not save project.",
   "toast.saveProjectFailed": "Failed to save project.",
+  "toast.secretsMigrated": "Credentials migrated to your system's secure storage.",
   "toast.savedAs": "Saved as \"{{name}}\".",
   "toast.stateChanged": "The state has changed",
   "toast.stateChangedBody": "Press the Refresh button to see the latest terraform show.",

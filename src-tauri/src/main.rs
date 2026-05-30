@@ -1,4 +1,5 @@
 mod aws_credentials;
+mod secrets;
 mod terminal_commands;
 mod terraform_actions;
 
@@ -28,7 +29,13 @@ fn main() {
             aws_credentials::resolve_aws_env_credentials,
             aws_credentials::get_aws_paths,
             aws_credentials::check_aws_path_exists,
-            aws_credentials::get_aws_env_source
+            aws_credentials::get_aws_env_source,
+            secrets::save_secret,
+            secrets::load_secret,
+            secrets::delete_secret,
+            secrets::secrets_backend_info,
+            secrets::set_fallback_passphrase,
+            secrets::clear_fallback_passphrase
         ])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())

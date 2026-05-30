@@ -337,6 +337,7 @@
   "toast.renameViewFailed": "No s'ha pogut reanomenar la carpeta de la vista.",
   "toast.saveFailed": "No s'ha pogut desar el projecte.",
   "toast.saveProjectFailed": "No s'ha pogut desar el projecte.",
+  "toast.secretsMigrated": "Credencials mogudes a l'emmagatzematge segur del sistema.",
   "toast.savedAs": "Desat com a \"{{name}}\".",
   "toast.stateChanged": "L'estat ha canviat",
   "toast.stateChangedBody": "Prem el botó Refrescar per veure l'últim terraform show.",

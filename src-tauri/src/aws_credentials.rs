@@ -343,6 +343,64 @@ fn read_env_or_file(env_file: Option<&str>, key: &str) -> Option<String> {
     std::env::var(key).ok().filter(|v| !v.is_empty())
 }
 
+pub fn resolve_profile_credentials_sync(
+    profile: &str,
+    credentials_path: Option<&str>,
+    config_path: Option<&str>,
+) -> Result<AwsProfileCredentials, String> {
+    let creds = load_credentials_ini(credentials_path);
+    let section = creds
+        .get(profile)
+        .ok_or_else(|| format!("El perfil '{profile}' no existe en el archivo de credenciales"))?;
+
+    let access_key_id = section
+        .get("aws_access_key_id")
+        .filter(|v| !v.is_empty())
+        .cloned()
+        .ok_or_else(|| format!("El perfil '{profile}' no tiene aws_access_key_id"))?;
+    let secret_access_key = section
+        .get("aws_secret_access_key")
+        .filter(|v| !v.is_empty())
+        .cloned()
+        .ok_or_else(|| format!("El perfil '{profile}' no tiene aws_secret_access_key"))?;
+    let session_token = section
+        .get("aws_session_token")
+        .filter(|v| !v.is_empty())
+        .cloned();
+    let config = load_config_ini(config_path);
+    let region = config
+        .get(profile)
+        .and_then(|kvs| kvs.get("region"))
+        .filter(|v| !v.is_empty())
+        .cloned();
+
+    Ok(AwsProfileCredentials {
+        access_key_id,
+        secret_access_key,
+        session_token,
+        region,
+    })
+}
+
+pub fn resolve_env_credentials_sync(
+    env_file: Option<&str>,
+) -> Result<AwsProfileCredentials, String> {
+    let access_key_id = read_env_or_file(env_file, "AWS_ACCESS_KEY_ID")
+        .ok_or_else(|| "AWS_ACCESS_KEY_ID no está definida".to_string())?;
+    let secret_access_key = read_env_or_file(env_file, "AWS_SECRET_ACCESS_KEY")
+        .ok_or_else(|| "AWS_SECRET_ACCESS_KEY no está definida".to_string())?;
+    let session_token = read_env_or_file(env_file, "AWS_SESSION_TOKEN");
+    let region = read_env_or_file(env_file, "AWS_DEFAULT_REGION")
+        .or_else(|| read_env_or_file(env_file, "AWS_REGION"));
+
+    Ok(AwsProfileCredentials {
+        access_key_id,
+        secret_access_key,
+        session_token,
+        region,
+    })
+}
+
 #[tauri::command]
 pub async fn resolve_aws_env_credentials(
     env_file: Option<String>,
