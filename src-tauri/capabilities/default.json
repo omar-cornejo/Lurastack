@@ -23,15 +23,18 @@
       "identifier": "fs:scope",
       "allow": [
         { "path": "$HOME/**" },
-        { "path": "$HOME/**/.*" },
-        { "path": "$HOME/**/.*/**" },
         { "path": "$APPDATA/**" },
         { "path": "$DOCUMENT/**" },
-        { "path": "$DOCUMENT/**/.*" },
-        { "path": "$DOCUMENT/**/.*/**" },
-        { "path": "$DESKTOP/**" },
-        { "path": "$DESKTOP/**/.*" },
-        { "path": "$DESKTOP/**/.*/**" }
+        { "path": "$DESKTOP/**" }
+      ],
+      "deny": [
+        { "path": "$HOME/.ssh/**" },
+        { "path": "$HOME/.aws/credentials" },
+        { "path": "$HOME/.aws/config" },
+        { "path": "$HOME/.gnupg/**" },
+        { "path": "$HOME/.kube/**" },
+        { "path": "$HOME/.docker/**" },
+        { "path": "$HOME/.config/**" }
       ]
     }
   ]

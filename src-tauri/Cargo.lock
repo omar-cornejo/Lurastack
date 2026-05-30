@@ -2043,6 +2043,7 @@ dependencies = [
  "anyhow",
  "dirs",
  "hcl-rs",
+ "percent-encoding",
  "portable-pty",
  "serde",
  "serde_json",
