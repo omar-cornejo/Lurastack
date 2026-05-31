@@ -33,7 +33,7 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/Virtual-private-cloud-VPC_32.svg"
+            "icon": "/icons/aws/Virtual-private-cloud-VPC_32.svg"
           }
         },
         {
@@ -53,7 +53,7 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg"
+            "icon": "/icons/aws/Res_Amazon-VPC_Internet-Gateway_48.svg"
           }
         },
         {
@@ -76,7 +76,7 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/Private-subnet_32.svg"
+            "icon": "/icons/aws/Private-subnet_32.svg"
           }
         },
         {
@@ -96,7 +96,7 @@
           "ui": {
             "x": 0,
             "y": 200,
-            "icon": "/icons/route-table.svg"
+            "icon": "/icons/aws/route-table.svg"
           }
         },
         {
@@ -117,7 +117,7 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/route-table.svg"
+            "icon": "/icons/aws/route-table.svg"
           }
         },
         {
@@ -138,7 +138,7 @@
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/aws_security_group.svg"
+            "icon": "/icons/aws/aws_security_group.svg"
           }
         },
         {
@@ -162,7 +162,7 @@
           "ui": {
             "x": 280,
             "y": 400,
-            "icon": "/icons/EC2-instance-contents_32.svg"
+            "icon": "/icons/aws/EC2-instance-contents_32.svg"
           }
         }
       ],
@@ -178,7 +178,7 @@
             "resourceId": "8b083e85-ad03-4d84-aaa9-902715f4daf0",
             "schemaId": "aws_vpc",
             "label": "main",
-            "icon": "/icons/Virtual-private-cloud-VPC_32.svg",
+            "icon": "/icons/aws/Virtual-private-cloud-VPC_32.svg",
             "terraformType": "aws_vpc",
             "terraformKind": "resource",
             "isContainer": false
@@ -195,7 +195,7 @@
             "resourceId": "e0da4a91-79e1-4db6-adfa-17164cdc9590",
             "schemaId": "aws_internet_gateway",
             "label": "main",
-            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg",
+            "icon": "/icons/aws/Res_Amazon-VPC_Internet-Gateway_48.svg",
             "terraformType": "aws_internet_gateway",
             "terraformKind": "resource",
             "isContainer": false
@@ -212,7 +212,7 @@
             "resourceId": "1001a9bb-7f5b-4fac-a156-b29b7577a742",
             "schemaId": "aws_subnet",
             "label": "public_a",
-            "icon": "/icons/Private-subnet_32.svg",
+            "icon": "/icons/aws/Private-subnet_32.svg",
             "terraformType": "aws_subnet",
             "terraformKind": "resource",
             "isContainer": false
@@ -229,7 +229,7 @@
             "resourceId": "44e7d3b9-0b4a-4535-8ee5-97ac9c8ae777",
             "schemaId": "aws_route_table",
             "label": "public",
-            "icon": "/icons/route-table.svg",
+            "icon": "/icons/aws/route-table.svg",
             "terraformType": "aws_route_table",
             "terraformKind": "resource",
             "isContainer": false
@@ -246,7 +246,7 @@
             "resourceId": "35b7ba2d-8e25-4e68-8f8d-33d1887fefdb",
             "schemaId": "aws_route_table_association",
             "label": "public_a",
-            "icon": "/icons/route-table.svg",
+            "icon": "/icons/aws/route-table.svg",
             "terraformType": "aws_route_table_association",
             "terraformKind": "resource",
             "isContainer": false
@@ -263,7 +263,7 @@
             "resourceId": "1e5fd7c2-305e-47b8-a382-c80dd4bb5312",
             "schemaId": "aws_security_group",
             "label": "ssh",
-            "icon": "/icons/aws_security_group.svg",
+            "icon": "/icons/aws/aws_security_group.svg",
             "terraformType": "aws_security_group",
             "terraformKind": "resource",
             "isContainer": false
@@ -280,7 +280,7 @@
             "resourceId": "93874a02-ef57-4e74-8eb2-1179b1c40d47",
             "schemaId": "aws_instance",
             "label": "app",
-            "icon": "/icons/EC2-instance-contents_32.svg",
+            "icon": "/icons/aws/EC2-instance-contents_32.svg",
             "terraformType": "aws_instance",
             "terraformKind": "resource",
             "isContainer": false

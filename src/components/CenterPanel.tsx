@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
+import { useTranslation } from "react-i18next";
+import { Icon } from "@iconify/react";
 import {
   Background,
   BackgroundVariant,
@@ -106,6 +108,7 @@ export default function CenterPanel({
   rightOverlayOffset = 0,
   isRightOverlayResizing = false,
 }: CenterPanelProps) {
+  const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const hasAutoFittedRef = useRef(false);
   const [reactFlowInstance, setReactFlowInstance] =
@@ -133,6 +136,7 @@ export default function CenterPanel({
     y: number;
   } | null>(null);
   const [activeLayer, setActiveLayer] = useState(0);
+  const [showGrid, setShowGrid] = useState(true);
   const lastSelectionRef = useRef<string | undefined>(undefined);
   const lastDragUpdateRef = useRef<number>(0);
 
@@ -859,20 +863,29 @@ export default function CenterPanel({
               onClick={() =>
                 setActiveLayer((current) => (current >= maxLayer ? 0 : current + 1))
               }
-              title={`Layer ${activeLayer}`}
-              aria-label="Cambiar capa visible"
+              title={t("centerpanel.layer", { layer: activeLayer })}
+              aria-label={t("centerpanel.aria.changeLayer")}
             >
               {activeLayer}
             </ControlButton>
+            <ControlButton
+              onClick={() => setShowGrid((v) => !v)}
+              title={t(showGrid ? "centerpanel.hideGrid" : "centerpanel.showGrid")}
+              aria-label={t(showGrid ? "centerpanel.hideGrid" : "centerpanel.showGrid")}
+            >
+              <Icon icon={showGrid ? "mdi:dots-grid" : "mdi:grid-off"} />
+            </ControlButton>
           </Controls>
 
-          <Background
-            id="primary-grid"
-            gap={20}
-            size={1}
-            color="#94a3b8"
-            variant={BackgroundVariant.Dots}
-          />
+          {showGrid ? (
+            <Background
+              id="primary-grid"
+              gap={20}
+              size={1}
+              color="#94a3b8"
+              variant={BackgroundVariant.Dots}
+            />
+          ) : null}
         </ReactFlow>
 
         {edgeContextMenu ? (
@@ -892,7 +905,7 @@ export default function CenterPanel({
                 setEdgeContextMenu(null);
               }}
             >
-              Open edge mapping
+              {t("centerpanel.openEdgeMapping")}
             </button>
             <button
               type="button"
@@ -902,7 +915,7 @@ export default function CenterPanel({
                 setEdgeContextMenu(null);
               }}
             >
-              Delete edge
+              {t("centerpanel.deleteEdge")}
             </button>
           </div>
         ) : null}
@@ -966,7 +979,7 @@ export default function CenterPanel({
                 });
               }}
             >
-              <h4 className="text-sm font-semibold text-slate-900">Link attributes</h4>
+              <h4 className="text-sm font-semibold text-slate-900">{t("centerpanel.linkAttributes")}</h4>
               <button
                 type="button"
                 className="rounded-md px-1.5 py-1 text-sm text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -979,7 +992,7 @@ export default function CenterPanel({
             <div className="p-4 grid grid-cols-2 gap-6">
               <div className="space-y-3">
                 <label className="block">
-                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Source</span>
+                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">{t("centerpanel.source")}</span>
                   <select
                     value={edgeMapper.fromNodeId}
                     onChange={(event) => {
@@ -1018,7 +1031,7 @@ export default function CenterPanel({
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Attribute</span>
+                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">{t("centerpanel.attribute")}</span>
                   <select
                     value={(() => {
                       const sourceContext = getNodeResourceContext(edgeMapper.fromNodeId);
@@ -1056,7 +1069,7 @@ export default function CenterPanel({
 
               <div className="space-y-3">
                 <label className="block">
-                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Destination</span>
+                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">{t("centerpanel.destination")}</span>
                   <select
                     value={edgeMapper.toNodeId}
                     onChange={(event) => {
@@ -1088,7 +1101,7 @@ export default function CenterPanel({
                   </select>
                 </label>
                 <label className="block">
-                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">Attribute</span>
+                  <span className="text-xs font-semibold text-slate-900 uppercase tracking-wide">{t("centerpanel.attribute")}</span>
                   <select
                     value={edgeMapper.targetAttribute}
                     onChange={(event) =>
@@ -1121,7 +1134,7 @@ export default function CenterPanel({
                 className="rounded-md px-3 py-2 text-sm text-slate-700 font-medium hover:bg-slate-50 transition-colors"
                 onClick={() => setEdgeMapper(null)}
               >
-                Cancel
+                {t("centerpanel.cancel")}
               </button>
               <button
                 type="button"
@@ -1137,7 +1150,7 @@ export default function CenterPanel({
                   setEdgeMapper(null);
                 }}
               >
-                Link attributes
+                {t("centerpanel.linkAttributes")}
               </button>
             </div>
           </div>

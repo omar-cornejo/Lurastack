@@ -33,7 +33,7 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/gcp_networking.svg"
+            "icon": "/icons/gcp/gcp_networking.svg"
           }
         },
         {
@@ -56,7 +56,7 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/gcp_networking.svg"
+            "icon": "/icons/gcp/gcp_networking.svg"
           }
         },
         {
@@ -79,7 +79,7 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/gcp_security_identity.svg"
+            "icon": "/icons/gcp/gcp_security_identity.svg"
           }
         },
         {
@@ -101,7 +101,7 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/gcp_compute_engine.svg"
+            "icon": "/icons/gcp/gcp_compute_engine.svg"
           }
         }
       ],
@@ -117,7 +117,7 @@
             "resourceId": "5d79eff1-6094-41a7-8c32-5cff3dcbf296",
             "schemaId": "google_compute_network",
             "label": "main",
-            "icon": "/icons/gcp_networking.svg",
+            "icon": "/icons/gcp/gcp_networking.svg",
             "terraformType": "google_compute_network",
             "terraformKind": "resource",
             "isContainer": false
@@ -134,7 +134,7 @@
             "resourceId": "b1896e47-00d0-4abf-b377-cbbc5cb959f4",
             "schemaId": "google_compute_subnetwork",
             "label": "main",
-            "icon": "/icons/gcp_networking.svg",
+            "icon": "/icons/gcp/gcp_networking.svg",
             "terraformType": "google_compute_subnetwork",
             "terraformKind": "resource",
             "isContainer": false
@@ -151,7 +151,7 @@
             "resourceId": "74cabc7e-ad9e-4a24-832c-f9660d4351a1",
             "schemaId": "google_compute_firewall",
             "label": "ssh",
-            "icon": "/icons/gcp_security_identity.svg",
+            "icon": "/icons/gcp/gcp_security_identity.svg",
             "terraformType": "google_compute_firewall",
             "terraformKind": "resource",
             "isContainer": false
@@ -168,7 +168,7 @@
             "resourceId": "52e7fa19-e90c-422c-ab3e-b7b10608999e",
             "schemaId": "google_compute_instance",
             "label": "vm",
-            "icon": "/icons/gcp_compute_engine.svg",
+            "icon": "/icons/gcp/gcp_compute_engine.svg",
             "terraformType": "google_compute_instance",
             "terraformKind": "resource",
             "isContainer": false

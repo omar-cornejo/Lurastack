@@ -1,4 +1,5 @@
 import { Icon } from "@iconify/react";
+import { useTranslation } from "react-i18next";
 
 type DivergenceBannerProps = {
   visible: boolean;
@@ -7,6 +8,7 @@ type DivergenceBannerProps = {
 };
 
 export default function DivergenceBanner({ visible, onApply, onDismiss }: DivergenceBannerProps) {
+  const { t } = useTranslation();
   if (!visible) return null;
 
   return (
@@ -14,7 +16,7 @@ export default function DivergenceBanner({ visible, onApply, onDismiss }: Diverg
       <div className="flex items-center gap-2 text-amber-800">
         <Icon icon="mdi:alert-circle-outline" width={16} className="shrink-0 text-amber-500" />
         <span className="text-[12px] font-medium">
-          El canvas está divergente del cloud. Ejecuta Apply para alinear.
+          {t("divergence.message")}
         </span>
       </div>
       <div className="flex items-center gap-2">
@@ -29,7 +31,7 @@ export default function DivergenceBanner({ visible, onApply, onDismiss }: Diverg
           type="button"
           onClick={onDismiss}
           className="rounded-md border border-amber-300 bg-white px-2 py-1 text-[11px] text-amber-700 hover:bg-amber-50 transition-colors"
-          title="Dismiss"
+          title={t("divergence.dismiss")}
         >
           <Icon icon="mdi:close" width={13} />
         </button>

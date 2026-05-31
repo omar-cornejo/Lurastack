@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { HclCodeArea } from "./HclCodeArea";
 import { Icon } from "@iconify/react";
 import type { Node } from "reactflow";
@@ -474,6 +475,7 @@ export const RightPanel = ({
   historyRefreshSignal = 0,
   onRestoreFromHistory,
 }: RightPanelProps) => {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
   const [width, setWidth] = useState(288);
   const [isResizing, setIsResizing] = useState(false);
@@ -529,8 +531,8 @@ export const RightPanel = ({
           sectionKey,
           sectionTitle:
             sectionKey === "root"
-              ? "Atributos principales"
-              : `Bloque: ${sectionKey}`,
+              ? t("inspector.mainAttributes")
+              : t("inspector.block", { name: sectionKey }),
           properties: [],
         });
       }
@@ -555,7 +557,7 @@ export const RightPanel = ({
     });
 
     return sections;
-  }, [inspectorProperties]);
+  }, [inspectorProperties, t]);
 
   const availableTypeOptions = useMemo(() => {
     const preferredOrder = ["string", "number", "bool", "map", "list", "set", "object"];
@@ -817,7 +819,7 @@ export const RightPanel = ({
             onMouseDown={startPanelResize}
             onKeyDown={resizePanelWithKeyboard}
             role="separator"
-            aria-label="Resize inspector panel"
+            aria-label={t("inspector.resizePanel")}
             aria-orientation="vertical"
             aria-valuemin={RIGHT_PANEL_MIN_WIDTH}
             aria-valuemax={RIGHT_PANEL_MAX_WIDTH}
@@ -840,7 +842,7 @@ export const RightPanel = ({
         className="absolute left-0 top-1/2 z-20 flex h-10 w-[18px] -translate-x-full -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md border border-r-0 border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50"
         type="button"
         aria-expanded={visible}
-        aria-label={visible ? "Close inspector" : "Open inspector"}
+        aria-label={visible ? t("inspector.close") : t("inspector.open")}
       >
         <Icon
           icon="weui:arrow-filled"
@@ -854,8 +856,8 @@ export const RightPanel = ({
           <div className="shrink-0 flex border-b border-slate-200 bg-white">
             {(["inspector", "history"] as RightPanelMode[]).map((mode) => {
               const isActive = activeMode === mode;
-              const label = mode === "inspector" ? "Inspector" : "Historial";
-              const icon = mode === "inspector" ? "mdi:inspector" : "mdi:history";
+              const label = mode === "inspector" ? t("inspector.modeInspector") : t("inspector.modeHistory");
+              const icon = mode === "inspector" ? "mdi:tune-variant" : "mdi:history";
               return (
                 <button
                   key={mode}
@@ -888,7 +890,7 @@ export const RightPanel = ({
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
                     <Icon icon="mdi:history" className="text-slate-400" width={20} />
                   </div>
-                  <p className="text-[12px] text-slate-500">Abre un proyecto para ver el historial.</p>
+                  <p className="text-[12px] text-slate-500">{t("inspector.openProjectForHistory")}</p>
                 </div>
               )}
             </div>
@@ -957,9 +959,9 @@ export const RightPanel = ({
               ) : (
                 <div className="flex items-center gap-2.5">
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
-                    <Icon icon="mdi:inspector" className="text-slate-400" width={18} />
+                    <Icon icon="mdi:tune-variant" className="text-slate-400" width={18} />
                   </div>
-                  <p className="text-[13px] font-semibold text-slate-800">Inspector</p>
+                  <p className="text-[13px] font-semibold text-slate-800">{t("inspector.modeInspector")}</p>
                 </div>
               )}
             </div>
@@ -976,7 +978,7 @@ export const RightPanel = ({
                       : "border-transparent text-slate-400 hover:text-slate-700"
                   }`}
                 >
-                  {tab === "info" ? "Info" : "HCL"}
+                  {tab === "info" ? t("inspector.tab.info") : "HCL"}
                 </button>
               ))}
             </div>
@@ -993,8 +995,8 @@ export const RightPanel = ({
                   <Icon icon="mdi:cursor-default-click-outline" className="text-slate-400" width={22} />
                 </div>
                 <div>
-                  <p className="text-[12px] font-medium text-slate-600">Nothing selected</p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">Click a node on the canvas to inspect it</p>
+                  <p className="text-[12px] font-medium text-slate-600">{t("inspector.nothingSelected")}</p>
+                  <p className="mt-0.5 text-[11px] text-slate-400">{t("inspector.nothingSelectedHint")}</p>
                 </div>
               </div>
             )}
@@ -1003,7 +1005,7 @@ export const RightPanel = ({
               <div className="space-y-3 px-3">
                 {!diffMode && !cloudMode && selectedSchema.terraformType === "aws_subnet" && (
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400">Subnet type</label>
+                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.subnetType")}</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -1015,7 +1017,7 @@ export const RightPanel = ({
                       }}
                       className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-[12px] font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-300/60 hover:bg-indigo-50/20"
                     >
-                      {selectedResource.ui.icon === SUBNET_PUBLIC_ICON_PATH ? "Public subnet" : "Private subnet"}
+                      {selectedResource.ui.icon === SUBNET_PUBLIC_ICON_PATH ? t("inspector.publicSubnet") : t("inspector.privateSubnet")}
                     </button>
                   </div>
                 )}
@@ -1036,16 +1038,16 @@ export const RightPanel = ({
 
                   if (cloudAttributeRows.length === 0) {
                     const emptyMessage = cloudStateLoading
-                      ? "Cargando estado del cloud..."
+                      ? t("inspector.loadingCloud")
                       : !cloudStateAvailable
-                        ? "No hay state file. Ejecuta apply para crear recursos en el cloud."
-                        : "Este recurso aún no existe en el cloud.";
+                        ? t("inspector.noStateFile")
+                        : t("inspector.notInCloud");
                     return (
                       <div className="space-y-2">
                         <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                           <div className="mb-2.5 flex items-center justify-between">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Cloud state</span>
-                            <span className="text-[9px] text-slate-400">0 activos</span>
+                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.cloudState")}</span>
+                            <span className="text-[9px] text-slate-400">{t("inspector.activeCount", { count: 0 })}</span>
                           </div>
                           <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
                             {emptyMessage}
@@ -1058,7 +1060,7 @@ export const RightPanel = ({
                   return (
                     <div className="space-y-2">
                       {sortedSections.map(([sectionKey, rows]) => {
-                        const sectionTitle = sectionKey === "root" ? "Atributos principales" : `Bloque: ${sectionKey}`;
+                        const sectionTitle = sectionKey === "root" ? t("inspector.mainAttributes") : t("inspector.block", { name: sectionKey });
                         return (
                           <div key={sectionKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
                             <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
@@ -1084,7 +1086,7 @@ export const RightPanel = ({
                                       <div className="space-y-1.5">
                                         {entries.map((entry, idx) => (
                                           <div key={idx} className="rounded-lg border border-slate-200 bg-white p-2">
-                                            <div className="mb-1 text-[10px] font-semibold text-slate-400">Entry {idx + 1}</div>
+                                            <div className="mb-1 text-[10px] font-semibold text-slate-400">{t("inspector.entry", { number: idx + 1 })}</div>
                                             <div className="space-y-0.5">
                                               {Object.entries(entry).map(([k, v]) => (
                                                 <div key={k} className="flex items-center gap-1.5">
@@ -1152,11 +1154,11 @@ export const RightPanel = ({
                     return (
                       <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                         <div className="mb-2.5 flex items-center justify-between">
-                          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Diff attributes</span>
-                          <span className="text-[9px] text-slate-400">0 activos</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.diffAttributes")}</span>
+                          <span className="text-[9px] text-slate-400">{t("inspector.activeCount", { count: 0 })}</span>
                         </div>
                         <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
-                          No hay atributos activos para este recurso
+                          {t("inspector.noActiveAttrs")}
                         </p>
                       </div>
                     );
@@ -1165,7 +1167,7 @@ export const RightPanel = ({
                   return (
                     <div className="space-y-2">
                       {sortedSections.map(([sectionKey, rows]) => {
-                        const sectionTitle = sectionKey === "root" ? "Atributos principales" : `Bloque: ${sectionKey}`;
+                        const sectionTitle = sectionKey === "root" ? t("inspector.mainAttributes") : t("inspector.block", { name: sectionKey });
                         return (
                           <div key={sectionKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
                             <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
@@ -1192,7 +1194,7 @@ export const RightPanel = ({
                                       <div className="space-y-1.5">
                                         {entries.map((entry, idx) => (
                                           <div key={idx} className="rounded-lg border border-slate-200 bg-white p-2">
-                                            <div className="mb-1 text-[10px] font-semibold text-slate-400">Entry {idx + 1}</div>
+                                            <div className="mb-1 text-[10px] font-semibold text-slate-400">{t("inspector.entry", { number: idx + 1 })}</div>
                                             <div className="space-y-0.5">
                                               {Object.entries(entry).map(([k, v]) => (
                                                 <div key={k} className="flex items-center gap-1.5">
@@ -1233,13 +1235,13 @@ export const RightPanel = ({
                 <div className="space-y-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                     <div className="mb-2.5 flex items-center justify-between">
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Attributes</span>
+                      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.attributes")}</span>
                       <div className="flex items-center gap-1 text-[9.5px] text-slate-400">
-                        <span className="font-semibold text-red-500">{attributeStats.required} req</span>
+                        <span className="font-semibold text-red-500">{attributeStats.required} {t("inspector.reqAbbrev")}</span>
                         <span>·</span>
-                        <span>{attributeStats.optional} opt</span>
+                        <span>{attributeStats.optional} {t("inspector.optAbbrev")}</span>
                         <span>·</span>
-                        <span>{attributeStats.total} total</span>
+                        <span>{attributeStats.total} {t("inspector.totalAbbrev")}</span>
                       </div>
                     </div>
 
@@ -1248,7 +1250,7 @@ export const RightPanel = ({
                       <input
                         value={attributeSearch}
                         onChange={(event) => setAttributeSearch(event.target.value)}
-                        placeholder="Search attributes…"
+                        placeholder={t("inspector.searchAttributes")}
                         className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-[11px] text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
                       />
                     </div>
@@ -1272,7 +1274,7 @@ export const RightPanel = ({
                             }
                             className={`rounded-lg border px-2.5 py-1 text-[10.5px] font-semibold capitalize transition-colors ${colors[state]}`}
                           >
-                            {state}
+                            {t(`inspector.filter.${state}`)}
                           </button>
                         );
                       })}
@@ -1287,19 +1289,19 @@ export const RightPanel = ({
                               : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
                           }`}
                         >
-                          Type{attributeTypeFilters.length > 0 ? ` (${attributeTypeFilters.length})` : ""}
+                          {t("inspector.type")}{attributeTypeFilters.length > 0 ? ` (${attributeTypeFilters.length})` : ""}
                         </button>
 
                         {showTypeMenu && (
                           <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-2.5 shadow-lg shadow-slate-200/60">
                             <div className="mb-2 flex items-center justify-between">
-                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">Types</span>
+                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">{t("inspector.types")}</span>
                               <button
                                 type="button"
                                 onClick={() => setAttributeTypeFilters([])}
                                 className="text-[10px] font-medium text-indigo-500 hover:text-indigo-700"
                               >
-                                Clear
+                                {t("inspector.clear")}
                               </button>
                             </div>
                             <div className="max-h-44 space-y-1 overflow-auto">
@@ -1362,9 +1364,9 @@ export const RightPanel = ({
                                     <p className="font-mono text-[9.5px] text-slate-400 break-all">{formatTypeLabel(property.rawType)}</p>
                                   </div>
                                   <div className="flex shrink-0 gap-1">
-                                    <span className="rounded-[4px] bg-slate-100 px-1.5 py-[1.5px] text-[9px] font-semibold text-slate-500">optional</span>
+                                    <span className="rounded-[4px] bg-slate-100 px-1.5 py-[1.5px] text-[9px] font-semibold text-slate-500">{t("inspector.optional")}</span>
                                     {property.computed && (
-                                      <span className="rounded-[4px] bg-amber-50 px-1.5 py-[1.5px] text-[9px] font-semibold text-amber-600">computed</span>
+                                      <span className="rounded-[4px] bg-amber-50 px-1.5 py-[1.5px] text-[9px] font-semibold text-amber-600">{t("inspector.computed")}</span>
                                     )}
                                   </div>
                                 </div>
@@ -1373,13 +1375,13 @@ export const RightPanel = ({
                                   {entries.map((entry, entryIndex) => (
                                     <div key={entryIndex} className="rounded-lg border border-slate-200 bg-white p-2">
                                       <div className="mb-1.5 flex items-center justify-between">
-                                        <span className="text-[10px] font-semibold text-slate-400">Entry {entryIndex + 1}</span>
+                                        <span className="text-[10px] font-semibold text-slate-400">{t("inspector.entry", { number: entryIndex + 1 })}</span>
                                         <button
                                           type="button"
                                           onClick={() => updateEntries(entries.filter((_, i) => i !== entryIndex))}
                                           className="text-[10px] font-medium text-red-400 transition-colors hover:text-red-600"
                                         >
-                                          Remove
+                                          {t("inspector.remove")}
                                         </button>
                                       </div>
                                       <div className="space-y-1">
@@ -1412,7 +1414,7 @@ export const RightPanel = ({
                                   }}
                                   className="mt-1.5 w-full rounded-lg border border-dashed border-slate-300 py-1.5 text-[10px] font-medium text-slate-400 transition-colors hover:border-indigo-300 hover:bg-indigo-50/30 hover:text-indigo-500"
                                 >
-                                  + Add entry
+                                  {t("inspector.addEntry")}
                                 </button>
                               </div>
                             );
@@ -1431,11 +1433,11 @@ export const RightPanel = ({
                                   <span className={`rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ${
                                     property.required ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500"
                                   }`}>
-                                    {property.required ? "required" : "optional"}
+                                    {property.required ? t("inspector.required") : t("inspector.optional")}
                                   </span>
                                   {property.computed && (
                                     <span className="rounded-[4px] bg-amber-50 px-1.5 py-[1.5px] text-[9px] font-semibold text-amber-600">
-                                      computed
+                                      {t("inspector.computed")}
                                     </span>
                                   )}
                                 </div>
@@ -1497,7 +1499,7 @@ export const RightPanel = ({
 
                   {filteredInspectorSections.length === 0 && (
                     <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center">
-                      <p className="text-[11px] text-slate-400">No attributes match the current filters</p>
+                      <p className="text-[11px] text-slate-400">{t("inspector.noMatchingAttributes")}</p>
                     </div>
                   )}
                 </div>
@@ -1508,8 +1510,8 @@ export const RightPanel = ({
                     <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
                       <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                         {(selectedNode.data.containerKind === "zone" || selectedNode.data.schemaId === "aws_availability_zone")
-                          ? "Nodes in zone"
-                          : "Children"}
+                          ? t("inspector.nodesInZone")
+                          : t("inspector.children")}
                       </span>
                       <div className="h-px flex-1 bg-slate-100" />
                       <span className="text-[9px] tabular-nums text-slate-400">{children.length}</span>
@@ -1519,8 +1521,8 @@ export const RightPanel = ({
                       {children.length === 0 ? (
                         <p className="px-1 py-2 text-center text-[11px] text-slate-400">
                           {(selectedNode.data.containerKind === "zone" || selectedNode.data.schemaId === "aws_availability_zone")
-                            ? "No nodes inside this zone"
-                            : "No children in this container"}
+                            ? t("inspector.noNodesInZone")
+                            : t("inspector.noChildren")}
                         </p>
                       ) : (
                         children.map((child) => (
@@ -1551,12 +1553,12 @@ export const RightPanel = ({
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
                       <Icon icon="mdi:code-braces" className="text-slate-400" width={22} />
                     </div>
-                    <p className="text-[11px] text-slate-400">Select a node to view its HCL</p>
+                    <p className="text-[11px] text-slate-400">{t("inspector.selectNodeForHcl")}</p>
                   </div>
                 ) : cloudMode ? (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="border-b border-slate-100 px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Cloud HCL</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.cloudHcl")}</p>
                     </div>
                     <div className="space-y-1 p-3 font-mono text-[11px] text-slate-700">
                       <div className="text-slate-600">
@@ -1564,7 +1566,7 @@ export const RightPanel = ({
                       </div>
                       {cloudAttributeRows.length === 0 ? (
                         <div className="px-2 py-1 text-slate-400">
-                          {cloudStateLoading ? "// cargando..." : "// sin datos en el state"}
+                          {cloudStateLoading ? t("inspector.hclLoading") : t("inspector.hclNoStateData")}
                         </div>
                       ) : (
                         cloudAttributeRows.map((attribute) => (
@@ -1579,7 +1581,7 @@ export const RightPanel = ({
                 ) : diffMode ? (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="border-b border-slate-100 px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">Diff HCL</p>
+                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.diffHcl")}</p>
                     </div>
                     <div className="space-y-1 p-3 font-mono text-[11px] text-slate-700">
                       <div className="text-slate-600">

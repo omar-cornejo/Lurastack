@@ -32,7 +32,7 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/Res_Amazon-Simple-Storage-Service_Bucket_48.svg"
+            "icon": "/icons/aws/Res_Amazon-Simple-Storage-Service_Bucket_48.svg"
           }
         },
         {
@@ -54,7 +54,7 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/aws_dynamodb_table.svg"
+            "icon": "/icons/aws/aws_dynamodb_table.svg"
           }
         },
         {
@@ -75,7 +75,7 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/aws_iam_role.svg"
+            "icon": "/icons/aws/aws_iam_role.svg"
           }
         },
         {
@@ -96,7 +96,7 @@
           "ui": {
             "x": 840,
             "y": 0,
-            "icon": "/icons/aws_iam_policy.svg"
+            "icon": "/icons/aws/aws_iam_policy.svg"
           }
         },
         {
@@ -120,7 +120,7 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/Res_AWS-Lambda_Lambda-Function_48.svg"
+            "icon": "/icons/aws/Res_AWS-Lambda_Lambda-Function_48.svg"
           }
         },
         {
@@ -144,7 +144,7 @@
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/Res_AWS-Lambda_Lambda-Function_48.svg"
+            "icon": "/icons/aws/Res_AWS-Lambda_Lambda-Function_48.svg"
           }
         },
         {
@@ -164,7 +164,7 @@
           "ui": {
             "x": 0,
             "y": 200,
-            "icon": "/icons/Res_Amazon-Simple-Storage-Service_Bucket_48.svg"
+            "icon": "/icons/aws/Res_Amazon-Simple-Storage-Service_Bucket_48.svg"
           }
         }
       ],
@@ -180,7 +180,7 @@
             "resourceId": "ce6f44b9-4b8d-4016-932b-bd3f143c0fda",
             "schemaId": "aws_s3_bucket",
             "label": "uploads",
-            "icon": "/icons/Res_Amazon-Simple-Storage-Service_Bucket_48.svg",
+            "icon": "/icons/aws/Res_Amazon-Simple-Storage-Service_Bucket_48.svg",
             "terraformType": "aws_s3_bucket",
             "terraformKind": "resource",
             "isContainer": false
@@ -197,7 +197,7 @@
             "resourceId": "24e17e1c-53ea-462f-9336-1e1901b5ca72",
             "schemaId": "aws_dynamodb_table",
             "label": "items",
-            "icon": "/icons/aws_dynamodb_table.svg",
+            "icon": "/icons/aws/aws_dynamodb_table.svg",
             "terraformType": "aws_dynamodb_table",
             "terraformKind": "resource",
             "isContainer": false
@@ -214,7 +214,7 @@
             "resourceId": "25c3d3f5-0af0-4216-8e6d-6985a418c4c2",
             "schemaId": "aws_iam_role",
             "label": "lambda_exec",
-            "icon": "/icons/aws_iam_role.svg",
+            "icon": "/icons/aws/aws_iam_role.svg",
             "terraformType": "aws_iam_role",
             "terraformKind": "resource",
             "isContainer": false
@@ -231,7 +231,7 @@
             "resourceId": "fb80489f-ae34-441f-8d98-ffcd25cd8c19",
             "schemaId": "aws_iam_role_policy_attachment",
             "label": "basic",
-            "icon": "/icons/aws_iam_policy.svg",
+            "icon": "/icons/aws/aws_iam_policy.svg",
             "terraformType": "aws_iam_role_policy_attachment",
             "terraformKind": "resource",
             "isContainer": false
@@ -248,7 +248,7 @@
             "resourceId": "c6080e80-518f-4e3d-9277-1a7084ba5761",
             "schemaId": "aws_lambda_function",
             "label": "processor",
-            "icon": "/icons/Res_AWS-Lambda_Lambda-Function_48.svg",
+            "icon": "/icons/aws/Res_AWS-Lambda_Lambda-Function_48.svg",
             "terraformType": "aws_lambda_function",
             "terraformKind": "resource",
             "isContainer": false
@@ -265,7 +265,7 @@
             "resourceId": "334c3177-db10-45c0-ae3a-cd2187347ae3",
             "schemaId": "aws_lambda_permission",
             "label": "from_s3",
-            "icon": "/icons/Res_AWS-Lambda_Lambda-Function_48.svg",
+            "icon": "/icons/aws/Res_AWS-Lambda_Lambda-Function_48.svg",
             "terraformType": "aws_lambda_permission",
             "terraformKind": "resource",
             "isContainer": false
@@ -282,7 +282,7 @@
             "resourceId": "7402c087-7430-4c1b-9a0d-4ea068fa755b",
             "schemaId": "aws_s3_bucket_notification",
             "label": "uploads_notify",
-            "icon": "/icons/Res_Amazon-Simple-Storage-Service_Bucket_48.svg",
+            "icon": "/icons/aws/Res_Amazon-Simple-Storage-Service_Bucket_48.svg",
             "terraformType": "aws_s3_bucket_notification",
             "terraformKind": "resource",
             "isContainer": false

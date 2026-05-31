@@ -4,9 +4,28 @@ use std::{
     sync::Mutex,
 };
 
+use percent_encoding::{utf8_percent_encode, AsciiSet, CONTROLS};
 use portable_pty::{native_pty_system, CommandBuilder, PtySize};
 use serde::{Deserialize, Serialize};
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindowBuilder};
+
+// Characters that must be escaped inside a URL query-string component.
+// Based on the WHATWG URL "component percent-encode set" + a few extras
+// that could otherwise break query parsing (`?` `=` `&` `+`).
+const QUERY_COMPONENT_SET: &AsciiSet = &CONTROLS
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'<')
+    .add(b'>')
+    .add(b'?')
+    .add(b'`')
+    .add(b'{')
+    .add(b'}')
+    .add(b'=')
+    .add(b'&')
+    .add(b'+')
+    .add(b'%');
 
 #[derive(Debug, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -171,8 +190,9 @@ pub fn open_detached_terminal_window(
         return Ok(());
     }
 
-    let encoded_cwd = cwd.replace(' ', "%20");
-    let encoded_view_id = view_id.unwrap_or_default().replace(' ', "%20");
+    let encoded_cwd = utf8_percent_encode(&cwd, QUERY_COMPONENT_SET).to_string();
+    let encoded_view_id =
+        utf8_percent_encode(view_id.as_deref().unwrap_or(""), QUERY_COMPONENT_SET).to_string();
     let app_url = format!("/?detachedTerminal=1&cwd={encoded_cwd}&viewId={encoded_view_id}");
 
     let window = WebviewWindowBuilder::new(&app, label, WebviewUrl::App(app_url.into()))

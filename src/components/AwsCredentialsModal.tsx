@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AwsStoredCredentials,
@@ -99,10 +100,10 @@ type Props = {
   onClose: () => void;
 };
 
-const PROVIDER_TITLE: Record<CloudProvider, string> = {
-  aws: "Credenciales AWS",
-  gcp: "Credenciales Google Cloud",
-  azure: "Credenciales Microsoft Azure",
+const PROVIDER_TITLE_KEY: Record<CloudProvider, string> = {
+  aws: "credentials.title.aws",
+  gcp: "credentials.title.gcp",
+  azure: "credentials.title.azure",
 };
 
 export default function AwsCredentialsModal({ provider = "aws", initial, onSave, onClose }: Props) {
@@ -116,6 +117,7 @@ export default function AwsCredentialsModal({ provider = "aws", initial, onSave,
 }
 
 function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCredentials; onSave: (c: AwsStoredCredentials) => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<CredentialMode>(initial.mode ?? "manual");
 
   const [accessKeyId, setAccessKeyId] = useState(initial.accessKeyId ?? "");
@@ -168,7 +170,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
       })
       .catch((err) => {
         if (cancelled) return;
-        setProfilesError(typeof err === "string" ? err : "No se pudieron leer los perfiles AWS.");
+        setProfilesError(typeof err === "string" ? err : t("credentials.error.profiles"));
       })
       .finally(() => {
         if (!cancelled) setProfilesLoading(false);
@@ -215,7 +217,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
       })
       .catch((err) => {
         if (cancelled) return;
-        setEnvError(typeof err === "string" ? err : "No se pudieron leer las variables de entorno.");
+        setEnvError(typeof err === "string" ? err : t("credentials.error.env"));
       })
       .finally(() => {
         if (!cancelled) setEnvLoading(false);
@@ -283,9 +285,9 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
   };
 
   const tabs: Array<{ id: CredentialMode; label: string }> = [
-    { id: "manual", label: "Claves IAM" },
-    { id: "profile", label: "Perfil AWS CLI" },
-    { id: "env", label: "Variables de entorno" },
+    { id: "manual", label: t("credentials.tab.manual") },
+    { id: "profile", label: t("credentials.tab.profile") },
+    { id: "env", label: t("credentials.tab.env") },
   ];
 
   const selectedProfileData = profiles.find((p) => p.name === selectedProfile);
@@ -293,16 +295,16 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] p-6 flex flex-col gap-5">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[640px] max-w-full max-h-full p-5 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-white text-base font-semibold">{PROVIDER_TITLE.aws}</h2>
+          <h2 className="text-white text-lg font-semibold">{t(PROVIDER_TITLE_KEY.aws)}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-gray-400 hover:text-white text-xl leading-none"
+            className="text-gray-400 hover:text-white text-2xl leading-none"
           >
             ×
           </button>
@@ -314,7 +316,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors ${
+              className={`flex-1 rounded px-2 py-1.5 text-[13px] font-medium transition-colors ${
                 activeTab === tab.id
                   ? "bg-gray-700 text-white"
                   : "text-gray-400 hover:text-white"
@@ -326,41 +328,56 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
         </div>
 
         {activeTab === "manual" && (
-          <div className="flex flex-col gap-4">
-            <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
-              <p>Se guardan solo en tu equipo (localStorage).</p>
-              <ol className="mt-2 list-decimal pl-4 text-gray-400 space-y-1">
-                <li>Crea un usuario IAM con permisos para Terraform.</li>
-                <li>Genera Access Key + Secret o usa STS.</li>
-                <li>Si usas STS/MFA, pega también el Session Token.</li>
+          <div className="flex flex-col gap-2.5">
+            <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-[13px] text-gray-300">
+              <p>{t("credentials.manual.storageNote")}</p>
+              <ol className="mt-1.5 list-decimal pl-4 text-gray-400 space-y-0.5">
+                <li>{t("credentials.manual.step1")}</li>
+                <li>{t("credentials.manual.step2")}</li>
+                <li>{t("credentials.manual.step3")}</li>
               </ol>
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">AWS Access Key ID</label>
-              <input
-                type="text"
-                value={accessKeyId}
-                onChange={(e) => setAccessKeyId(e.target.value)}
-                placeholder="AKIAIOSFODNN7EXAMPLE"
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
-                autoComplete="off"
-                spellCheck={false}
-              />
-              {hasAccessKeyError && (
-                <span className="text-[11px] text-amber-300">Formato esperado: AKIA/ASIA + 16 caracteres.</span>
-              )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1">
+                <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.accessKeyId")}</label>
+                <input
+                  type="text"
+                  value={accessKeyId}
+                  onChange={(e) => setAccessKeyId(e.target.value)}
+                  placeholder="AKIAIOSFODNN7EXAMPLE"
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                {hasAccessKeyError && (
+                  <span className="text-[11px] text-amber-300">{t("credentials.field.accessKeyIdError")}</span>
+                )}
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.region")}</label>
+                <select
+                  value={region}
+                  onChange={(e) => setRegion(e.target.value)}
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
+                >
+                  {AWS_REGIONS.map((r) => (
+                    <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">AWS Secret Access Key</label>
+              <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.secretAccessKey")}</label>
               <div className="relative">
                 <input
                   type={showSecret ? "text" : "password"}
                   value={secretAccessKey}
                   onChange={(e) => setSecretAccessKey(e.target.value)}
                   placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
-                  className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full"
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full"
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -369,23 +386,23 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                   onClick={() => setShowSecret((v) => !v)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs"
                 >
-                  {showSecret ? "ocultar" : "ver"}
+                  {showSecret ? t("credentials.toggle.hide") : t("credentials.toggle.show")}
                 </button>
               </div>
               {hasSecretKeyError && (
-                <span className="text-[11px] text-amber-300">La Secret Access Key parece incompleta.</span>
+                <span className="text-[11px] text-amber-300">{t("credentials.field.secretAccessKeyError")}</span>
               )}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">AWS Session Token (opcional)</label>
+              <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.sessionToken")}</label>
               <div className="relative">
                 <input
                   type={showSessionToken ? "text" : "password"}
                   value={sessionToken}
                   onChange={(e) => setSessionToken(e.target.value)}
                   placeholder="IQoJb3JpZ2luX2VjEOz//////////wEaCXVzLWVhc3QtMSJHMEUC..."
-                  className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full"
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full"
                   autoComplete="off"
                   spellCheck={false}
                 />
@@ -394,37 +411,24 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                   onClick={() => setShowSessionToken((v) => !v)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs"
                 >
-                  {showSessionToken ? "ocultar" : "ver"}
+                  {showSessionToken ? t("credentials.toggle.hide") : t("credentials.toggle.show")}
                 </button>
               </div>
-              <span className="text-[11px] text-gray-500">Requerido cuando usas credenciales temporales (STS/MFA).</span>
-            </div>
-
-            <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">Region</label>
-              <select
-                value={region}
-                onChange={(e) => setRegion(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
-              >
-                {AWS_REGIONS.map((r) => (
-                  <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
-                ))}
-              </select>
+              <span className="text-[11px] text-gray-500">{t("credentials.field.sessionTokenHelp")}</span>
             </div>
           </div>
         )}
 
         {activeTab === "profile" && (
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2.5">
             <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
-              <p>Usa un perfil definido en tu archivo de credenciales AWS CLI.</p>
-              <p className="mt-1 text-gray-400">Crea perfiles con <code className="text-gray-200">aws configure --profile NOMBRE</code>.</p>
+              <p>{t("credentials.profile.intro")}</p>
+              <p className="mt-1 text-gray-400">{t("credentials.profile.createHint")} <code className="text-gray-200">aws configure --profile NOMBRE</code>.</p>
             </div>
 
             <div className="flex flex-col gap-2 rounded border border-gray-700 bg-gray-800/40 p-3">
               <div className="flex flex-col gap-1">
-                <label className="text-gray-300 text-[11px] font-medium">Archivo de credenciales</label>
+                <label className="text-gray-300 text-[11px] font-medium">{t("credentials.profile.credentialsFile")}</label>
                 <input
                   type="text"
                   value={credentialsPath}
@@ -435,13 +439,13 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                 />
                 <span className="text-[10px] text-gray-500">
                   {credentialsPath.trim()
-                    ? (credentialsPathExists === false ? <span className="text-amber-300">⚠ El archivo no existe</span> : credentialsPathExists ? <span className="text-emerald-400">✓ Existe</span> : "")
-                    : <>Por defecto: <code>{paths?.credentialsPath ?? "~/.aws/credentials"}</code> {paths?.credentialsExists === false && <span className="text-amber-300">(no existe)</span>}</>
+                    ? (credentialsPathExists === false ? <span className="text-amber-300">⚠ {t("credentials.path.notExists")}</span> : credentialsPathExists ? <span className="text-emerald-400">✓ {t("credentials.path.exists")}</span> : "")
+                    : <>{t("credentials.path.default")} <code>{paths?.credentialsPath ?? "~/.aws/credentials"}</code> {paths?.credentialsExists === false && <span className="text-amber-300">{t("credentials.path.notExistsInline")}</span>}</>
                   }
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-gray-300 text-[11px] font-medium">Archivo de configuración</label>
+                <label className="text-gray-300 text-[11px] font-medium">{t("credentials.profile.configFile")}</label>
                 <input
                   type="text"
                   value={configPath}
@@ -452,37 +456,37 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                 />
                 <span className="text-[10px] text-gray-500">
                   {configPath.trim()
-                    ? (configPathExists === false ? <span className="text-amber-300">⚠ El archivo no existe</span> : configPathExists ? <span className="text-emerald-400">✓ Existe</span> : "")
-                    : <>Por defecto: <code>{paths?.configPath ?? "~/.aws/config"}</code> {paths?.configExists === false && <span className="text-amber-300">(no existe)</span>}</>
+                    ? (configPathExists === false ? <span className="text-amber-300">⚠ {t("credentials.path.notExists")}</span> : configPathExists ? <span className="text-emerald-400">✓ {t("credentials.path.exists")}</span> : "")
+                    : <>{t("credentials.path.default")} <code>{paths?.configPath ?? "~/.aws/config"}</code> {paths?.configExists === false && <span className="text-amber-300">{t("credentials.path.notExistsInline")}</span>}</>
                   }
                 </span>
               </div>
             </div>
 
             {profilesLoading && (
-              <div className="text-xs text-gray-400">Cargando perfiles…</div>
+              <div className="text-xs text-gray-400">{t("credentials.profile.loading")}</div>
             )}
             {profilesError && (
               <div className="rounded border border-red-700 bg-red-900/30 p-2 text-[11px] text-red-300">{profilesError}</div>
             )}
             {!profilesLoading && !profilesError && profiles.length === 0 && (
               <div className="rounded border border-amber-700 bg-amber-900/20 p-2 text-[11px] text-amber-200">
-                No se encontraron perfiles en el archivo de credenciales. Ejecuta <code>aws configure</code> o cambia el path arriba.
+                {t("credentials.profile.emptyBefore")} <code>aws configure</code> {t("credentials.profile.emptyAfter")}
               </div>
             )}
 
             {profiles.length > 0 && (
               <div className="flex flex-col gap-1">
-                <label className="text-gray-300 text-xs font-medium">Perfil</label>
+                <label className="text-gray-300 text-xs font-medium">{t("credentials.profile.label")}</label>
                 <select
                   value={selectedProfile}
                   onChange={(e) => setSelectedProfile(e.target.value)}
-                  className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+                  className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
                 >
-                  <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>— Selecciona un perfil —</option>
+                  <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>{t("credentials.profile.selectPlaceholder")}</option>
                   {profiles.map((p) => (
                     <option key={p.name} value={p.name} style={{ backgroundColor: '#1f2937', color: '#000' }}>
-                      {p.name}{p.region ? ` (${p.region})` : " (sin región)"}
+                      {p.name}{p.region ? ` (${p.region})` : ` (${t("credentials.profile.noRegion")})`}
                     </option>
                   ))}
                 </select>
@@ -490,20 +494,20 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
             )}
 
             <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">Región (opcional, sobrescribe la del perfil)</label>
+              <label className="text-gray-300 text-xs font-medium">{t("credentials.profile.regionOverrideLabel")}</label>
               <select
                 value={profileRegionOverride}
                 onChange={(e) => setProfileRegionOverride(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+                className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
               >
-                <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>— Usar la del perfil —</option>
+                <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>{t("credentials.profile.useProfileRegion")}</option>
                 {AWS_REGIONS.map((r) => (
                   <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
                 ))}
               </select>
               {profileNeedsRegion && (
                 <span className="text-[11px] text-amber-300">
-                  Este perfil no tiene región configurada. Selecciona una arriba o se usará us-east-1 por defecto.
+                  {t("credentials.profile.needsRegion")}
                 </span>
               )}
             </div>
@@ -511,40 +515,32 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
         )}
 
         {activeTab === "env" && (
-          <div className="flex flex-col gap-4">
-            <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
-              <p>Usa las variables AWS_* del proceso de la app o de un archivo <code className="text-gray-200">.env</code>.</p>
-              <p className="mt-1 text-gray-400">
-                Nota: en macOS/Linux las apps lanzadas desde el icono pueden no heredar las variables de la shell. Si
-                faltan, lanza la app desde la terminal o usa un archivo .env.
-              </p>
-            </div>
-
+          <div className="flex flex-col gap-2.5">
             <div className="flex flex-col gap-2 rounded border border-gray-700 bg-gray-800/40 p-3">
               <div className="flex flex-col gap-0.5 text-[11px]">
-                <span className="text-gray-400">Directorio del proceso (cwd):</span>
-                <code className="text-gray-200 break-all">{envSource?.processCwd ?? "(cargando…)"}</code>
+                <span className="text-gray-400">{t("credentials.env.cwdLabel")}</span>
+                <code className="text-gray-200 break-all">{envSource?.processCwd ?? t("credentials.env.loadingPlaceholder")}</code>
               </div>
               <div className="flex flex-col gap-1 mt-1">
-                <label className="text-gray-300 text-[11px] font-medium">Archivo .env (opcional)</label>
+                <label className="text-gray-300 text-[11px] font-medium">{t("credentials.env.fileLabel")}</label>
                 <input
                   type="text"
                   value={envFilePath}
                   onChange={(e) => setEnvFilePath(e.target.value)}
-                  placeholder="/ruta/a/.env  — leído antes que las env vars del proceso"
+                  placeholder={t("credentials.env.filePlaceholder")}
                   className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-white text-[11px] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
                   spellCheck={false}
                 />
                 <span className="text-[10px] text-gray-500">
                   {envFilePath.trim()
-                    ? (envFileExists === false ? <span className="text-amber-300">⚠ El archivo no existe</span> : envFileExists ? <span className="text-emerald-400">✓ Existe — los valores del archivo tienen prioridad</span> : "")
-                    : "Si está vacío, se usan solo las variables del proceso."
+                    ? (envFileExists === false ? <span className="text-amber-300">⚠ {t("credentials.path.notExists")}</span> : envFileExists ? <span className="text-emerald-400">✓ {t("credentials.env.fileExistsPriority")}</span> : "")
+                    : t("credentials.env.fileEmptyHelp")
                   }
                 </span>
               </div>
             </div>
 
-            {envLoading && <div className="text-xs text-gray-400">Leyendo entorno…</div>}
+            {envLoading && <div className="text-xs text-gray-400">{t("credentials.env.reading")}</div>}
             {envError && (
               <div className="rounded border border-red-700 bg-red-900/30 p-2 text-[11px] text-red-300">{envError}</div>
             )}
@@ -560,18 +556,18 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
 
             {envCreds && !envCreds.isComplete && (
               <div className="rounded border border-amber-700 bg-amber-900/20 p-2 text-[11px] text-amber-200">
-                Faltan variables AWS_* obligatorias. Terraform fallará con error de autenticación.
+                {t("credentials.env.incomplete")}
               </div>
             )}
 
             <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-xs font-medium">Región (opcional, sobrescribe AWS_DEFAULT_REGION)</label>
+              <label className="text-gray-300 text-xs font-medium">{t("credentials.env.regionOverrideLabel")}</label>
               <select
                 value={envRegion}
                 onChange={(e) => setEnvRegion(e.target.value)}
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+                className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
               >
-                <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>— Usar la del entorno —</option>
+                <option value="" style={{ backgroundColor: '#1f2937', color: '#000' }}>{t("credentials.env.useEnvRegion")}</option>
                 {AWS_REGIONS.map((r) => (
                   <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
                 ))}
@@ -584,17 +580,17 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded text-sm text-gray-300 hover:text-white hover:bg-gray-700"
+            className="px-5 py-2 rounded text-[15px] text-gray-300 hover:text-white hover:bg-gray-700"
           >
-            Cancelar
+            {t("credentials.button.cancel")}
           </button>
           <button
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="px-4 py-1.5 rounded text-sm bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+            className="px-5 py-2 rounded text-[15px] bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
           >
-            Guardar
+            {t("credentials.button.save")}
           </button>
         </div>
       </div>
@@ -603,11 +599,12 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
 }
 
 function EnvRow({ name, value }: { name: string; value: string | null }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-gray-400">{name}</span>
       <span className={value ? "text-emerald-300" : "text-gray-500"}>
-        {value ?? "no establecida"}
+        {value ?? t("credentials.env.notSet")}
       </span>
     </div>
   );
@@ -621,15 +618,16 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
   canSave: boolean;
   onSave: () => void;
 }) {
+  const { t } = useTranslation();
   const saveBtnClass = accent === "blue"
     ? "bg-blue-600 hover:bg-blue-500"
     : "bg-sky-600 hover:bg-sky-500";
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[460px] p-6 flex flex-col gap-5">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[640px] max-w-full max-h-full p-5 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-base font-semibold">{title}</h2>
           <button
@@ -645,17 +643,17 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-1.5 rounded text-sm text-gray-300 hover:text-white hover:bg-gray-700"
+            className="px-5 py-2 rounded text-[15px] text-gray-300 hover:text-white hover:bg-gray-700"
           >
-            Cancelar
+            {t("credentials.button.cancel")}
           </button>
           <button
             type="button"
             onClick={onSave}
             disabled={!canSave}
-            className={`px-4 py-1.5 rounded text-sm text-white disabled:opacity-40 disabled:cursor-not-allowed font-medium ${saveBtnClass}`}
+            className={`px-5 py-2 rounded text-[15px] text-white disabled:opacity-40 disabled:cursor-not-allowed font-medium ${saveBtnClass}`}
           >
-            Guardar
+            {t("credentials.button.save")}
           </button>
         </div>
       </div>
@@ -664,6 +662,7 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
 }
 
 function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCredentials; onSave: (c: GcpStoredCredentials) => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const [serviceAccountJson, setServiceAccountJson] = useState(initial.serviceAccountJson ?? "");
   const [serviceAccountFilePath, setServiceAccountFilePath] = useState(initial.serviceAccountFilePath ?? "");
   const [projectId, setProjectId] = useState(initial.projectId ?? "");
@@ -679,10 +678,10 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
     try {
       const parsed = JSON.parse(trimmedJson);
       if (typeof parsed !== "object" || parsed === null || !("client_email" in parsed) || !("private_key" in parsed)) {
-        jsonError = "El JSON no parece una service account válida (faltan client_email/private_key).";
+        jsonError = t("credentials.gcp.jsonInvalidServiceAccount");
       }
     } catch {
-      jsonError = "JSON inválido.";
+      jsonError = t("credentials.gcp.jsonInvalid");
     }
   }
 
@@ -701,31 +700,31 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
   };
 
   return (
-    <ModalShell title={PROVIDER_TITLE.gcp} accent="blue" onClose={onClose} onSave={handleSave} canSave={canSave}>
+    <ModalShell title={t(PROVIDER_TITLE_KEY.gcp)} accent="blue" onClose={onClose} onSave={handleSave} canSave={canSave}>
       <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
-        <p>Se guardan solo en tu equipo (localStorage).</p>
-        <ol className="mt-2 list-decimal pl-4 text-gray-400 space-y-1">
-          <li>Crea una Service Account en IAM con permisos para Terraform.</li>
-          <li>Descarga su clave en formato JSON.</li>
-          <li>Pega el contenido del JSON o indica la ruta al archivo.</li>
+        <p>{t("credentials.gcp.storageNote")}</p>
+        <ol className="mt-1.5 list-decimal pl-4 text-gray-400 space-y-0.5">
+          <li>{t("credentials.gcp.step1")}</li>
+          <li>{t("credentials.gcp.step2")}</li>
+          <li>{t("credentials.gcp.step3")}</li>
         </ol>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Project ID</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.gcp.projectId")}</label>
         <input
           type="text"
           value={projectId}
           onChange={(e) => setProjectId(e.target.value)}
           placeholder="my-gcp-project-123456"
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-blue-500"
           autoComplete="off"
           spellCheck={false}
         />
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Ruta a service account JSON (opcional)</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.gcp.serviceAccountPath")}</label>
         <input
           type="text"
           value={serviceAccountFilePath}
@@ -734,11 +733,11 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
           className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-xs font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
           spellCheck={false}
         />
-        <span className="text-[10px] text-gray-500">Si pegas el JSON abajo, no necesitas ruta.</span>
+        <span className="text-[10px] text-gray-500">{t("credentials.gcp.serviceAccountPathHelp")}</span>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Service Account JSON</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.gcp.serviceAccountJson")}</label>
         <div className="relative">
           <textarea
             value={showJson ? serviceAccountJson : serviceAccountJson ? "•".repeat(Math.min(serviceAccountJson.length, 200)) : ""}
@@ -754,18 +753,18 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
             onClick={() => setShowJson((v) => !v)}
             className="absolute right-2 top-2 text-gray-400 hover:text-white text-xs"
           >
-            {showJson ? "ocultar" : "ver/editar"}
+            {showJson ? t("credentials.toggle.hide") : t("credentials.toggle.showEdit")}
           </button>
         </div>
         {jsonError && <span className="text-[11px] text-amber-300">{jsonError}</span>}
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Region</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.field.region")}</label>
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-blue-500"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-blue-500"
         >
           {GCP_REGIONS.map((r) => (
             <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>
@@ -777,6 +776,7 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
 }
 
 function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStoredCredentials; onSave: (c: AzureStoredCredentials) => void; onClose: () => void }) {
+  const { t } = useTranslation();
   const [subscriptionId, setSubscriptionId] = useState(initial.subscriptionId ?? "");
   const [tenantId, setTenantId] = useState(initial.tenantId ?? "");
   const [clientId, setClientId] = useState(initial.clientId ?? "");
@@ -785,9 +785,9 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
   const [showSecret, setShowSecret] = useState(false);
 
   const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const subError = subscriptionId.trim() && !uuidRe.test(subscriptionId.trim()) ? "Debe ser un UUID." : null;
-  const tenantError = tenantId.trim() && !uuidRe.test(tenantId.trim()) ? "Debe ser un UUID." : null;
-  const clientError = clientId.trim() && !uuidRe.test(clientId.trim()) ? "Debe ser un UUID." : null;
+  const subError = subscriptionId.trim() && !uuidRe.test(subscriptionId.trim()) ? t("credentials.azure.uuidError") : null;
+  const tenantError = tenantId.trim() && !uuidRe.test(tenantId.trim()) ? t("credentials.azure.uuidError") : null;
+  const clientError = clientId.trim() && !uuidRe.test(clientId.trim()) ? t("credentials.azure.uuidError") : null;
 
   const canSave =
     subscriptionId.trim() !== "" && !subError &&
@@ -809,64 +809,64 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
   };
 
   return (
-    <ModalShell title={PROVIDER_TITLE.azure} accent="sky" onClose={onClose} onSave={handleSave} canSave={canSave}>
+    <ModalShell title={t(PROVIDER_TITLE_KEY.azure)} accent="sky" onClose={onClose} onSave={handleSave} canSave={canSave}>
       <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-xs text-gray-300">
-        <p>Se guardan solo en tu equipo (localStorage).</p>
-        <ol className="mt-2 list-decimal pl-4 text-gray-400 space-y-1">
-          <li>Crea un Service Principal en Azure AD.</li>
-          <li>Asigna roles sobre la Subscription que vas a desplegar.</li>
-          <li>Copia subscription/tenant/client ID + secret.</li>
+        <p>{t("credentials.azure.storageNote")}</p>
+        <ol className="mt-1.5 list-decimal pl-4 text-gray-400 space-y-0.5">
+          <li>{t("credentials.azure.step1")}</li>
+          <li>{t("credentials.azure.step2")}</li>
+          <li>{t("credentials.azure.step3")}</li>
         </ol>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Subscription ID</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.azure.subscriptionId")}</label>
         <input
           type="text"
           value={subscriptionId}
           onChange={(e) => setSubscriptionId(e.target.value)}
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
         {subError && <span className="text-[11px] text-amber-300">{subError}</span>}
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Tenant ID</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.azure.tenantId")}</label>
         <input
           type="text"
           value={tenantId}
           onChange={(e) => setTenantId(e.target.value)}
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
         {tenantError && <span className="text-[11px] text-amber-300">{tenantError}</span>}
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Client ID</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.azure.clientId")}</label>
         <input
           type="text"
           value={clientId}
           onChange={(e) => setClientId(e.target.value)}
           placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
         {clientError && <span className="text-[11px] text-amber-300">{clientError}</span>}
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Client Secret</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.azure.clientSecret")}</label>
         <div className="relative">
           <input
             type={showSecret ? "text" : "password"}
             value={clientSecret}
             onChange={(e) => setClientSecret(e.target.value)}
             placeholder="•••••••"
-            className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 w-full"
+            className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 pr-10 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 w-full"
             autoComplete="off"
             spellCheck={false}
           />
@@ -875,17 +875,17 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
             onClick={() => setShowSecret((v) => !v)}
             className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white text-xs"
           >
-            {showSecret ? "ocultar" : "ver"}
+            {showSecret ? t("credentials.toggle.hide") : t("credentials.toggle.show")}
           </button>
         </div>
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="text-gray-300 text-xs font-medium">Region</label>
+        <label className="text-gray-300 text-xs font-medium">{t("credentials.field.region")}</label>
         <select
           value={region}
           onChange={(e) => setRegion(e.target.value)}
-          className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-black text-sm focus:outline-none focus:border-sky-500"
+          className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-black text-sm focus:outline-none focus:border-sky-500"
         >
           {AZURE_REGIONS.map((r) => (
             <option key={r} value={r} style={{ backgroundColor: '#1f2937', color: '#000' }}>{r}</option>

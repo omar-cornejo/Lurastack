@@ -33,7 +33,7 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/gcp_cloud_storage.svg"
+            "icon": "/icons/gcp/gcp_cloud_storage.svg"
           }
         },
         {
@@ -54,7 +54,7 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/gcp_cloud_storage.svg"
+            "icon": "/icons/gcp/gcp_cloud_storage.svg"
           }
         },
         {
@@ -75,7 +75,7 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/gcp_security_identity.svg"
+            "icon": "/icons/gcp/gcp_security_identity.svg"
           }
         },
         {
@@ -96,7 +96,7 @@
           "ui": {
             "x": 0,
             "y": 200,
-            "icon": "/icons/gcp_bigquery.svg"
+            "icon": "/icons/gcp/gcp_bigquery.svg"
           }
         },
         {
@@ -118,7 +118,7 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/gcp_bigquery.svg"
+            "icon": "/icons/gcp/gcp_bigquery.svg"
           }
         },
         {
@@ -139,7 +139,7 @@
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/gcp_serverless.svg"
+            "icon": "/icons/gcp/gcp_serverless.svg"
           }
         }
       ],
@@ -155,7 +155,7 @@
             "resourceId": "46b8b538-1425-49c9-a2c5-999fe6aff623",
             "schemaId": "google_storage_bucket",
             "label": "uploads",
-            "icon": "/icons/gcp_cloud_storage.svg",
+            "icon": "/icons/gcp/gcp_cloud_storage.svg",
             "terraformType": "google_storage_bucket",
             "terraformKind": "resource",
             "isContainer": false
@@ -172,7 +172,7 @@
             "resourceId": "9faac1bc-692c-4e03-954a-2644c26dfe83",
             "schemaId": "google_storage_bucket",
             "label": "source",
-            "icon": "/icons/gcp_cloud_storage.svg",
+            "icon": "/icons/gcp/gcp_cloud_storage.svg",
             "terraformType": "google_storage_bucket",
             "terraformKind": "resource",
             "isContainer": false
@@ -189,7 +189,7 @@
             "resourceId": "d4838159-aac1-4a2c-a625-3e8fd742dc54",
             "schemaId": "google_service_account",
             "label": "fn",
-            "icon": "/icons/gcp_security_identity.svg",
+            "icon": "/icons/gcp/gcp_security_identity.svg",
             "terraformType": "google_service_account",
             "terraformKind": "resource",
             "isContainer": false
@@ -206,7 +206,7 @@
             "resourceId": "fcf0b9f7-64f1-4344-8b15-dc6ccb1fae93",
             "schemaId": "google_bigquery_dataset",
             "label": "analytics",
-            "icon": "/icons/gcp_bigquery.svg",
+            "icon": "/icons/gcp/gcp_bigquery.svg",
             "terraformType": "google_bigquery_dataset",
             "terraformKind": "resource",
             "isContainer": false
@@ -223,7 +223,7 @@
             "resourceId": "d6ac8357-9efb-4c59-a824-7915ac7fe950",
             "schemaId": "google_bigquery_table",
             "label": "events",
-            "icon": "/icons/gcp_bigquery.svg",
+            "icon": "/icons/gcp/gcp_bigquery.svg",
             "terraformType": "google_bigquery_table",
             "terraformKind": "resource",
             "isContainer": false
@@ -240,7 +240,7 @@
             "resourceId": "c0c18f77-c233-49b3-abf9-77aa7715de76",
             "schemaId": "google_cloudfunctions2_function",
             "label": "processor",
-            "icon": "/icons/gcp_serverless.svg",
+            "icon": "/icons/gcp/gcp_serverless.svg",
             "terraformType": "google_cloudfunctions2_function",
             "terraformKind": "resource",
             "isContainer": false

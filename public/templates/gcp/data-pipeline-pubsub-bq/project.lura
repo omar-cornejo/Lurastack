@@ -32,7 +32,7 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/gcp_integration.svg"
+            "icon": "/icons/gcp/gcp_integration.svg"
           }
         },
         {
@@ -53,7 +53,7 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/gcp_cloud_storage.svg"
+            "icon": "/icons/gcp/gcp_cloud_storage.svg"
           }
         },
         {
@@ -74,7 +74,7 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/gcp_cloud_storage.svg"
+            "icon": "/icons/gcp/gcp_cloud_storage.svg"
           }
         },
         {
@@ -95,7 +95,7 @@
           "ui": {
             "x": 840,
             "y": 0,
-            "icon": "/icons/gcp_bigquery.svg"
+            "icon": "/icons/gcp/gcp_bigquery.svg"
           }
         },
         {
@@ -117,7 +117,7 @@
           "ui": {
             "x": 0,
             "y": 200,
-            "icon": "/icons/gcp_bigquery.svg"
+            "icon": "/icons/gcp/gcp_bigquery.svg"
           }
         },
         {
@@ -138,7 +138,7 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/gcp_security_identity.svg"
+            "icon": "/icons/gcp/gcp_security_identity.svg"
           }
         },
         {
@@ -159,7 +159,7 @@
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/gcp_serverless.svg"
+            "icon": "/icons/gcp/gcp_serverless.svg"
           }
         },
         {
@@ -180,7 +180,7 @@
           "ui": {
             "x": 840,
             "y": 200,
-            "icon": "/icons/gcp_integration.svg"
+            "icon": "/icons/gcp/gcp_integration.svg"
           }
         }
       ],
@@ -196,7 +196,7 @@
             "resourceId": "0725f9cf-ee3d-4667-9eeb-69d8c40d506e",
             "schemaId": "google_pubsub_topic",
             "label": "ingest",
-            "icon": "/icons/gcp_integration.svg",
+            "icon": "/icons/gcp/gcp_integration.svg",
             "terraformType": "google_pubsub_topic",
             "terraformKind": "resource",
             "isContainer": false
@@ -213,7 +213,7 @@
             "resourceId": "9e1d06e6-718e-40df-a57f-c4233a7fece9",
             "schemaId": "google_storage_bucket",
             "label": "raw",
-            "icon": "/icons/gcp_cloud_storage.svg",
+            "icon": "/icons/gcp/gcp_cloud_storage.svg",
             "terraformType": "google_storage_bucket",
             "terraformKind": "resource",
             "isContainer": false
@@ -230,7 +230,7 @@
             "resourceId": "6e34dcfe-7f23-4afc-a888-89f786cfabf3",
             "schemaId": "google_storage_bucket",
             "label": "source",
-            "icon": "/icons/gcp_cloud_storage.svg",
+            "icon": "/icons/gcp/gcp_cloud_storage.svg",
             "terraformType": "google_storage_bucket",
             "terraformKind": "resource",
             "isContainer": false
@@ -247,7 +247,7 @@
             "resourceId": "316a2220-fa30-4260-9608-5e44b246cf9e",
             "schemaId": "google_bigquery_dataset",
             "label": "warehouse",
-            "icon": "/icons/gcp_bigquery.svg",
+            "icon": "/icons/gcp/gcp_bigquery.svg",
             "terraformType": "google_bigquery_dataset",
             "terraformKind": "resource",
             "isContainer": false
@@ -264,7 +264,7 @@
             "resourceId": "5a045269-a7e1-43d5-ada4-4f92c01658e0",
             "schemaId": "google_bigquery_table",
             "label": "events",
-            "icon": "/icons/gcp_bigquery.svg",
+            "icon": "/icons/gcp/gcp_bigquery.svg",
             "terraformType": "google_bigquery_table",
             "terraformKind": "resource",
             "isContainer": false
@@ -281,7 +281,7 @@
             "resourceId": "b1d0ecf4-2710-44f5-aa59-85ea49457807",
             "schemaId": "google_service_account",
             "label": "fn",
-            "icon": "/icons/gcp_security_identity.svg",
+            "icon": "/icons/gcp/gcp_security_identity.svg",
             "terraformType": "google_service_account",
             "terraformKind": "resource",
             "isContainer": false
@@ -298,7 +298,7 @@
             "resourceId": "d9550509-9df7-410f-8f3b-8e3477b08f03",
             "schemaId": "google_cloudfunctions2_function",
             "label": "worker",
-            "icon": "/icons/gcp_serverless.svg",
+            "icon": "/icons/gcp/gcp_serverless.svg",
             "terraformType": "google_cloudfunctions2_function",
             "terraformKind": "resource",
             "isContainer": false
@@ -315,7 +315,7 @@
             "resourceId": "d7999e28-145d-4621-a09d-1de4ec236ff9",
             "schemaId": "google_pubsub_subscription",
             "label": "audit",
-            "icon": "/icons/gcp_integration.svg",
+            "icon": "/icons/gcp/gcp_integration.svg",
             "terraformType": "google_pubsub_subscription",
             "terraformKind": "resource",
             "isContainer": false

@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
+import type { TFunction } from "i18next";
 import { Icon } from "@iconify/react";
 import { loadHistoryIndex, loadHistoryEntry } from "../commands/historyManager";
 import type { HistoryEntry, HistoryIndex, HistoryAction } from "../types/history";
@@ -11,15 +13,15 @@ type HistoryTabProps = {
   onRestore: (snapshot: ViewSnapshot, entryId: string) => void;
 };
 
-function relativeTime(iso: string): string {
+function relativeTime(iso: string, t: TFunction): string {
   const diff = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diff / 60_000);
-  if (minutes < 1) return "ahora mismo";
-  if (minutes < 60) return `hace ${minutes} min`;
+  if (minutes < 1) return t("history.justNow");
+  if (minutes < 60) return t("history.minutesAgo", { count: minutes });
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `hace ${hours} h`;
+  if (hours < 24) return t("history.hoursAgo", { count: hours });
   const days = Math.floor(hours / 24);
-  return `hace ${days} d`;
+  return t("history.daysAgo", { count: days });
 }
 
 function dayKey(iso: string): string {
@@ -27,13 +29,13 @@ function dayKey(iso: string): string {
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 }
 
-function dayLabel(iso: string): string {
+function dayLabel(iso: string, t: TFunction): string {
   const d = new Date(iso);
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  if (dayKey(iso) === dayKey(today.toISOString())) return "Hoy";
-  if (dayKey(iso) === dayKey(yesterday.toISOString())) return "Ayer";
+  if (dayKey(iso) === dayKey(today.toISOString())) return t("history.today");
+  if (dayKey(iso) === dayKey(yesterday.toISOString())) return t("history.yesterday");
   return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
@@ -47,13 +49,13 @@ function actionIcon(action: HistoryAction): string {
   }
 }
 
-function actionLabel(action: HistoryAction): string {
+function actionLabel(action: HistoryAction, t: TFunction): string {
   switch (action) {
     case "terraform_plan": return "Plan";
     case "terraform_plan_destroy": return "Plan Destroy";
     case "terraform_apply": return "Apply";
     case "terraform_destroy": return "Destroy";
-    case "local-edit": return "Edición local";
+    case "local-edit": return t("history.localEdit");
   }
 }
 
@@ -92,6 +94,7 @@ export default function HistoryTab({
   refreshSignal,
   onRestore,
 }: HistoryTabProps) {
+  const { t } = useTranslation();
   const [index, setIndex] = useState<HistoryIndex | null>(null);
   const [showAllViews, setShowAllViews] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -141,7 +144,7 @@ export default function HistoryTab({
     <div className="flex flex-col h-full w-full min-w-0 overflow-hidden pl-1.5">
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
         <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
-          {filtered.length} {filtered.length === 1 ? "entrada" : "entradas"}
+          {t("history.entries", { count: filtered.length })}
         </span>
         <button
           type="button"
@@ -152,7 +155,7 @@ export default function HistoryTab({
               : "text-slate-400 hover:text-slate-600"
           }`}
         >
-          {showAllViews ? "Este view" : "Todas las vistas"}
+          {showAllViews ? t("history.thisView") : t("history.allViews")}
         </button>
       </div>
 
@@ -164,8 +167,8 @@ export default function HistoryTab({
             </div>
             <p className="text-[12px] text-slate-500">
               {entries.length === 0
-                ? "Aún no hay entradas en el historial."
-                : "No hay entradas para este view."}
+                ? t("history.empty")
+                : t("history.emptyView")}
             </p>
           </div>
         )}
@@ -181,7 +184,7 @@ export default function HistoryTab({
             {showDayDivider && (
               <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-1.5">
                 <span className="inline-block max-w-full truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                  {dayLabel(entry.timestamp)}
+                  {dayLabel(entry.timestamp, t)}
                 </span>
               </div>
             )}
@@ -197,22 +200,22 @@ export default function HistoryTab({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[12px] font-medium ${color.label}`}>
-                      {actionLabel(entry.action)}
+                      {actionLabel(entry.action, t)}
                     </span>
                     {!entry.success && (
                       <span className="rounded bg-red-100 px-1.5 py-px text-[9px] font-bold uppercase text-red-600">
-                        Error
+                        {t("history.error")}
                       </span>
                     )}
                     {isPlanOnly(entry.action) && (
                       <span className="rounded bg-slate-100 px-1.5 py-px text-[9px] font-semibold uppercase text-slate-500">
-                        Informativo
+                        {t("history.info")}
                       </span>
                     )}
                     <SummaryChip summary={entry.summary} />
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-slate-400">{relativeTime(entry.timestamp)}</span>
+                    <span className="text-[10px] text-slate-400">{relativeTime(entry.timestamp, t)}</span>
                     {!showAllViews ? null : (
                       <span className="text-[10px] text-slate-300">· {entry.viewName}</span>
                     )}
@@ -231,7 +234,7 @@ export default function HistoryTab({
               {isExpanded && (
                 <div className="bg-slate-50/80 border-t border-slate-100 px-3 py-3 space-y-3">
                   {loadingDetail && !expandedEntry && (
-                    <p className="text-[11px] text-slate-400">Cargando detalles…</p>
+                    <p className="text-[11px] text-slate-400">{t("history.loadingDetails")}</p>
                   )}
 
                   {expandedEntry && (
@@ -243,7 +246,7 @@ export default function HistoryTab({
                       {expandedEntry.changes && expandedEntry.changes.length > 0 && (
                         <div className="space-y-1">
                           <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                            Cambios
+                            {t("history.changes")}
                           </p>
                           <div className="space-y-0.5 max-h-40 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
                             {expandedEntry.changes.map((change) => (
@@ -271,26 +274,26 @@ export default function HistoryTab({
 
                       {isPlanOnly(expandedEntry.action) ? (
                         <p className="text-[11px] text-slate-400 italic">
-                          Las entradas de Plan no modifican estado; no se puede restaurar a este punto.
+                          {t("history.planNotRestorable")}
                         </p>
                       ) : (
                         <div>
                           {restoreConfirmId === expandedEntry.id ? (
                             <div className="flex items-center gap-2">
-                              <span className="text-[11px] text-slate-600">¿Restaurar diseño?</span>
+                              <span className="text-[11px] text-slate-600">{t("history.restoreConfirm")}</span>
                               <button
                                 type="button"
                                 onClick={() => handleRestore(expandedEntry)}
                                 className="rounded bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700 transition-colors"
                               >
-                                Confirmar
+                                {t("history.confirm")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setRestoreConfirmId(null)}
                                 className="rounded border border-slate-200 px-2.5 py-1 text-[11px] text-slate-600 hover:bg-slate-100 transition-colors"
                               >
-                                Cancelar
+                                {t("history.cancel")}
                               </button>
                             </div>
                           ) : (
@@ -299,7 +302,7 @@ export default function HistoryTab({
                               onClick={() => setRestoreConfirmId(expandedEntry.id)}
                               className="rounded border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
                             >
-                              Restaurar diseño
+                              {t("history.restore")}
                             </button>
                           )}
                         </div>
