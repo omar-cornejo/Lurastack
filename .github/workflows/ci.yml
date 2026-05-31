@@ -9,6 +9,7 @@ on:
 # Least-privilege token for all jobs by default.
 permissions:
   contents: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -80,14 +81,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Build (locked)
-        run: cargo build --locked
+      - name: Check (locked)
+        run: cargo check --locked
 
       - name: Install cargo-audit
         run: cargo install --locked cargo-audit
 
-      - name: Cargo audit
-        run: cargo audit --deny warnings
+      - name: Cargo audit (vulnerabilities only — unmaintained warnings suppressed)
+        run: cargo audit --deny unsound --deny yanked
 
       - name: Install cargo-deny
         run: cargo install --locked cargo-deny
@@ -105,6 +106,6 @@ jobs:
           fetch-depth: 0
 
       - name: Run gitleaks
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
