@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "LuraStack — a visual platform for designing, generating, and deploying infrastructure stacks through Infrastructure as Code (IaC).",
-  "author": "Omar Cornejo <omarcornejovargas@gmail.com>",
+  "author": "Omar Antonio Cornejo Vargas <omarcornejovargas@gmail.com>",
   "license": "Apache-2.0",
   "homepage": "https://github.com/omar-cornejo/lurastack#readme",
   "repository": {

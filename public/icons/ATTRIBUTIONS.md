@@ -42,5 +42,5 @@ Microsoft Corporation.
 ---
 
 All other assets in this repository (application code, custom icons, and
-templates) are copyright Omar Cornejo and licensed under the
+templates) are copyright Omar Antonio Cornejo Vargas and licensed under the
 [Apache License 2.0](../../LICENSE).

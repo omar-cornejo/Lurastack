@@ -185,9 +185,9 @@ Bachelor's thesis:
 
 ```bibtex
 @thesis{cornejo2026lurastack,
-  author = {Cornejo, Omar},
+  author = {Cornejo, Omar Antonio},
   title  = {LuraStack: A Visual Editor for Cloud Infrastructure as Code},
-  school = {Universitat Polit\`{e}cnica de Catalunya, Facultat d'Inform\`{a}tica de Barcelona},
+  school = {Universitat Politècnica de Catalunya, Facultat d'Informàtica de Barcelona},
   year   = {2026},
   type   = {Bachelor's Thesis}
 }
