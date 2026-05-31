@@ -1,4 +1,4 @@
-DDF — Visual Terraform Editor
+LuraStack — Visual Infrastructure-as-Code Platform
 Copyright 2026 Omar Cornejo
 
 This product includes software developed by Omar Cornejo and contributors,
@@ -35,7 +35,7 @@ Desktop runtime (Rust / Tauri):
 External tools invoked as subprocesses (not bundled):
   - Terraform (Business Source License 1.1 from v1.6+; MPL-2.0 for older
     versions) — https://github.com/hashicorp/terraform
-    DDF executes the user's local `terraform` binary; it does not redistribute it.
+    LuraStack executes the user's local `terraform` binary; it does not redistribute it.
 
 ==============================================================================
 Icon assets
