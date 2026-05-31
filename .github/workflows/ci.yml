@@ -84,12 +84,6 @@ jobs:
       - name: Check (locked)
         run: cargo check --locked
 
-      - name: Install cargo-audit
-        uses: taiki-e/install-action@cargo-audit
-
-      - name: Cargo audit (vulnerabilities only — unmaintained warnings suppressed)
-        run: cargo audit --deny unsound --deny yanked
-
       - name: Install cargo-deny
         uses: taiki-e/install-action@cargo-deny
 
