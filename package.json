@@ -28,8 +28,8 @@
     "audit:rust": "cd src-tauri && cargo audit"
   },
   "dependencies": {
-    "@coreui/coreui": "5.7.0",
-    "@coreui/react": "5.10.0",
+    "@coreui/coreui": "5.7.1",
+    "@coreui/react": "5.11.0",
     "@iconify/react": "6.0.2",
     "@tauri-apps/api": "2.11.0",
     "@tauri-apps/plugin-dialog": "2.7.1",
