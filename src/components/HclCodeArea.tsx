@@ -6,6 +6,7 @@ type HclCodeAreaProps = {
   value: string;
   onChange?: (value: string) => void;
   onScroll?: () => void;
+  onPaste?: (event: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   textareaRef?: RefObject<HTMLTextAreaElement | null>;
   containerClassName?: string;
   /** Classes applied to both the pre and textarea (font, padding, etc.) */
@@ -20,6 +21,7 @@ export function HclCodeArea({
   value,
   onChange,
   onScroll,
+  onPaste,
   textareaRef: externalRef,
   containerClassName = "",
   innerClassName = "",
@@ -98,6 +100,7 @@ export function HclCodeArea({
         value={value}
         onChange={onChange ? handleChange : undefined}
         onBeforeInput={onChange ? handleBeforeInput : undefined}
+        onPaste={onChange ? onPaste : undefined}
         onScroll={handleScroll}
         readOnly={!onChange}
         spellCheck={false}

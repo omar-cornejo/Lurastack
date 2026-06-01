@@ -91,8 +91,13 @@ export default function BottomPanel({
   const lastReportedPanelHeightRef = useRef<number | null>(null);
   const handledOpenSignalRef = useRef<number>(openSignal);
   const isTerraformRunningRef = useRef<boolean>(isTerraformRunning);
+  // Buffers characters typed while an in-app terraform process is running, so a
+  // complete line can be forwarded to terraform's stdin on Enter.
+  const terraformInputBufferRef = useRef<string>("");
   useEffect(() => {
     isTerraformRunningRef.current = isTerraformRunning;
+    // Reset any half-typed input when a terraform process starts/stops.
+    terraformInputBufferRef.current = "";
   }, [isTerraformRunning]);
 
   useEffect(() => {
@@ -431,11 +436,38 @@ export default function BottomPanel({
     const currentWindowLabel = getCurrentWindow().label;
     const onDataDisposable = term.current.onData((data: string) => {
       if (terminalDisposedRef.current) return;
-      // If a terraform process spawned from the app is running, Ctrl+C in the
-      // in-app terminal targets that process (the PTY shell can't reach it).
-      if (data === "\x03" && isTerraformRunningRef.current) {
-        void invoke("terraform_cancel").catch(() => {});
-        try { term.current?.write("\r\n\x1b[33m^C → terraform_cancel\x1b[0m\r\n"); } catch {}
+      // While an in-app terraform process is running, the PTY shell can't reach
+      // it, so terminal input must target the terraform process directly instead
+      // of being written to the shell (where e.g. "yes" would run as a command).
+      if (isTerraformRunningRef.current) {
+        // Ctrl+C cancels the terraform process.
+        if (data === "\x03") {
+          terraformInputBufferRef.current = "";
+          void invoke("terraform_cancel").catch(() => {});
+          try { term.current?.write("\r\n\x1b[33m^C → terraform_cancel\x1b[0m\r\n"); } catch {}
+          return;
+        }
+        // `data` can be a single keystroke or a multi-char paste, possibly with
+        // embedded newlines. Process char-by-char: buffer printable text (with
+        // local echo, since terraform's stdin is a pipe, not a TTY) and forward
+        // each completed line to terraform's stdin on Enter.
+        for (const char of data) {
+          if (char === "\r" || char === "\n") {
+            const line = terraformInputBufferRef.current;
+            terraformInputBufferRef.current = "";
+            try { term.current?.write("\r\n"); } catch {}
+            void invoke("terraform_confirm", { input: line }).catch(() => {});
+          } else if (char === "\x7f" || char === "\b") {
+            if (terraformInputBufferRef.current.length > 0) {
+              terraformInputBufferRef.current = terraformInputBufferRef.current.slice(0, -1);
+              try { term.current?.write("\b \b"); } catch {}
+            }
+          } else if (char >= " ") {
+            // Skip other control sequences (arrows, etc.).
+            terraformInputBufferRef.current += char;
+            try { term.current?.write(char); } catch {}
+          }
+        }
         return;
       }
       void invoke("write_to_pty", { input: data });

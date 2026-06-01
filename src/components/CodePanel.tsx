@@ -1046,6 +1046,36 @@ export default function CodePanel({
     }, 180);
   };
 
+  // In attribute mode, pasted clipboard text often carries trailing newlines
+  // (e.g. copying a whole line), which the structural guard rejects outright.
+  // Sanitize the paste to a single line and apply it manually so the resulting
+  // edit stays inside the attribute value and is accepted.
+  const handleAttributeModePaste = (
+    event: React.ClipboardEvent<HTMLTextAreaElement>,
+    currentValue: string,
+    applyChange: (next: string) => void,
+  ) => {
+    if (isFreeEditMode) return; // free mode: let the browser handle paste natively
+    const textarea = event.currentTarget;
+    const clipboard = event.clipboardData.getData("text");
+    const sanitized = clipboard.replace(/\r?\n|\r/g, " ");
+    if (!sanitized) return;
+    event.preventDefault();
+    const start = textarea.selectionStart ?? currentValue.length;
+    const end = textarea.selectionEnd ?? start;
+    const next = currentValue.slice(0, start) + sanitized + currentValue.slice(end);
+    const caret = start + sanitized.length;
+    // Restore the caret after React re-renders with the new value.
+    requestAnimationFrame(() => {
+      if (codeEditorRef.current) {
+        const max = codeEditorRef.current.value.length;
+        const pos = Math.min(caret, max);
+        codeEditorRef.current.setSelectionRange(pos, pos);
+      }
+    });
+    applyChange(next);
+  };
+
   const handleMainTfContentChange = (next: string) => {
     if (!isFreeEditMode && !canEditOnlyInAttributeValues(mainTfDraft, next)) {
       return;
@@ -1318,6 +1348,9 @@ export default function CodePanel({
                   <HclCodeArea
                     value={mainTfDraft}
                     onChange={handleMainTfContentChange}
+                    onPaste={(event) =>
+                      handleAttributeModePaste(event, mainTfDraft, handleMainTfContentChange)
+                    }
                     onScroll={handleEditorScroll}
                     textareaRef={codeEditorRef}
                     containerClassName="h-full min-h-0"
@@ -1340,6 +1373,9 @@ export default function CodePanel({
                 <HclCodeArea
                   value={auxiliaryContent}
                   onChange={handleAuxiliaryContentChange}
+                  onPaste={(event) =>
+                    handleAttributeModePaste(event, auxiliaryContent, handleAuxiliaryContentChange)
+                  }
                   onScroll={handleEditorScroll}
                   textareaRef={codeEditorRef}
                   containerClassName="h-full min-h-0"
