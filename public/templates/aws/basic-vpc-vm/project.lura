@@ -8,15 +8,15 @@
   "settings": {
     "autosave": false
   },
-  "activeViewId": "view-791b21a3-c738-43af-854a-4eaffd1a6480",
+  "activeViewId": "view-280452f2-9014-4d57-9913-5072afe656ff",
   "views": [
     {
-      "id": "view-791b21a3-c738-43af-854a-4eaffd1a6480",
+      "id": "view-280452f2-9014-4d57-9913-5072afe656ff",
       "name": "View 1",
       "activeProvider": "aws",
       "resources": [
         {
-          "id": "fca81ea0-6f89-437d-aab6-ff681e5bac23",
+          "id": "cda86412-9f2f-4229-832c-04726b5339ae",
           "kind": "resource",
           "type": "aws_vpc",
           "name": "main",
@@ -37,7 +37,7 @@
           }
         },
         {
-          "id": "51c5bd87-1bf0-4536-8a92-5956b0b003ae",
+          "id": "fea4e464-b7d7-4d48-8ea0-8fbe06521874",
           "kind": "resource",
           "type": "aws_internet_gateway",
           "name": "main",
@@ -57,7 +57,7 @@
           }
         },
         {
-          "id": "92e6d770-5375-468b-b60d-5fe2729df5c5",
+          "id": "b46b4dc2-3ed6-4bb6-a483-90092fe98a39",
           "kind": "resource",
           "type": "aws_subnet",
           "name": "public_a",
@@ -80,7 +80,7 @@
           }
         },
         {
-          "id": "80d8cfe5-72dd-48ca-b2ba-2c180a4a54cd",
+          "id": "e4a4c470-1e0f-456b-9f6b-6264acb49674",
           "kind": "resource",
           "type": "aws_route_table",
           "name": "public",
@@ -106,7 +106,7 @@
           }
         },
         {
-          "id": "1dfb2985-62bd-406f-bba7-7f9eb95d1148",
+          "id": "8851ac15-6091-4f7b-8733-27393d96d133",
           "kind": "resource",
           "type": "aws_route_table_association",
           "name": "public_a",
@@ -127,7 +127,7 @@
           }
         },
         {
-          "id": "8fe09393-9aa6-4ac4-85b3-09d97aa5d727",
+          "id": "ce3169e6-1459-4573-8385-616cfc024bc7",
           "kind": "resource",
           "type": "aws_security_group",
           "name": "web",
@@ -152,7 +152,7 @@
           }
         },
         {
-          "id": "23b3d1d0-8421-4925-9a72-bf24d872a672",
+          "id": "f8fd0798-b775-4dfa-b88f-300a78b57a71",
           "kind": "resource",
           "type": "aws_instance",
           "name": "app",
@@ -179,7 +179,7 @@
       ],
       "nodes": [
         {
-          "id": "node-fca81ea0-6f89-437d-aab6-ff681e5bac23",
+          "id": "node-cda86412-9f2f-4229-832c-04726b5339ae",
           "type": "terraformResource",
           "position": {
             "x": 0,
@@ -192,7 +192,7 @@
           "dragHandle": ".container-drag-handle",
           "zIndex": 0,
           "data": {
-            "resourceId": "fca81ea0-6f89-437d-aab6-ff681e5bac23",
+            "resourceId": "cda86412-9f2f-4229-832c-04726b5339ae",
             "schemaId": "aws_vpc",
             "label": "main",
             "icon": "/icons/Virtual-private-cloud-VPC_32.svg",
@@ -201,12 +201,12 @@
             "isContainer": true,
             "containerKind": "hierarchical",
             "zoneContainerIds": [
-              "node-8fe09393-9aa6-4ac4-85b3-09d97aa5d727"
+              "node-ce3169e6-1459-4573-8385-616cfc024bc7"
             ]
           }
         },
         {
-          "id": "node-8fe09393-9aa6-4ac4-85b3-09d97aa5d727",
+          "id": "node-ce3169e6-1459-4573-8385-616cfc024bc7",
           "type": "terraformResource",
           "position": {
             "x": 309.28577421152335,
@@ -219,7 +219,7 @@
           "dragHandle": ".container-drag-handle",
           "zIndex": 0,
           "data": {
-            "resourceId": "8fe09393-9aa6-4ac4-85b3-09d97aa5d727",
+            "resourceId": "ce3169e6-1459-4573-8385-616cfc024bc7",
             "schemaId": "aws_security_group",
             "label": "web",
             "icon": "/icons/aws_security_group.svg",
@@ -231,16 +231,16 @@
           }
         },
         {
-          "id": "node-51c5bd87-1bf0-4536-8a92-5956b0b003ae",
+          "id": "node-fea4e464-b7d7-4d48-8ea0-8fbe06521874",
           "type": "terraformResource",
           "position": {
             "x": 286.1464058811032,
             "y": 92.62234682409769
           },
           "zIndex": 10,
-          "parentNode": "node-fca81ea0-6f89-437d-aab6-ff681e5bac23",
+          "parentNode": "node-cda86412-9f2f-4229-832c-04726b5339ae",
           "data": {
-            "resourceId": "51c5bd87-1bf0-4536-8a92-5956b0b003ae",
+            "resourceId": "fea4e464-b7d7-4d48-8ea0-8fbe06521874",
             "schemaId": "aws_internet_gateway",
             "label": "main",
             "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg",
@@ -251,7 +251,7 @@
           }
         },
         {
-          "id": "node-92e6d770-5375-468b-b60d-5fe2729df5c5",
+          "id": "node-b46b4dc2-3ed6-4bb6-a483-90092fe98a39",
           "type": "terraformResource",
           "position": {
             "x": 33.29701613612758,
@@ -263,9 +263,9 @@
           },
           "dragHandle": ".container-drag-handle",
           "zIndex": 0,
-          "parentNode": "node-fca81ea0-6f89-437d-aab6-ff681e5bac23",
+          "parentNode": "node-cda86412-9f2f-4229-832c-04726b5339ae",
           "data": {
-            "resourceId": "92e6d770-5375-468b-b60d-5fe2729df5c5",
+            "resourceId": "b46b4dc2-3ed6-4bb6-a483-90092fe98a39",
             "schemaId": "aws_subnet",
             "label": "public_a",
             "icon": "/icons/Private-subnet_32.svg",
@@ -274,21 +274,21 @@
             "isContainer": true,
             "containerKind": "hierarchical",
             "zoneContainerIds": [
-              "node-8fe09393-9aa6-4ac4-85b3-09d97aa5d727"
+              "node-ce3169e6-1459-4573-8385-616cfc024bc7"
             ]
           }
         },
         {
-          "id": "node-80d8cfe5-72dd-48ca-b2ba-2c180a4a54cd",
+          "id": "node-e4a4c470-1e0f-456b-9f6b-6264acb49674",
           "type": "terraformResource",
           "position": {
             "x": 652.7161693560213,
             "y": 108.98681450785111
           },
           "zIndex": 10,
-          "parentNode": "node-fca81ea0-6f89-437d-aab6-ff681e5bac23",
+          "parentNode": "node-cda86412-9f2f-4229-832c-04726b5339ae",
           "data": {
-            "resourceId": "80d8cfe5-72dd-48ca-b2ba-2c180a4a54cd",
+            "resourceId": "e4a4c470-1e0f-456b-9f6b-6264acb49674",
             "schemaId": "aws_route_table",
             "label": "public",
             "icon": "/icons/route-table.svg",
@@ -299,16 +299,16 @@
           }
         },
         {
-          "id": "node-1dfb2985-62bd-406f-bba7-7f9eb95d1148",
+          "id": "node-8851ac15-6091-4f7b-8733-27393d96d133",
           "type": "terraformResource",
           "position": {
             "x": 20,
             "y": 222.34587096963418
           },
           "zIndex": 10,
-          "parentNode": "node-92e6d770-5375-468b-b60d-5fe2729df5c5",
+          "parentNode": "node-b46b4dc2-3ed6-4bb6-a483-90092fe98a39",
           "data": {
-            "resourceId": "1dfb2985-62bd-406f-bba7-7f9eb95d1148",
+            "resourceId": "8851ac15-6091-4f7b-8733-27393d96d133",
             "schemaId": "aws_route_table_association",
             "label": "public_a",
             "icon": "/icons/route-table.svg",
@@ -319,16 +319,16 @@
           }
         },
         {
-          "id": "node-23b3d1d0-8421-4925-9a72-bf24d872a672",
+          "id": "node-f8fd0798-b775-4dfa-b88f-300a78b57a71",
           "type": "terraformResource",
           "position": {
             "x": 358.62970161361284,
             "y": 192.61651612146397
           },
           "zIndex": 10,
-          "parentNode": "node-92e6d770-5375-468b-b60d-5fe2729df5c5",
+          "parentNode": "node-b46b4dc2-3ed6-4bb6-a483-90092fe98a39",
           "data": {
-            "resourceId": "23b3d1d0-8421-4925-9a72-bf24d872a672",
+            "resourceId": "f8fd0798-b775-4dfa-b88f-300a78b57a71",
             "schemaId": "aws_instance",
             "label": "app",
             "icon": "/icons/EC2-instance-contents_32.svg",
@@ -336,7 +336,7 @@
             "terraformKind": "resource",
             "isContainer": false,
             "zoneContainerIds": [
-              "node-8fe09393-9aa6-4ac4-85b3-09d97aa5d727"
+              "node-ce3169e6-1459-4573-8385-616cfc024bc7"
             ]
           }
         }
@@ -344,12 +344,12 @@
       "edges": [],
       "codeFiles": [
         {
-          "id": "f39fb3d3-abde-43e7-a5ea-966ef5c0e350",
+          "id": "e56c023b-76f3-4f17-8e84-a250618847b6",
           "name": "user_data.sh",
-          "content": "#!/bin/bash\nset -euo pipefail\n\n# Install and start nginx (Amazon Linux 2)\namazon-linux-extras enable nginx1\nyum clean metadata\nyum install -y nginx\n\ncat > /usr/share/nginx/html/index.html <<'HTML'\n<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>LuraStack — nginx</title>\n    <style>\n      body { font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }\n      .card { text-align: center; padding: 2rem 3rem; border: 1px solid #334155; border-radius: 12px; background: #1e293b; }\n      h1 { margin: 0 0 .5rem; }\n      code { color: #38bdf8; }\n    </style>\n  </head>\n  <body>\n    <div class=\"card\">\n      <h1>It works 🎉</h1>\n      <p>nginx is running on this EC2 instance, served on <code>port 80</code>.</p>\n      <p>Provisioned with <strong>LuraStack</strong>.</p>\n    </div>\n  </body>\n</html>\nHTML\n\nsystemctl enable nginx\nsystemctl restart nginx\n"
+          "content": "#!/bin/bash\nset -uo pipefail\n\n# Install nginx (Amazon Linux 2023 uses dnf; Amazon Linux 2 uses amazon-linux-extras + yum)\nif command -v dnf >/dev/null 2>&1; then\n  dnf install -y nginx\nelse\n  amazon-linux-extras enable nginx1 || true\n  yum clean metadata || true\n  yum install -y nginx\nfi\n\ncat > /usr/share/nginx/html/index.html <<'HTML'\n<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>LuraStack — nginx</title>\n    <style>\n      body { font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }\n      .card { text-align: center; padding: 2rem 3rem; border: 1px solid #334155; border-radius: 12px; background: #1e293b; }\n      h1 { margin: 0 0 .5rem; }\n      code { color: #38bdf8; }\n    </style>\n  </head>\n  <body>\n    <div class=\"card\">\n      <h1>It works 🎉</h1>\n      <p>nginx is running on this EC2 instance, served on <code>port 80</code>.</p>\n      <p>Provisioned with <strong>LuraStack</strong>.</p>\n    </div>\n  </body>\n</html>\nHTML\n\nsystemctl enable nginx\nsystemctl restart nginx\n"
         },
         {
-          "id": "3e863f37-a600-4b1e-b1c9-0dc5c17deb20",
+          "id": "cdfaf106-7815-44df-8104-a99ed18ff973",
           "name": "output.tf",
           "content": "output \"instance_public_ip\" {\n  description = \"Public IP of the nginx EC2 instance\"\n  value       = aws_instance.app.public_ip\n}\n\noutput \"instance_port\" {\n  description = \"Port nginx is served on\"\n  value       = 80\n}\n\noutput \"url\" {\n  description = \"Open this URL in a browser to see the nginx welcome page\"\n  value       = \"http://${aws_instance.app.public_ip}:80\"\n}\n"
         }

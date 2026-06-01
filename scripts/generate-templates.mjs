@@ -534,14 +534,20 @@ const AWS_BASIC_LAYOUT = {
   "aws_instance.app": { x: 33.29701613612758 + 358.62970161361284, y: 192.6165161214638 + 192.61651612146397 },
 };
 
-// nginx bootstrap (Amazon Linux 2): installs nginx, serves a welcome page on :80.
+// nginx bootstrap (Amazon Linux 2023): installs nginx with dnf and serves a
+// welcome page on :80. AL2023 has no amazon-linux-extras, so install via dnf
+// directly; falls back to yum for Amazon Linux 2 just in case.
 const AWS_BASIC_USER_DATA = `#!/bin/bash
-set -euo pipefail
+set -uo pipefail
 
-# Install and start nginx (Amazon Linux 2)
-amazon-linux-extras enable nginx1
-yum clean metadata
-yum install -y nginx
+# Install nginx (Amazon Linux 2023 uses dnf; Amazon Linux 2 uses amazon-linux-extras + yum)
+if command -v dnf >/dev/null 2>&1; then
+  dnf install -y nginx
+else
+  amazon-linux-extras enable nginx1 || true
+  yum clean metadata || true
+  yum install -y nginx
+fi
 
 cat > /usr/share/nginx/html/index.html <<'HTML'
 <!doctype html>

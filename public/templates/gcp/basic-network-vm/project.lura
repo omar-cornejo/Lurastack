@@ -8,15 +8,15 @@
   "settings": {
     "autosave": false
   },
-  "activeViewId": "view-a2f4bc50-6bd0-4b5a-a117-6d938041cb82",
+  "activeViewId": "view-8d7c17ff-bcb7-44e1-b206-b128aebd080a",
   "views": [
     {
-      "id": "view-a2f4bc50-6bd0-4b5a-a117-6d938041cb82",
+      "id": "view-8d7c17ff-bcb7-44e1-b206-b128aebd080a",
       "name": "View 1",
       "activeProvider": "gcp",
       "resources": [
         {
-          "id": "3fc9ad28-c922-4325-939f-cbe74b424bcd",
+          "id": "8b785f33-d508-4a23-93f1-8a745634a4a2",
           "kind": "resource",
           "type": "google_compute_network",
           "name": "main",
@@ -37,7 +37,7 @@
           }
         },
         {
-          "id": "5aecc33f-0881-4a0b-9157-83a31e041118",
+          "id": "a90f4d56-137e-44f6-8608-9add5602269b",
           "kind": "resource",
           "type": "google_compute_subnetwork",
           "name": "main",
@@ -60,7 +60,7 @@
           }
         },
         {
-          "id": "38716d1b-ae08-47d6-be2a-88e291b38ae0",
+          "id": "8b840351-16fc-4224-b7fd-17d88c3f9756",
           "kind": "resource",
           "type": "google_compute_firewall",
           "name": "ssh",
@@ -83,7 +83,7 @@
           }
         },
         {
-          "id": "1baa8329-7091-4979-8618-411e98baf8ac",
+          "id": "225401a3-3501-4c8a-adbf-184b4a1a1ee5",
           "kind": "resource",
           "type": "google_compute_instance",
           "name": "vm",
@@ -107,7 +107,7 @@
       ],
       "nodes": [
         {
-          "id": "node-3fc9ad28-c922-4325-939f-cbe74b424bcd",
+          "id": "node-8b785f33-d508-4a23-93f1-8a745634a4a2",
           "type": "terraformResource",
           "position": {
             "x": 0,
@@ -120,7 +120,7 @@
           "dragHandle": ".container-drag-handle",
           "zIndex": 0,
           "data": {
-            "resourceId": "3fc9ad28-c922-4325-939f-cbe74b424bcd",
+            "resourceId": "8b785f33-d508-4a23-93f1-8a745634a4a2",
             "schemaId": "google_compute_network",
             "label": "main",
             "icon": "/icons/gcp_networking.svg",
@@ -132,7 +132,7 @@
           }
         },
         {
-          "id": "node-1baa8329-7091-4979-8618-411e98baf8ac",
+          "id": "node-225401a3-3501-4c8a-adbf-184b4a1a1ee5",
           "type": "terraformResource",
           "position": {
             "x": 660,
@@ -140,7 +140,7 @@
           },
           "zIndex": 10,
           "data": {
-            "resourceId": "1baa8329-7091-4979-8618-411e98baf8ac",
+            "resourceId": "225401a3-3501-4c8a-adbf-184b4a1a1ee5",
             "schemaId": "google_compute_instance",
             "label": "vm",
             "icon": "/icons/gcp_compute_engine.svg",
@@ -151,7 +151,7 @@
           }
         },
         {
-          "id": "node-5aecc33f-0881-4a0b-9157-83a31e041118",
+          "id": "node-a90f4d56-137e-44f6-8608-9add5602269b",
           "type": "terraformResource",
           "position": {
             "x": 20,
@@ -163,9 +163,9 @@
           },
           "dragHandle": ".container-drag-handle",
           "zIndex": 0,
-          "parentNode": "node-3fc9ad28-c922-4325-939f-cbe74b424bcd",
+          "parentNode": "node-8b785f33-d508-4a23-93f1-8a745634a4a2",
           "data": {
-            "resourceId": "5aecc33f-0881-4a0b-9157-83a31e041118",
+            "resourceId": "a90f4d56-137e-44f6-8608-9add5602269b",
             "schemaId": "google_compute_subnetwork",
             "label": "main",
             "icon": "/icons/gcp_networking.svg",
@@ -177,16 +177,16 @@
           }
         },
         {
-          "id": "node-38716d1b-ae08-47d6-be2a-88e291b38ae0",
+          "id": "node-8b840351-16fc-4224-b7fd-17d88c3f9756",
           "type": "terraformResource",
           "position": {
             "x": 384,
             "y": 58
           },
           "zIndex": 10,
-          "parentNode": "node-3fc9ad28-c922-4325-939f-cbe74b424bcd",
+          "parentNode": "node-8b785f33-d508-4a23-93f1-8a745634a4a2",
           "data": {
-            "resourceId": "38716d1b-ae08-47d6-be2a-88e291b38ae0",
+            "resourceId": "8b840351-16fc-4224-b7fd-17d88c3f9756",
             "schemaId": "google_compute_firewall",
             "label": "ssh",
             "icon": "/icons/gcp_security_identity.svg",

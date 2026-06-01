@@ -8,15 +8,15 @@
   "settings": {
     "autosave": false
   },
-  "activeViewId": "view-315ebb97-0427-4b58-83a1-0f30e8253147",
+  "activeViewId": "view-59a9e8b4-d236-4bb4-8b8b-58e9cc2ae6c1",
   "views": [
     {
-      "id": "view-315ebb97-0427-4b58-83a1-0f30e8253147",
+      "id": "view-59a9e8b4-d236-4bb4-8b8b-58e9cc2ae6c1",
       "name": "View 1",
       "activeProvider": "aws",
       "resources": [
         {
-          "id": "e889a2cb-9b37-49bc-84c5-be03fe725ff8",
+          "id": "cc77d288-e3c6-4d0f-ae3f-6e530d373341",
           "kind": "resource",
           "type": "aws_s3_bucket",
           "name": "uploads",
@@ -36,7 +36,7 @@
           }
         },
         {
-          "id": "df3ea622-0be8-48e2-a51f-238b0c361b90",
+          "id": "f4e1a8f4-8512-4830-8ac6-e956c18557f5",
           "kind": "resource",
           "type": "aws_dynamodb_table",
           "name": "items",
@@ -58,7 +58,7 @@
           }
         },
         {
-          "id": "9bcc8874-d756-422f-a66f-22541b27a350",
+          "id": "464a288b-5e48-4a29-92fa-30d6af400eef",
           "kind": "resource",
           "type": "aws_iam_role",
           "name": "lambda_exec",
@@ -79,7 +79,7 @@
           }
         },
         {
-          "id": "dbbf5513-d9b7-40a7-afc2-9d27486dc5b4",
+          "id": "6c6e85ce-b274-49d7-a185-1581cbb0cc6c",
           "kind": "resource",
           "type": "aws_iam_role_policy_attachment",
           "name": "basic",
@@ -100,7 +100,7 @@
           }
         },
         {
-          "id": "8c629c8e-913e-400d-976c-499d20bce453",
+          "id": "3aea4931-6691-4240-a18d-fe98cb595acf",
           "kind": "resource",
           "type": "aws_lambda_function",
           "name": "processor",
@@ -124,7 +124,7 @@
           }
         },
         {
-          "id": "0fda27eb-3d03-465a-9e37-eefe4f8c81b7",
+          "id": "f2c922c6-8ec1-4657-aba2-7226de19c7c1",
           "kind": "resource",
           "type": "aws_lambda_permission",
           "name": "from_s3",
@@ -148,7 +148,7 @@
           }
         },
         {
-          "id": "f8d76333-02d6-4a52-9535-6cb792c418b9",
+          "id": "39dc621a-de0a-41b0-b773-06f781268c01",
           "kind": "resource",
           "type": "aws_s3_bucket_notification",
           "name": "uploads_notify",
@@ -170,7 +170,7 @@
       ],
       "nodes": [
         {
-          "id": "node-e889a2cb-9b37-49bc-84c5-be03fe725ff8",
+          "id": "node-cc77d288-e3c6-4d0f-ae3f-6e530d373341",
           "type": "terraformResource",
           "position": {
             "x": 0,
@@ -178,7 +178,7 @@
           },
           "zIndex": 10,
           "data": {
-            "resourceId": "e889a2cb-9b37-49bc-84c5-be03fe725ff8",
+            "resourceId": "cc77d288-e3c6-4d0f-ae3f-6e530d373341",
             "schemaId": "aws_s3_bucket",
             "label": "uploads",
             "icon": "/icons/Res_Amazon-Simple-Storage-Service_Bucket_48.svg",
@@ -189,7 +189,7 @@
           }
         },
         {
-          "id": "node-df3ea622-0be8-48e2-a51f-238b0c361b90",
+          "id": "node-f4e1a8f4-8512-4830-8ac6-e956c18557f5",
           "type": "terraformResource",
           "position": {
             "x": 256,
@@ -197,7 +197,7 @@
           },
           "zIndex": 10,
           "data": {
-            "resourceId": "df3ea622-0be8-48e2-a51f-238b0c361b90",
+            "resourceId": "f4e1a8f4-8512-4830-8ac6-e956c18557f5",
             "schemaId": "aws_dynamodb_table",
             "label": "items",
             "icon": "/icons/aws_dynamodb_table.svg",
@@ -208,7 +208,7 @@
           }
         },
         {
-          "id": "node-9bcc8874-d756-422f-a66f-22541b27a350",
+          "id": "node-464a288b-5e48-4a29-92fa-30d6af400eef",
           "type": "terraformResource",
           "position": {
             "x": 512,
@@ -216,7 +216,7 @@
           },
           "zIndex": 10,
           "data": {
-            "resourceId": "9bcc8874-d756-422f-a66f-22541b27a350",
+            "resourceId": "464a288b-5e48-4a29-92fa-30d6af400eef",
             "schemaId": "aws_iam_role",
             "label": "lambda_exec",
             "icon": "/icons/aws_iam_role.svg",
@@ -227,7 +227,7 @@
           }
         },
         {
-          "id": "node-dbbf5513-d9b7-40a7-afc2-9d27486dc5b4",
+          "id": "node-6c6e85ce-b274-49d7-a185-1581cbb0cc6c",
           "type": "terraformResource",
           "position": {
             "x": 768,
@@ -235,7 +235,7 @@
           },
           "zIndex": 10,
           "data": {
-            "resourceId": "dbbf5513-d9b7-40a7-afc2-9d27486dc5b4",
+            "resourceId": "6c6e85ce-b274-49d7-a185-1581cbb0cc6c",
             "schemaId": "aws_iam_role_policy_attachment",
             "label": "basic",
             "icon": "/icons/aws_iam_policy.svg",
@@ -246,7 +246,7 @@
           }
         },
         {
-          "id": "node-8c629c8e-913e-400d-976c-499d20bce453",
+          "id": "node-3aea4931-6691-4240-a18d-fe98cb595acf",
           "type": "terraformResource",
           "position": {
             "x": 1024,
@@ -254,7 +254,7 @@
           },
           "zIndex": 10,
           "data": {
-            "resourceId": "8c629c8e-913e-400d-976c-499d20bce453",
+            "resourceId": "3aea4931-6691-4240-a18d-fe98cb595acf",
             "schemaId": "aws_lambda_function",
             "label": "processor",
             "icon": "/icons/Res_AWS-Lambda_Lambda-Function_48.svg",
@@ -265,7 +265,7 @@
           }
         },
         {
-          "id": "node-0fda27eb-3d03-465a-9e37-eefe4f8c81b7",
+          "id": "node-f2c922c6-8ec1-4657-aba2-7226de19c7c1",
           "type": "terraformResource",
           "position": {
             "x": 1280,
@@ -273,7 +273,7 @@
           },
           "zIndex": 10,
           "data": {
-            "resourceId": "0fda27eb-3d03-465a-9e37-eefe4f8c81b7",
+            "resourceId": "f2c922c6-8ec1-4657-aba2-7226de19c7c1",
             "schemaId": "aws_lambda_permission",
             "label": "from_s3",
             "icon": "/icons/Res_AWS-Lambda_Lambda-Function_48.svg",
@@ -284,7 +284,7 @@
           }
         },
         {
-          "id": "node-f8d76333-02d6-4a52-9535-6cb792c418b9",
+          "id": "node-39dc621a-de0a-41b0-b773-06f781268c01",
           "type": "terraformResource",
           "position": {
             "x": 1536,
@@ -292,7 +292,7 @@
           },
           "zIndex": 10,
           "data": {
-            "resourceId": "f8d76333-02d6-4a52-9535-6cb792c418b9",
+            "resourceId": "39dc621a-de0a-41b0-b773-06f781268c01",
             "schemaId": "aws_s3_bucket_notification",
             "label": "uploads_notify",
             "icon": "/icons/Res_Amazon-Simple-Storage-Service_Bucket_48.svg",
