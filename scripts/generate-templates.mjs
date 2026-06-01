@@ -67,6 +67,49 @@ const ICONS = {
 const providerOf = (type) =>
   type.startsWith("aws_") ? "aws" : type.startsWith("google_") ? "gcp" : "other";
 
+// ───────────────────────── CONTAINER MODEL ─────────────────────────
+// Mirrors src/commands/createCanvasNode.ts so generated nodes match what the
+// app produces when a container/child is created interactively.
+const HIERARCHICAL_CONTAINER_TYPES = new Set([
+  "aws_subnet",
+  "aws_vpc",
+  "google_compute_network",
+  "google_compute_subnetwork",
+]);
+const ZONE_CONTAINER_TYPES = new Set([
+  "aws_security_group",
+]);
+const isHierarchicalContainer = (type) => HIERARCHICAL_CONTAINER_TYPES.has(type);
+const isZoneContainer = (type) => ZONE_CONTAINER_TYPES.has(type);
+const isContainerType = (type) => isHierarchicalContainer(type) || isZoneContainer(type);
+
+const CONTAINER_SIZE = { width: 340, height: 230 };
+const RESOURCE_SIZE = { width: 176, height: 84 };
+
+// Layout constants for nesting children inside containers.
+const PAD_X = 20;            // left/right padding inside a container
+const HEADER_SPACE = 58;     // top space reserved for the container header
+const PAD_BOTTOM = 20;       // bottom padding inside a container
+const CHILD_GAP_X = 24;      // horizontal gap between sibling children
+const CHILD_GAP_Y = 24;      // vertical gap between sibling rows
+const ROOT_GAP_X = 80;       // gap between top-level columns
+const ROOT_GAP_Y = 80;       // gap between top-level rows
+
+// Finds the resources referenced by an entry's attribute values, e.g. a value
+// like "aws_vpc.main.id" or "[aws_security_group.ssh.id]" references aws_vpc.main.
+const collectReferencedKeys = (attrs) => {
+  const keys = new Set();
+  const re = /\b((?:aws|google)_[a-z0-9_]+)\.([a-z0-9_]+)\b/gi;
+  for (const value of Object.values(attrs ?? {})) {
+    if (typeof value !== "string") continue;
+    let match;
+    while ((match = re.exec(value)) !== null) {
+      keys.add(`${match[1]}.${match[2]}`);
+    }
+  }
+  return keys;
+};
+
 const readTemplate = (type) => {
   const p = resolve(schemasDir, providerOf(type), "templates/resources", `${type}.tf.tpl`);
   if (!existsSync(p)) throw new Error(`Missing template for ${type}: ${p}`);
@@ -93,35 +136,253 @@ const buildResource = (entry) => {
   };
 };
 
-const buildNode = (resource) => ({
-  id: `node-${resource.id}`,
-  type: "terraformResource",
-  position: { x: resource.ui.x, y: resource.ui.y },
-  data: {
-    resourceId: resource.id,
-    schemaId: resource.schemaId,
-    label: resource.name,
-    icon: resource.ui.icon,
-    terraformType: resource.type,
-    terraformKind: "resource",
-    isContainer: false,
-  },
-});
+// Builds the canvas nodes for a view, deriving container nesting and zone
+// memberships from the attribute references between resources.
+//
+// - Hierarchical containers (VPC/subnet, network/subnetwork) become real
+//   containers; resources that reference them are nested inside (relative
+//   position + parentNode + extent:"parent"), sized to fit their children.
+// - Zone containers (security groups) are positioned to geometrically span the
+//   bounding box of the resources that reference them, so the app's geometric
+//   zone-membership recompute keeps them as members. zoneContainerIds is also
+//   pre-populated to match.
+const buildNodes = (resources, entryByResourceId) => {
+  const byKey = new Map(resources.map((r) => [`${r.type}.${r.name}`, r]));
+  const refsByResourceId = new Map(
+    resources.map((r) => [r.id, collectReferencedKeys(entryByResourceId.get(r.id).attrs)]),
+  );
 
-const buildView = (id, provider, entries) => {
+  // Resolve each resource's innermost hierarchical-container parent. A subnet
+  // referencing a VPC nests in that VPC; an instance referencing a subnet nests
+  // in that subnet (preferred over the VPC it may also reference).
+  const parentOf = new Map(); // resourceId -> parent resourceId
+  for (const resource of resources) {
+    if (isZoneContainer(resource.type)) continue; // zones are never nested
+    const refs = refsByResourceId.get(resource.id);
+    let subnetParent;
+    let networkParent;
+    for (const refKey of refs) {
+      const target = byKey.get(refKey);
+      if (!target || target.id === resource.id) continue;
+      if (target.type === "aws_subnet" || target.type === "google_compute_subnetwork") {
+        subnetParent = target;
+      } else if (target.type === "aws_vpc" || target.type === "google_compute_network") {
+        networkParent = target;
+      }
+    }
+    const parent = subnetParent ?? networkParent;
+    if (parent && parent.id !== resource.id) parentOf.set(resource.id, parent.id);
+  }
+
+  const childrenOf = new Map(); // parent resourceId -> child resources[]
+  for (const resource of resources) {
+    const parentId = parentOf.get(resource.id);
+    if (!parentId) continue;
+    if (!childrenOf.has(parentId)) childrenOf.set(parentId, []);
+    childrenOf.get(parentId).push(resource);
+  }
+
+  // Recursively lay out a subtree and return its rendered size. Children are
+  // arranged in a grid; container size grows to fit them.
+  const sizeOf = new Map();   // resourceId -> { width, height }
+  const relPos = new Map();   // resourceId -> { x, y } relative to its parent (or absolute if root)
+
+  const layout = (resource) => {
+    const children = childrenOf.get(resource.id) ?? [];
+    if (children.length === 0 || !isHierarchicalContainer(resource.type)) {
+      const size = isContainerType(resource.type) ? { ...CONTAINER_SIZE } : { ...RESOURCE_SIZE };
+      sizeOf.set(resource.id, size);
+      return size;
+    }
+
+    const childSizes = children.map((child) => ({ child, size: layout(child) }));
+    const columns = Math.min(children.length, 3);
+    let cursorX = PAD_X;
+    let cursorY = HEADER_SPACE;
+    let rowHeight = 0;
+    let maxRight = PAD_X;
+    let col = 0;
+
+    for (const { child, size } of childSizes) {
+      relPos.set(child.id, { x: cursorX, y: cursorY });
+      maxRight = Math.max(maxRight, cursorX + size.width);
+      rowHeight = Math.max(rowHeight, size.height);
+      col += 1;
+      if (col >= columns) {
+        col = 0;
+        cursorX = PAD_X;
+        cursorY += rowHeight + CHILD_GAP_Y;
+        rowHeight = 0;
+      } else {
+        cursorX += size.width + CHILD_GAP_X;
+      }
+    }
+
+    const lastRowHeight = col === 0 ? 0 : rowHeight + CHILD_GAP_Y;
+    const contentBottom = cursorY + lastRowHeight;
+    const size = {
+      width: Math.max(CONTAINER_SIZE.width, maxRight + PAD_X),
+      height: Math.max(CONTAINER_SIZE.height, contentBottom + PAD_BOTTOM),
+    };
+    sizeOf.set(resource.id, size);
+    return size;
+  };
+
+  // Top-level subtree roots: resources without a hierarchical parent that are
+  // not zone containers (those are placed separately, overlapping their members).
+  const roots = resources.filter(
+    (r) => !parentOf.has(r.id) && !isZoneContainer(r.type),
+  );
+  roots.forEach(layout);
+
+  // Place top-level roots in a row, accumulating absolute positions.
+  let rootX = 0;
+  const rootY = 0;
+  let rowBottom = 0;
+  for (const root of roots) {
+    relPos.set(root.id, { x: rootX, y: rootY });
+    const size = sizeOf.get(root.id);
+    rootX += size.width + ROOT_GAP_X;
+    rowBottom = Math.max(rowBottom, rootY + size.height);
+  }
+
+  // Compute absolute positions for every nested resource (needed to size/place
+  // zone containers and to populate zoneContainerIds geometrically).
+  const absPos = new Map();
+  const computeAbs = (resource, parentAbs) => {
+    const rel = relPos.get(resource.id) ?? { x: 0, y: 0 };
+    const abs = { x: parentAbs.x + rel.x, y: parentAbs.y + rel.y };
+    absPos.set(resource.id, abs);
+    for (const child of childrenOf.get(resource.id) ?? []) {
+      computeAbs(child, abs);
+    }
+  };
+  for (const root of roots) computeAbs(root, { x: 0, y: 0 });
+
+  // Zone containers (security groups): span the bounding box of their members
+  // (resources that reference them), with padding, placed below the hierarchy.
+  const zoneContainers = resources.filter((r) => isZoneContainer(r.type));
+  const zoneMembersOf = new Map(); // zone resourceId -> member resourceIds[]
+  for (const zone of zoneContainers) {
+    const members = resources.filter((r) => {
+      if (r.id === zone.id || isContainerType(r.type)) return false;
+      return refsByResourceId.get(r.id).has(`${zone.type}.${zone.name}`);
+    });
+    zoneMembersOf.set(zone.id, members.map((m) => m.id));
+
+    if (members.length === 0) {
+      const size = { ...CONTAINER_SIZE };
+      sizeOf.set(zone.id, size);
+      absPos.set(zone.id, { x: 0, y: rowBottom + ROOT_GAP_Y });
+      continue;
+    }
+
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const member of members) {
+      const pos = absPos.get(member.id);
+      const size = sizeOf.get(member.id);
+      minX = Math.min(minX, pos.x);
+      minY = Math.min(minY, pos.y);
+      maxX = Math.max(maxX, pos.x + size.width);
+      maxY = Math.max(maxY, pos.y + size.height);
+    }
+    const size = {
+      width: Math.max(CONTAINER_SIZE.width, maxX - minX + PAD_X * 2),
+      height: Math.max(CONTAINER_SIZE.height, maxY - minY + HEADER_SPACE + PAD_BOTTOM),
+    };
+    sizeOf.set(zone.id, size);
+    absPos.set(zone.id, { x: minX - PAD_X, y: minY - HEADER_SPACE });
+  }
+
+  // Geometric zone membership: a member belongs to a zone if its center sits
+  // inside the zone's rect (matches applyZoneContainerMemberships in the app).
+  const centerInside = (memberId, zoneId) => {
+    const p = absPos.get(memberId);
+    const s = sizeOf.get(memberId);
+    const zp = absPos.get(zoneId);
+    const zs = sizeOf.get(zoneId);
+    const cx = p.x + s.width / 2;
+    const cy = p.y + s.height / 2;
+    return cx >= zp.x && cx <= zp.x + zs.width && cy >= zp.y && cy <= zp.y + zs.height;
+  };
+
+  const zoneIdsByResourceId = new Map(); // resourceId -> zone node ids[]
+  for (const resource of resources) {
+    if (isContainerType(resource.type)) continue;
+    const zoneIds = zoneContainers
+      .filter((zone) => (zoneMembersOf.get(zone.id) ?? []).includes(resource.id))
+      .filter((zone) => centerInside(resource.id, zone.id))
+      .map((zone) => `node-${zone.id}`);
+    if (zoneIds.length) zoneIdsByResourceId.set(resource.id, zoneIds);
+  }
+
+  // React Flow requires a parent node to appear before its children, so order
+  // resources by their depth in the hierarchy (containers first).
+  const depthOf = (resourceId) => {
+    let depth = 0;
+    let current = parentOf.get(resourceId);
+    while (current) {
+      depth += 1;
+      current = parentOf.get(current);
+    }
+    return depth;
+  };
+  const orderedResources = [...resources].sort((a, b) => depthOf(a.id) - depthOf(b.id));
+
+  // Emit the React Flow nodes.
+  return orderedResources.map((resource) => {
+    const container = isContainerType(resource.type);
+    const zoneContainer = isZoneContainer(resource.type);
+    const parentId = parentOf.get(resource.id);
+    const position = parentId ? relPos.get(resource.id) : absPos.get(resource.id);
+    const node = {
+      id: `node-${resource.id}`,
+      type: "terraformResource",
+      position: { x: Math.round(position.x), y: Math.round(position.y) },
+      ...(container
+        ? { style: { width: Math.round(sizeOf.get(resource.id).width), height: Math.round(sizeOf.get(resource.id).height) }, dragHandle: ".container-drag-handle", zIndex: 0 }
+        : { zIndex: 10 }),
+      // Nested nodes carry a parent + parent-relative position. We omit
+      // extent:"parent" to match the app, which manages child bounds itself.
+      ...(parentId ? { parentNode: `node-${parentId}` } : {}),
+      data: {
+        resourceId: resource.id,
+        schemaId: resource.schemaId,
+        label: resource.name,
+        icon: resource.ui.icon,
+        terraformType: resource.type,
+        terraformKind: "resource",
+        isContainer: container,
+        ...(container ? { containerKind: zoneContainer ? "zone" : "hierarchical" } : {}),
+        zoneContainerIds: zoneContainer ? [] : (zoneIdsByResourceId.get(resource.id) ?? []),
+      },
+    };
+    return node;
+  });
+};
+
+const buildView = (id, provider, entries, codeFiles) => {
   const resources = entries.map(buildResource);
+  const entryByResourceId = new Map(resources.map((r, i) => [r.id, entries[i]]));
+  // Containers must render under their children: parents before descendants.
+  const nodes = buildNodes(resources, entryByResourceId);
   return {
     id,
     name: "View 1",
     activeProvider: provider,
     resources,
-    nodes: resources.map(buildNode),
+    nodes,
     edges: [],
-    codeFiles: [],
+    // Auxiliary view files (output.tf, user_data.sh, …) alongside main.tf.
+    codeFiles: (codeFiles ?? []).map((file) => ({
+      id: randomUUID(),
+      name: file.name,
+      content: file.content,
+    })),
   };
 };
 
-const buildProject = (templateName, provider, entries) => {
+const buildProject = (templateName, provider, entries, codeFiles) => {
   const now = "2026-01-01T00:00:00.000Z";
   const viewId = `view-${randomUUID()}`;
   return {
@@ -129,11 +390,11 @@ const buildProject = (templateName, provider, entries) => {
     meta: { name: templateName, createdAt: now, updatedAt: now },
     settings: { autosave: false },
     activeViewId: viewId,
-    views: [buildView(viewId, provider, entries)],
+    views: [buildView(viewId, provider, entries, codeFiles)],
   };
 };
 
-const writeTemplate = ({ provider, id, name, description, tags, entries }) => {
+const writeTemplate = ({ provider, id, name, description, tags, entries, codeFiles }) => {
   const dir = resolve(templatesDir, provider, id);
   mkdirSync(dir, { recursive: true });
 
@@ -148,7 +409,7 @@ const writeTemplate = ({ provider, id, name, description, tags, entries }) => {
   };
   writeFileSync(resolve(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 
-  const project = buildProject(name, provider, entries);
+  const project = buildProject(name, provider, entries, codeFiles);
   writeFileSync(resolve(dir, "project.lura"), JSON.stringify(project, null, 2) + "\n");
   return manifest;
 };
@@ -159,6 +420,19 @@ const COL = 280;
 const ROW = 200;
 
 // ============== AWS ==============
+
+// Ingress: HTTP (80) for the nginx welcome page + SSH (22); egress: all.
+// Passed as arrays of objects so the HCL emitter renders one `ingress {}` /
+// `egress {}` block per rule (inline blocks let optional fields be omitted,
+// unlike the typed `ingress = [...]` attribute which requires every field).
+const WEB_SG_INGRESS = [
+  { description: "HTTP", from_port: 80, to_port: 80, protocol: "tcp", cidr_blocks: '["0.0.0.0/0"]' },
+  { description: "SSH", from_port: 22, to_port: 22, protocol: "tcp", cidr_blocks: '["0.0.0.0/0"]' },
+];
+const SG_EGRESS_ALL = [
+  // protocol -1 (number) → emitter renders it as the string "-1" (all protocols).
+  { description: "All outbound", from_port: 0, to_port: 0, protocol: -1, cidr_blocks: '["0.0.0.0/0"]' },
+];
 
 const AWS_BASIC = [
   { type: "aws_vpc", name: "main",
@@ -177,15 +451,77 @@ const AWS_BASIC = [
   { type: "aws_route_table_association", name: "public_a",
     attrs: { subnet_id: "aws_subnet.public_a.id", route_table_id: "aws_route_table.public.id" },
     x: COL, y: ROW },
-  { type: "aws_security_group", name: "ssh",
-    attrs: { name: "lurastack-basic-ssh", vpc_id: "aws_vpc.main.id" },
+  { type: "aws_security_group", name: "web",
+    attrs: { name: "lurastack-basic-web", vpc_id: "aws_vpc.main.id",
+             description: "Allow HTTP (80) and SSH (22)",
+             ingress: WEB_SG_INGRESS, egress: SG_EGRESS_ALL,
+             tags: '{ Name = "lurastack-basic-web" }' },
     x: 2 * COL, y: ROW },
   { type: "aws_instance", name: "app",
     attrs: { ami: "ami-0c02fb55956c7d316", instance_type: "t3.micro",
              subnet_id: "aws_subnet.public_a.id",
-             vpc_security_group_ids: '[aws_security_group.ssh.id]',
-             tags: '{ Name = "lurastack-basic-vm" }' },
+             vpc_security_group_ids: '[aws_security_group.web.id]',
+             user_data: 'file("${path.module}/user_data.sh")',
+             tags: '{ Name = "lurastack-basic-web" }' },
     x: COL, y: 2 * ROW },
+];
+
+// nginx bootstrap (Amazon Linux 2): installs nginx, serves a welcome page on :80.
+const AWS_BASIC_USER_DATA = `#!/bin/bash
+set -euo pipefail
+
+# Install and start nginx (Amazon Linux 2)
+amazon-linux-extras enable nginx1
+yum clean metadata
+yum install -y nginx
+
+cat > /usr/share/nginx/html/index.html <<'HTML'
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>LuraStack — nginx</title>
+    <style>
+      body { font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }
+      .card { text-align: center; padding: 2rem 3rem; border: 1px solid #334155; border-radius: 12px; background: #1e293b; }
+      h1 { margin: 0 0 .5rem; }
+      code { color: #38bdf8; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>It works 🎉</h1>
+      <p>nginx is running on this EC2 instance, served on <code>port 80</code>.</p>
+      <p>Provisioned with <strong>LuraStack</strong>.</p>
+    </div>
+  </body>
+</html>
+HTML
+
+systemctl enable nginx
+systemctl restart nginx
+`;
+
+// Outputs the public IP and the served port (see output.tf in the view).
+const AWS_BASIC_OUTPUTS = `output "instance_public_ip" {
+  description = "Public IP of the nginx EC2 instance"
+  value       = aws_instance.app.public_ip
+}
+
+output "instance_port" {
+  description = "Port nginx is served on"
+  value       = 80
+}
+
+output "url" {
+  description = "Open this URL in a browser to see the nginx welcome page"
+  value       = "http://\${aws_instance.app.public_ip}:80"
+}
+`;
+
+const AWS_BASIC_CODE_FILES = [
+  { name: "user_data.sh", content: AWS_BASIC_USER_DATA },
+  { name: "output.tf", content: AWS_BASIC_OUTPUTS },
 ];
 
 const AWS_WEB = [
@@ -372,9 +708,10 @@ const GCP_DATA = [
 
 const TEMPLATES = [
   { provider: "aws", id: "basic-vpc-vm",
-    name: "AWS — Basic VPC + EC2",
-    description: "VPC con subnet pública, un EC2 y security group.",
-    tags: ["starter", "networking", "compute"], entries: AWS_BASIC },
+    name: "AWS — Basic VPC + EC2 (nginx)",
+    description: "VPC con subnet pública y un EC2 con nginx en el puerto 80; output con IP y puerto.",
+    tags: ["starter", "networking", "compute", "nginx"],
+    entries: AWS_BASIC, codeFiles: AWS_BASIC_CODE_FILES },
   { provider: "aws", id: "web-classic-lb",
     name: "AWS — Classic web (ALB + ASG + RDS)",
     description: "ALB + Auto Scaling Group sobre subnets privadas + Aurora.",

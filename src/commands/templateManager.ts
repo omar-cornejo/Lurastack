@@ -88,9 +88,26 @@ export async function createProjectFromTemplate(
   const projectRoot = absolutePath.substring(0, absolutePath.lastIndexOf("/"));
   for (const view of project.views) {
     await writeViewMainTf(projectRoot, view);
+    await writeViewCodeFiles(projectRoot, view);
   }
 
   return absolutePath;
+}
+
+/**
+ * Writes a view's auxiliary code files (output.tf, user_data.sh, …) to disk
+ * next to main.tf. The CodePanel explorer lists files from the view directory,
+ * so these must exist on disk for the template to load with them.
+ */
+async function writeViewCodeFiles(projectRoot: string, view: ViewSnapshot): Promise<void> {
+  if (!view.codeFiles || view.codeFiles.length === 0) return;
+  const viewDir = getViewDir(projectRoot, view.name);
+  await mkdir(viewDir, { recursive: true });
+  for (const file of view.codeFiles) {
+    const safeName = file.name.split(/[\\/]/).pop();
+    if (!safeName) continue;
+    await writeTextFile(`${viewDir}/${safeName}`, file.content);
+  }
 }
 
 async function writeViewMainTf(projectRoot: string, view: ViewSnapshot): Promise<void> {

@@ -2,15 +2,52 @@
   "version": "1",
   "templates": [
     {
+      "id": "aws/empty-aws",
+      "name": "AWS — Empty project",
+      "description": "Proyecto en blanco con un view inicial preparado para AWS.",
+      "provider": "aws",
+      "resourceCount": 0,
+      "tags": [
+        "starter",
+        "blank"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
+      "id": "azure/empty-azure",
+      "name": "Azure — Empty project",
+      "description": "Proyecto en blanco con un view inicial preparado para Azure.",
+      "provider": "azure",
+      "resourceCount": 0,
+      "tags": [
+        "starter",
+        "blank"
+      ],
+      "icon": "mdi:microsoft-azure"
+    },
+    {
+      "id": "gcp/empty-gcp",
+      "name": "GCP — Empty project",
+      "description": "Proyecto en blanco con un view inicial preparado para GCP.",
+      "provider": "gcp",
+      "resourceCount": 0,
+      "tags": [
+        "starter",
+        "blank"
+      ],
+      "icon": "mdi:google-cloud"
+    },
+    {
       "id": "aws/basic-vpc-vm",
-      "name": "AWS — Basic VPC + EC2",
-      "description": "VPC con subnet pública, un EC2 y security group.",
+      "name": "AWS — Basic VPC + EC2 (nginx)",
+      "description": "VPC con subnet pública y un EC2 con nginx en el puerto 80; output con IP y puerto.",
       "provider": "aws",
       "resourceCount": 7,
       "tags": [
         "starter",
         "networking",
-        "compute"
+        "compute",
+        "nginx"
       ],
       "icon": "mdi:aws"
     },
@@ -28,30 +65,6 @@
       "icon": "mdi:aws"
     },
     {
-      "id": "aws/data-pipeline-sqs-lambda",
-      "name": "AWS — Data pipeline (SQS + Lambda + DynamoDB)",
-      "description": "Cola SQS consumida por Lambda hacia DynamoDB+S3.",
-      "provider": "aws",
-      "resourceCount": 7,
-      "tags": [
-        "data",
-        "queue"
-      ],
-      "icon": "mdi:aws"
-    },
-    {
-      "id": "aws/empty-aws",
-      "name": "AWS — Empty project",
-      "description": "Proyecto en blanco con un view inicial preparado para AWS.",
-      "provider": "aws",
-      "resourceCount": 0,
-      "tags": [
-        "starter",
-        "blank"
-      ],
-      "icon": "mdi:aws"
-    },
-    {
       "id": "aws/serverless-lambda-s3-dynamo",
       "name": "AWS — Serverless (Lambda + S3 + DynamoDB)",
       "description": "S3 dispara Lambda que escribe en DynamoDB.",
@@ -64,16 +77,16 @@
       "icon": "mdi:aws"
     },
     {
-      "id": "azure/empty-azure",
-      "name": "Azure — Empty project",
-      "description": "Proyecto en blanco con un view inicial preparado para Azure.",
-      "provider": "azure",
-      "resourceCount": 0,
+      "id": "aws/data-pipeline-sqs-lambda",
+      "name": "AWS — Data pipeline (SQS + Lambda + DynamoDB)",
+      "description": "Cola SQS consumida por Lambda hacia DynamoDB+S3.",
+      "provider": "aws",
+      "resourceCount": 7,
       "tags": [
-        "starter",
-        "blank"
+        "data",
+        "queue"
       ],
-      "icon": "mdi:microsoft-azure"
+      "icon": "mdi:aws"
     },
     {
       "id": "gcp/basic-network-vm",
@@ -102,30 +115,6 @@
       "icon": "mdi:google-cloud"
     },
     {
-      "id": "gcp/data-pipeline-pubsub-bq",
-      "name": "GCP — Data pipeline (Pub/Sub + Functions + BigQuery)",
-      "description": "Tema Pub/Sub procesado por Function hacia BigQuery.",
-      "provider": "gcp",
-      "resourceCount": 8,
-      "tags": [
-        "data",
-        "pubsub"
-      ],
-      "icon": "mdi:google-cloud"
-    },
-    {
-      "id": "gcp/empty-gcp",
-      "name": "GCP — Empty project",
-      "description": "Proyecto en blanco con un view inicial preparado para GCP.",
-      "provider": "gcp",
-      "resourceCount": 0,
-      "tags": [
-        "starter",
-        "blank"
-      ],
-      "icon": "mdi:google-cloud"
-    },
-    {
       "id": "gcp/serverless-functions-storage-bq",
       "name": "GCP — Serverless (Functions + Storage + BigQuery)",
       "description": "Cloud Function gatillada por Storage, datos a BigQuery.",
@@ -134,6 +123,18 @@
       "tags": [
         "serverless",
         "event-driven"
+      ],
+      "icon": "mdi:google-cloud"
+    },
+    {
+      "id": "gcp/data-pipeline-pubsub-bq",
+      "name": "GCP — Data pipeline (Pub/Sub + Functions + BigQuery)",
+      "description": "Tema Pub/Sub procesado por Function hacia BigQuery.",
+      "provider": "gcp",
+      "resourceCount": 8,
+      "tags": [
+        "data",
+        "pubsub"
       ],
       "icon": "mdi:google-cloud"
     }

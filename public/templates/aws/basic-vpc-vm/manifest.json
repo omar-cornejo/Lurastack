@@ -1,13 +1,14 @@
 {
   "id": "aws/basic-vpc-vm",
-  "name": "AWS — Basic VPC + EC2",
-  "description": "VPC con subnet pública, un EC2 y security group.",
+  "name": "AWS — Basic VPC + EC2 (nginx)",
+  "description": "VPC con subnet pública y un EC2 con nginx en el puerto 80; output con IP y puerto.",
   "provider": "aws",
   "resourceCount": 7,
   "tags": [
     "starter",
     "networking",
-    "compute"
+    "compute",
+    "nginx"
   ],
   "icon": "mdi:aws"
 }

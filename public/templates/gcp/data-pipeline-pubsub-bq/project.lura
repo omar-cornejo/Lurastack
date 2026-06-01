@@ -8,15 +8,15 @@
   "settings": {
     "autosave": false
   },
-  "activeViewId": "view-724f6e10-6c29-4734-819f-89a0ce1a4225",
+  "activeViewId": "view-45ecd9da-b3c2-4915-8eab-dac5b3aabcd9",
   "views": [
     {
-      "id": "view-724f6e10-6c29-4734-819f-89a0ce1a4225",
+      "id": "view-45ecd9da-b3c2-4915-8eab-dac5b3aabcd9",
       "name": "View 1",
       "activeProvider": "gcp",
       "resources": [
         {
-          "id": "0725f9cf-ee3d-4667-9eeb-69d8c40d506e",
+          "id": "1b2b4823-162d-4c65-92b6-c09b4d59cfb0",
           "kind": "resource",
           "type": "google_pubsub_topic",
           "name": "ingest",
@@ -32,11 +32,11 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/gcp/gcp_integration.svg"
+            "icon": "/icons/gcp_integration.svg"
           }
         },
         {
-          "id": "9e1d06e6-718e-40df-a57f-c4233a7fece9",
+          "id": "852f66ff-fd51-457e-8361-6c365af08748",
           "kind": "resource",
           "type": "google_storage_bucket",
           "name": "raw",
@@ -53,11 +53,11 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/gcp/gcp_cloud_storage.svg"
+            "icon": "/icons/gcp_cloud_storage.svg"
           }
         },
         {
-          "id": "6e34dcfe-7f23-4afc-a888-89f786cfabf3",
+          "id": "f7b4e041-35ca-41df-b6e9-ae75732936ef",
           "kind": "resource",
           "type": "google_storage_bucket",
           "name": "source",
@@ -74,11 +74,11 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/gcp/gcp_cloud_storage.svg"
+            "icon": "/icons/gcp_cloud_storage.svg"
           }
         },
         {
-          "id": "316a2220-fa30-4260-9608-5e44b246cf9e",
+          "id": "bf2ece79-10f7-451b-b1d1-726b56be52de",
           "kind": "resource",
           "type": "google_bigquery_dataset",
           "name": "warehouse",
@@ -95,11 +95,11 @@
           "ui": {
             "x": 840,
             "y": 0,
-            "icon": "/icons/gcp/gcp_bigquery.svg"
+            "icon": "/icons/gcp_bigquery.svg"
           }
         },
         {
-          "id": "5a045269-a7e1-43d5-ada4-4f92c01658e0",
+          "id": "930c689b-3c25-4317-96f1-f430d498ed8d",
           "kind": "resource",
           "type": "google_bigquery_table",
           "name": "events",
@@ -117,11 +117,11 @@
           "ui": {
             "x": 0,
             "y": 200,
-            "icon": "/icons/gcp/gcp_bigquery.svg"
+            "icon": "/icons/gcp_bigquery.svg"
           }
         },
         {
-          "id": "b1d0ecf4-2710-44f5-aa59-85ea49457807",
+          "id": "72b2111c-a461-433b-9409-a905c23e5378",
           "kind": "resource",
           "type": "google_service_account",
           "name": "fn",
@@ -138,11 +138,11 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/gcp/gcp_security_identity.svg"
+            "icon": "/icons/gcp_security_identity.svg"
           }
         },
         {
-          "id": "d9550509-9df7-410f-8f3b-8e3477b08f03",
+          "id": "f63961b2-2c36-42f1-9ba5-8057a62b0af0",
           "kind": "resource",
           "type": "google_cloudfunctions2_function",
           "name": "worker",
@@ -159,11 +159,11 @@
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/gcp/gcp_serverless.svg"
+            "icon": "/icons/gcp_serverless.svg"
           }
         },
         {
-          "id": "d7999e28-145d-4621-a09d-1de4ec236ff9",
+          "id": "dbb3a318-9b7e-4f50-a7a0-093918de0137",
           "kind": "resource",
           "type": "google_pubsub_subscription",
           "name": "audit",
@@ -180,145 +180,161 @@
           "ui": {
             "x": 840,
             "y": 200,
-            "icon": "/icons/gcp/gcp_integration.svg"
+            "icon": "/icons/gcp_integration.svg"
           }
         }
       ],
       "nodes": [
         {
-          "id": "node-0725f9cf-ee3d-4667-9eeb-69d8c40d506e",
+          "id": "node-1b2b4823-162d-4c65-92b6-c09b4d59cfb0",
           "type": "terraformResource",
           "position": {
             "x": 0,
             "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "0725f9cf-ee3d-4667-9eeb-69d8c40d506e",
+            "resourceId": "1b2b4823-162d-4c65-92b6-c09b4d59cfb0",
             "schemaId": "google_pubsub_topic",
             "label": "ingest",
-            "icon": "/icons/gcp/gcp_integration.svg",
+            "icon": "/icons/gcp_integration.svg",
             "terraformType": "google_pubsub_topic",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-9e1d06e6-718e-40df-a57f-c4233a7fece9",
+          "id": "node-852f66ff-fd51-457e-8361-6c365af08748",
           "type": "terraformResource",
           "position": {
-            "x": 280,
+            "x": 256,
             "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "9e1d06e6-718e-40df-a57f-c4233a7fece9",
+            "resourceId": "852f66ff-fd51-457e-8361-6c365af08748",
             "schemaId": "google_storage_bucket",
             "label": "raw",
-            "icon": "/icons/gcp/gcp_cloud_storage.svg",
+            "icon": "/icons/gcp_cloud_storage.svg",
             "terraformType": "google_storage_bucket",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-6e34dcfe-7f23-4afc-a888-89f786cfabf3",
+          "id": "node-f7b4e041-35ca-41df-b6e9-ae75732936ef",
           "type": "terraformResource",
           "position": {
-            "x": 560,
+            "x": 512,
             "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "6e34dcfe-7f23-4afc-a888-89f786cfabf3",
+            "resourceId": "f7b4e041-35ca-41df-b6e9-ae75732936ef",
             "schemaId": "google_storage_bucket",
             "label": "source",
-            "icon": "/icons/gcp/gcp_cloud_storage.svg",
+            "icon": "/icons/gcp_cloud_storage.svg",
             "terraformType": "google_storage_bucket",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-316a2220-fa30-4260-9608-5e44b246cf9e",
+          "id": "node-bf2ece79-10f7-451b-b1d1-726b56be52de",
           "type": "terraformResource",
           "position": {
-            "x": 840,
+            "x": 768,
             "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "316a2220-fa30-4260-9608-5e44b246cf9e",
+            "resourceId": "bf2ece79-10f7-451b-b1d1-726b56be52de",
             "schemaId": "google_bigquery_dataset",
             "label": "warehouse",
-            "icon": "/icons/gcp/gcp_bigquery.svg",
+            "icon": "/icons/gcp_bigquery.svg",
             "terraformType": "google_bigquery_dataset",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-5a045269-a7e1-43d5-ada4-4f92c01658e0",
+          "id": "node-930c689b-3c25-4317-96f1-f430d498ed8d",
           "type": "terraformResource",
           "position": {
-            "x": 0,
-            "y": 200
+            "x": 1024,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "5a045269-a7e1-43d5-ada4-4f92c01658e0",
+            "resourceId": "930c689b-3c25-4317-96f1-f430d498ed8d",
             "schemaId": "google_bigquery_table",
             "label": "events",
-            "icon": "/icons/gcp/gcp_bigquery.svg",
+            "icon": "/icons/gcp_bigquery.svg",
             "terraformType": "google_bigquery_table",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-b1d0ecf4-2710-44f5-aa59-85ea49457807",
+          "id": "node-72b2111c-a461-433b-9409-a905c23e5378",
           "type": "terraformResource",
           "position": {
-            "x": 280,
-            "y": 200
+            "x": 1280,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "b1d0ecf4-2710-44f5-aa59-85ea49457807",
+            "resourceId": "72b2111c-a461-433b-9409-a905c23e5378",
             "schemaId": "google_service_account",
             "label": "fn",
-            "icon": "/icons/gcp/gcp_security_identity.svg",
+            "icon": "/icons/gcp_security_identity.svg",
             "terraformType": "google_service_account",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-d9550509-9df7-410f-8f3b-8e3477b08f03",
+          "id": "node-f63961b2-2c36-42f1-9ba5-8057a62b0af0",
           "type": "terraformResource",
           "position": {
-            "x": 560,
-            "y": 200
+            "x": 1536,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "d9550509-9df7-410f-8f3b-8e3477b08f03",
+            "resourceId": "f63961b2-2c36-42f1-9ba5-8057a62b0af0",
             "schemaId": "google_cloudfunctions2_function",
             "label": "worker",
-            "icon": "/icons/gcp/gcp_serverless.svg",
+            "icon": "/icons/gcp_serverless.svg",
             "terraformType": "google_cloudfunctions2_function",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-d7999e28-145d-4621-a09d-1de4ec236ff9",
+          "id": "node-dbb3a318-9b7e-4f50-a7a0-093918de0137",
           "type": "terraformResource",
           "position": {
-            "x": 840,
-            "y": 200
+            "x": 1792,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "d7999e28-145d-4621-a09d-1de4ec236ff9",
+            "resourceId": "dbb3a318-9b7e-4f50-a7a0-093918de0137",
             "schemaId": "google_pubsub_subscription",
             "label": "audit",
-            "icon": "/icons/gcp/gcp_integration.svg",
+            "icon": "/icons/gcp_integration.svg",
             "terraformType": "google_pubsub_subscription",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         }
       ],

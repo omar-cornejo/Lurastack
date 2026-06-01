@@ -11,8 +11,26 @@ type HclBlockNode = {
   blocks: Record<string, HclBlockNode>;
 };
 
-const TERRAFORM_REF_PATTERN =
-  /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+// A dotted expression like `aws_vpc.main.id` is only a Terraform reference if
+// its first segment names a resource type or a known top-level scope. This
+// avoids treating plain strings such as `s3.amazonaws.com` (a domain, not a ref)
+// as bare references — those must stay quoted.
+const TERRAFORM_REF_SHAPE = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+$/;
+const TERRAFORM_REF_SCOPES = new Set(["data", "var", "local", "module", "each", "self", "count"]);
+const isTerraformReference = (value: string): boolean => {
+  if (!TERRAFORM_REF_SHAPE.test(value)) return false;
+  const head = value.split(".")[0];
+  // Resource types (aws_*, google_*, …) always contain an underscore; other
+  // genuine references start with a known scope keyword.
+  return head.includes("_") || TERRAFORM_REF_SCOPES.has(head);
+};
+
+// HCL expressions that must be emitted verbatim (not quoted as a string):
+//  - function calls like `file(...)`, `jsonencode({...})`, `templatefile(...)`
+//  - interpolations like `"${path.module}/x"` (already quoted) or bare `${...}`
+const HCL_FUNCTION_CALL_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*\s*\([\s\S]*\)$/;
+const isRawHclExpression = (value: string): boolean =>
+  HCL_FUNCTION_CALL_PATTERN.test(value) || value.includes("${");
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -60,7 +78,8 @@ const toHclLiteral = (value: unknown): string => {
   if (typeof value === "string") {
     const trimmed = value.trim();
     if (!trimmed) return '""';
-    if (TERRAFORM_REF_PATTERN.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
+    if (isTerraformReference(trimmed) || trimmed.startsWith("var.")) return trimmed;
+    if (isRawHclExpression(trimmed)) return trimmed;
     if (
       trimmed === "true" ||
       trimmed === "false" ||

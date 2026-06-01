@@ -8,15 +8,15 @@
   "settings": {
     "autosave": false
   },
-  "activeViewId": "view-ace98dcf-164f-40bd-ae32-c5418eb12092",
+  "activeViewId": "view-f1a092bf-b7f4-4d53-8229-9764f73d41da",
   "views": [
     {
-      "id": "view-ace98dcf-164f-40bd-ae32-c5418eb12092",
+      "id": "view-f1a092bf-b7f4-4d53-8229-9764f73d41da",
       "name": "View 1",
       "activeProvider": "gcp",
       "resources": [
         {
-          "id": "09f35cf5-c14d-453b-a7f2-698cea545d61",
+          "id": "fae566eb-50ab-4a8a-a556-908ece3fabbc",
           "kind": "resource",
           "type": "google_compute_network",
           "name": "main",
@@ -33,11 +33,11 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/gcp/gcp_networking.svg"
+            "icon": "/icons/gcp_networking.svg"
           }
         },
         {
-          "id": "f1500186-2cae-4159-a607-152cb6547cf3",
+          "id": "da4c35a0-19e8-4fda-9412-a32bc8685652",
           "kind": "resource",
           "type": "google_compute_subnetwork",
           "name": "main",
@@ -56,11 +56,11 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/gcp/gcp_networking.svg"
+            "icon": "/icons/gcp_networking.svg"
           }
         },
         {
-          "id": "3d026c96-af0f-46e2-bc8a-1cf7dbe12c3c",
+          "id": "5c2f8426-b40d-4a72-9e55-e05cbcb896bc",
           "kind": "resource",
           "type": "google_compute_firewall",
           "name": "http",
@@ -79,11 +79,11 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/gcp/gcp_security_identity.svg"
+            "icon": "/icons/gcp_security_identity.svg"
           }
         },
         {
-          "id": "98e2a5b5-1509-4c63-aabf-a4deaf22770c",
+          "id": "21f0b133-5377-4dbc-8fc8-9112a3716a75",
           "kind": "resource",
           "type": "google_compute_health_check",
           "name": "http",
@@ -99,11 +99,11 @@
           "ui": {
             "x": 840,
             "y": 0,
-            "icon": "/icons/gcp/gcp_networking.svg"
+            "icon": "/icons/gcp_networking.svg"
           }
         },
         {
-          "id": "043c5a5e-ec2a-4d73-946e-4fd348be9720",
+          "id": "b4fab8ef-ffa3-4b1d-b48b-01ffccfb2f24",
           "kind": "resource",
           "type": "google_compute_instance_template",
           "name": "app",
@@ -120,11 +120,11 @@
           "ui": {
             "x": 0,
             "y": 200,
-            "icon": "/icons/gcp/gcp_compute_engine.svg"
+            "icon": "/icons/gcp_compute_engine.svg"
           }
         },
         {
-          "id": "5acc80f3-0f14-4cb3-b7fc-f691eae4497f",
+          "id": "6b0605c3-a86e-4cea-ad80-8435a80dfcfe",
           "kind": "resource",
           "type": "google_compute_instance_group_manager",
           "name": "app",
@@ -143,11 +143,11 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/gcp/gcp_compute_engine.svg"
+            "icon": "/icons/gcp_compute_engine.svg"
           }
         },
         {
-          "id": "d8b93b44-0dba-4e9a-a549-3e8272157428",
+          "id": "9a1ca920-68dc-4356-bd3e-ba6d136b961e",
           "kind": "resource",
           "type": "google_compute_backend_service",
           "name": "app",
@@ -165,11 +165,11 @@
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/gcp/gcp_networking.svg"
+            "icon": "/icons/gcp_networking.svg"
           }
         },
         {
-          "id": "83838527-66be-4f7d-ba8e-974965c8b30c",
+          "id": "41cde80a-cee4-4041-8d4e-f8ea21185534",
           "kind": "resource",
           "type": "google_compute_url_map",
           "name": "app",
@@ -186,11 +186,11 @@
           "ui": {
             "x": 840,
             "y": 200,
-            "icon": "/icons/gcp/gcp_networking.svg"
+            "icon": "/icons/gcp_networking.svg"
           }
         },
         {
-          "id": "953bdc74-ef2d-4333-9885-58061acde76f",
+          "id": "2b773d6d-88f5-4447-ac6b-f5e2bbb37570",
           "kind": "resource",
           "type": "google_compute_address",
           "name": "lb_ip",
@@ -207,11 +207,11 @@
           "ui": {
             "x": 0,
             "y": 400,
-            "icon": "/icons/gcp/gcp_networking.svg"
+            "icon": "/icons/gcp_networking.svg"
           }
         },
         {
-          "id": "05366cbd-a057-4681-831b-a8a27033646e",
+          "id": "64f04fa3-fa85-4663-adf6-cee91d0bf77f",
           "kind": "resource",
           "type": "google_sql_database_instance",
           "name": "db",
@@ -230,179 +230,213 @@
           "ui": {
             "x": 280,
             "y": 400,
-            "icon": "/icons/gcp/gcp_cloud_sql.svg"
+            "icon": "/icons/gcp_cloud_sql.svg"
           }
         }
       ],
       "nodes": [
         {
-          "id": "node-09f35cf5-c14d-453b-a7f2-698cea545d61",
+          "id": "node-fae566eb-50ab-4a8a-a556-908ece3fabbc",
           "type": "terraformResource",
           "position": {
             "x": 0,
             "y": 0
           },
+          "style": {
+            "width": 580,
+            "height": 332
+          },
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
           "data": {
-            "resourceId": "09f35cf5-c14d-453b-a7f2-698cea545d61",
+            "resourceId": "fae566eb-50ab-4a8a-a556-908ece3fabbc",
             "schemaId": "google_compute_network",
             "label": "main",
-            "icon": "/icons/gcp/gcp_networking.svg",
+            "icon": "/icons/gcp_networking.svg",
             "terraformType": "google_compute_network",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-f1500186-2cae-4159-a607-152cb6547cf3",
+          "id": "node-21f0b133-5377-4dbc-8fc8-9112a3716a75",
           "type": "terraformResource",
           "position": {
-            "x": 280,
+            "x": 660,
             "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "f1500186-2cae-4159-a607-152cb6547cf3",
-            "schemaId": "google_compute_subnetwork",
-            "label": "main",
-            "icon": "/icons/gcp/gcp_networking.svg",
-            "terraformType": "google_compute_subnetwork",
-            "terraformKind": "resource",
-            "isContainer": false
-          }
-        },
-        {
-          "id": "node-3d026c96-af0f-46e2-bc8a-1cf7dbe12c3c",
-          "type": "terraformResource",
-          "position": {
-            "x": 560,
-            "y": 0
-          },
-          "data": {
-            "resourceId": "3d026c96-af0f-46e2-bc8a-1cf7dbe12c3c",
-            "schemaId": "google_compute_firewall",
-            "label": "http",
-            "icon": "/icons/gcp/gcp_security_identity.svg",
-            "terraformType": "google_compute_firewall",
-            "terraformKind": "resource",
-            "isContainer": false
-          }
-        },
-        {
-          "id": "node-98e2a5b5-1509-4c63-aabf-a4deaf22770c",
-          "type": "terraformResource",
-          "position": {
-            "x": 840,
-            "y": 0
-          },
-          "data": {
-            "resourceId": "98e2a5b5-1509-4c63-aabf-a4deaf22770c",
+            "resourceId": "21f0b133-5377-4dbc-8fc8-9112a3716a75",
             "schemaId": "google_compute_health_check",
             "label": "http",
-            "icon": "/icons/gcp/gcp_networking.svg",
+            "icon": "/icons/gcp_networking.svg",
             "terraformType": "google_compute_health_check",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-043c5a5e-ec2a-4d73-946e-4fd348be9720",
+          "id": "node-b4fab8ef-ffa3-4b1d-b48b-01ffccfb2f24",
           "type": "terraformResource",
           "position": {
-            "x": 0,
-            "y": 200
+            "x": 916,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "043c5a5e-ec2a-4d73-946e-4fd348be9720",
+            "resourceId": "b4fab8ef-ffa3-4b1d-b48b-01ffccfb2f24",
             "schemaId": "google_compute_instance_template",
             "label": "app",
-            "icon": "/icons/gcp/gcp_compute_engine.svg",
+            "icon": "/icons/gcp_compute_engine.svg",
             "terraformType": "google_compute_instance_template",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-5acc80f3-0f14-4cb3-b7fc-f691eae4497f",
+          "id": "node-6b0605c3-a86e-4cea-ad80-8435a80dfcfe",
           "type": "terraformResource",
           "position": {
-            "x": 280,
-            "y": 200
+            "x": 1172,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "5acc80f3-0f14-4cb3-b7fc-f691eae4497f",
+            "resourceId": "6b0605c3-a86e-4cea-ad80-8435a80dfcfe",
             "schemaId": "google_compute_instance_group_manager",
             "label": "app",
-            "icon": "/icons/gcp/gcp_compute_engine.svg",
+            "icon": "/icons/gcp_compute_engine.svg",
             "terraformType": "google_compute_instance_group_manager",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-d8b93b44-0dba-4e9a-a549-3e8272157428",
+          "id": "node-9a1ca920-68dc-4356-bd3e-ba6d136b961e",
           "type": "terraformResource",
           "position": {
-            "x": 560,
-            "y": 200
+            "x": 1428,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "d8b93b44-0dba-4e9a-a549-3e8272157428",
+            "resourceId": "9a1ca920-68dc-4356-bd3e-ba6d136b961e",
             "schemaId": "google_compute_backend_service",
             "label": "app",
-            "icon": "/icons/gcp/gcp_networking.svg",
+            "icon": "/icons/gcp_networking.svg",
             "terraformType": "google_compute_backend_service",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-83838527-66be-4f7d-ba8e-974965c8b30c",
+          "id": "node-41cde80a-cee4-4041-8d4e-f8ea21185534",
           "type": "terraformResource",
           "position": {
-            "x": 840,
-            "y": 200
+            "x": 1684,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "83838527-66be-4f7d-ba8e-974965c8b30c",
+            "resourceId": "41cde80a-cee4-4041-8d4e-f8ea21185534",
             "schemaId": "google_compute_url_map",
             "label": "app",
-            "icon": "/icons/gcp/gcp_networking.svg",
+            "icon": "/icons/gcp_networking.svg",
             "terraformType": "google_compute_url_map",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-953bdc74-ef2d-4333-9885-58061acde76f",
+          "id": "node-2b773d6d-88f5-4447-ac6b-f5e2bbb37570",
           "type": "terraformResource",
           "position": {
-            "x": 0,
-            "y": 400
+            "x": 1940,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "953bdc74-ef2d-4333-9885-58061acde76f",
+            "resourceId": "2b773d6d-88f5-4447-ac6b-f5e2bbb37570",
             "schemaId": "google_compute_address",
             "label": "lb_ip",
-            "icon": "/icons/gcp/gcp_networking.svg",
+            "icon": "/icons/gcp_networking.svg",
             "terraformType": "google_compute_address",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-05366cbd-a057-4681-831b-a8a27033646e",
+          "id": "node-64f04fa3-fa85-4663-adf6-cee91d0bf77f",
           "type": "terraformResource",
           "position": {
-            "x": 280,
-            "y": 400
+            "x": 2196,
+            "y": 0
           },
+          "zIndex": 10,
           "data": {
-            "resourceId": "05366cbd-a057-4681-831b-a8a27033646e",
+            "resourceId": "64f04fa3-fa85-4663-adf6-cee91d0bf77f",
             "schemaId": "google_sql_database_instance",
             "label": "db",
-            "icon": "/icons/gcp/gcp_cloud_sql.svg",
+            "icon": "/icons/gcp_cloud_sql.svg",
             "terraformType": "google_sql_database_instance",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": []
+          }
+        },
+        {
+          "id": "node-da4c35a0-19e8-4fda-9412-a32bc8685652",
+          "type": "terraformResource",
+          "position": {
+            "x": 20,
+            "y": 58
+          },
+          "style": {
+            "width": 340,
+            "height": 230
+          },
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
+          "parentNode": "node-fae566eb-50ab-4a8a-a556-908ece3fabbc",
+          "data": {
+            "resourceId": "da4c35a0-19e8-4fda-9412-a32bc8685652",
+            "schemaId": "google_compute_subnetwork",
+            "label": "main",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_subnetwork",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          }
+        },
+        {
+          "id": "node-5c2f8426-b40d-4a72-9e55-e05cbcb896bc",
+          "type": "terraformResource",
+          "position": {
+            "x": 384,
+            "y": 58
+          },
+          "zIndex": 10,
+          "parentNode": "node-fae566eb-50ab-4a8a-a556-908ece3fabbc",
+          "data": {
+            "resourceId": "5c2f8426-b40d-4a72-9e55-e05cbcb896bc",
+            "schemaId": "google_compute_firewall",
+            "label": "http",
+            "icon": "/icons/gcp_security_identity.svg",
+            "terraformType": "google_compute_firewall",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
           }
         }
       ],

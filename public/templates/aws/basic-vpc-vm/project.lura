@@ -1,22 +1,22 @@
 {
   "version": "1",
   "meta": {
-    "name": "AWS — Basic VPC + EC2",
+    "name": "AWS — Basic VPC + EC2 (nginx)",
     "createdAt": "2026-01-01T00:00:00.000Z",
     "updatedAt": "2026-01-01T00:00:00.000Z"
   },
   "settings": {
     "autosave": false
   },
-  "activeViewId": "view-3a993e28-169f-4fa6-9365-4d13c7381564",
+  "activeViewId": "view-931c5149-98be-4380-8b65-0e000605f6da",
   "views": [
     {
-      "id": "view-3a993e28-169f-4fa6-9365-4d13c7381564",
+      "id": "view-931c5149-98be-4380-8b65-0e000605f6da",
       "name": "View 1",
       "activeProvider": "aws",
       "resources": [
         {
-          "id": "8b083e85-ad03-4d84-aaa9-902715f4daf0",
+          "id": "95d6ab7a-a3be-497e-b752-14a598d9a978",
           "kind": "resource",
           "type": "aws_vpc",
           "name": "main",
@@ -33,11 +33,11 @@
           "ui": {
             "x": 0,
             "y": 0,
-            "icon": "/icons/aws/Virtual-private-cloud-VPC_32.svg"
+            "icon": "/icons/Virtual-private-cloud-VPC_32.svg"
           }
         },
         {
-          "id": "e0da4a91-79e1-4db6-adfa-17164cdc9590",
+          "id": "aec5748b-e591-4c1b-9830-583099ad7442",
           "kind": "resource",
           "type": "aws_internet_gateway",
           "name": "main",
@@ -53,11 +53,11 @@
           "ui": {
             "x": 280,
             "y": 0,
-            "icon": "/icons/aws/Res_Amazon-VPC_Internet-Gateway_48.svg"
+            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg"
           }
         },
         {
-          "id": "1001a9bb-7f5b-4fac-a156-b29b7577a742",
+          "id": "00b5ce13-3e72-462f-a840-74bda59c0297",
           "kind": "resource",
           "type": "aws_subnet",
           "name": "public_a",
@@ -76,11 +76,11 @@
           "ui": {
             "x": 560,
             "y": 0,
-            "icon": "/icons/aws/Private-subnet_32.svg"
+            "icon": "/icons/Private-subnet_32.svg"
           }
         },
         {
-          "id": "44e7d3b9-0b4a-4535-8ee5-97ac9c8ae777",
+          "id": "23f15ec7-34ed-4fad-b7ed-f4d5666e5cf9",
           "kind": "resource",
           "type": "aws_route_table",
           "name": "public",
@@ -96,11 +96,11 @@
           "ui": {
             "x": 0,
             "y": 200,
-            "icon": "/icons/aws/route-table.svg"
+            "icon": "/icons/route-table.svg"
           }
         },
         {
-          "id": "35b7ba2d-8e25-4e68-8f8d-33d1887fefdb",
+          "id": "2040dffa-9417-4877-aeef-92d89994a798",
           "kind": "resource",
           "type": "aws_route_table_association",
           "name": "public_a",
@@ -117,32 +117,59 @@
           "ui": {
             "x": 280,
             "y": 200,
-            "icon": "/icons/aws/route-table.svg"
+            "icon": "/icons/route-table.svg"
           }
         },
         {
-          "id": "1e5fd7c2-305e-47b8-a382-c80dd4bb5312",
+          "id": "7edf3fd3-6b72-4a81-91a8-acb531d67354",
           "kind": "resource",
           "type": "aws_security_group",
-          "name": "ssh",
+          "name": "web",
           "schemaId": "aws_security_group",
           "origin": "imported-file",
           "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_security_group                                  │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_security_group\" \"this\" {\n\n  description            = \"\"     # string | optional\n  egress                 = []     # set(object({ cidr_blocks: list(string), description: string, from_port: number, ipv6_cidr_blocks: list(string), prefix_list_ids: list(string), protocol: string, security_groups: set(string), self: bool, to_port: number })) | optional+computed\n  id                     = \"\"     # string | optional+computed\n  ingress                = []     # set(object({ cidr_blocks: list(string), description: string, from_port: number, ipv6_cidr_blocks: list(string), prefix_list_ids: list(string), protocol: string, security_groups: set(string), self: bool, to_port: number })) | optional+computed\n  name                   = \"\"     # string | optional+computed\n  name_prefix            = \"\"     # string | optional+computed\n  revoke_rules_on_delete = false  # bool | optional\n  tags                   = {}     # map(string) | optional\n  tags_all               = {}     # map(string) | optional+computed\n  vpc_id                 = \"\"     # string | optional+computed\n\n  # arn                    = \"\"     # string | computed\n  # owner_id               = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n\n  }\n\n}\n\n",
           "config": {
             "attributes": {
-              "name": "lurastack-basic-ssh",
-              "vpc_id": "aws_vpc.main.id"
+              "name": "lurastack-basic-web",
+              "vpc_id": "aws_vpc.main.id",
+              "description": "Allow HTTP (80) and SSH (22)",
+              "ingress": [
+                {
+                  "description": "HTTP",
+                  "from_port": 80,
+                  "to_port": 80,
+                  "protocol": "tcp",
+                  "cidr_blocks": "[\"0.0.0.0/0\"]"
+                },
+                {
+                  "description": "SSH",
+                  "from_port": 22,
+                  "to_port": 22,
+                  "protocol": "tcp",
+                  "cidr_blocks": "[\"0.0.0.0/0\"]"
+                }
+              ],
+              "egress": [
+                {
+                  "description": "All outbound",
+                  "from_port": 0,
+                  "to_port": 0,
+                  "protocol": -1,
+                  "cidr_blocks": "[\"0.0.0.0/0\"]"
+                }
+              ],
+              "tags": "{ Name = \"lurastack-basic-web\" }"
             },
             "blocks": {}
           },
           "ui": {
             "x": 560,
             "y": 200,
-            "icon": "/icons/aws/aws_security_group.svg"
+            "icon": "/icons/aws_security_group.svg"
           }
         },
         {
-          "id": "93874a02-ef57-4e74-8eb2-1179b1c40d47",
+          "id": "d0b6c810-835f-4201-83d5-91ed87f945d2",
           "kind": "resource",
           "type": "aws_instance",
           "name": "app",
@@ -154,141 +181,192 @@
               "ami": "ami-0c02fb55956c7d316",
               "instance_type": "t3.micro",
               "subnet_id": "aws_subnet.public_a.id",
-              "vpc_security_group_ids": "[aws_security_group.ssh.id]",
-              "tags": "{ Name = \"lurastack-basic-vm\" }"
+              "vpc_security_group_ids": "[aws_security_group.web.id]",
+              "user_data": "file(\"${path.module}/user_data.sh\")",
+              "tags": "{ Name = \"lurastack-basic-web\" }"
             },
             "blocks": {}
           },
           "ui": {
             "x": 280,
             "y": 400,
-            "icon": "/icons/aws/EC2-instance-contents_32.svg"
+            "icon": "/icons/EC2-instance-contents_32.svg"
           }
         }
       ],
       "nodes": [
         {
-          "id": "node-8b083e85-ad03-4d84-aaa9-902715f4daf0",
+          "id": "node-95d6ab7a-a3be-497e-b752-14a598d9a978",
           "type": "terraformResource",
           "position": {
             "x": 0,
             "y": 0
           },
+          "style": {
+            "width": 856,
+            "height": 332
+          },
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
           "data": {
-            "resourceId": "8b083e85-ad03-4d84-aaa9-902715f4daf0",
+            "resourceId": "95d6ab7a-a3be-497e-b752-14a598d9a978",
             "schemaId": "aws_vpc",
             "label": "main",
-            "icon": "/icons/aws/Virtual-private-cloud-VPC_32.svg",
+            "icon": "/icons/Virtual-private-cloud-VPC_32.svg",
             "terraformType": "aws_vpc",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-e0da4a91-79e1-4db6-adfa-17164cdc9590",
+          "id": "node-7edf3fd3-6b72-4a81-91a8-acb531d67354",
           "type": "terraformResource",
           "position": {
-            "x": 280,
-            "y": 0
+            "x": 420,
+            "y": 58
           },
-          "data": {
-            "resourceId": "e0da4a91-79e1-4db6-adfa-17164cdc9590",
-            "schemaId": "aws_internet_gateway",
-            "label": "main",
-            "icon": "/icons/aws/Res_Amazon-VPC_Internet-Gateway_48.svg",
-            "terraformType": "aws_internet_gateway",
-            "terraformKind": "resource",
-            "isContainer": false
-          }
-        },
-        {
-          "id": "node-1001a9bb-7f5b-4fac-a156-b29b7577a742",
-          "type": "terraformResource",
-          "position": {
-            "x": 560,
-            "y": 0
+          "style": {
+            "width": 340,
+            "height": 230
           },
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
           "data": {
-            "resourceId": "1001a9bb-7f5b-4fac-a156-b29b7577a742",
-            "schemaId": "aws_subnet",
-            "label": "public_a",
-            "icon": "/icons/aws/Private-subnet_32.svg",
-            "terraformType": "aws_subnet",
-            "terraformKind": "resource",
-            "isContainer": false
-          }
-        },
-        {
-          "id": "node-44e7d3b9-0b4a-4535-8ee5-97ac9c8ae777",
-          "type": "terraformResource",
-          "position": {
-            "x": 0,
-            "y": 200
-          },
-          "data": {
-            "resourceId": "44e7d3b9-0b4a-4535-8ee5-97ac9c8ae777",
-            "schemaId": "aws_route_table",
-            "label": "public",
-            "icon": "/icons/aws/route-table.svg",
-            "terraformType": "aws_route_table",
-            "terraformKind": "resource",
-            "isContainer": false
-          }
-        },
-        {
-          "id": "node-35b7ba2d-8e25-4e68-8f8d-33d1887fefdb",
-          "type": "terraformResource",
-          "position": {
-            "x": 280,
-            "y": 200
-          },
-          "data": {
-            "resourceId": "35b7ba2d-8e25-4e68-8f8d-33d1887fefdb",
-            "schemaId": "aws_route_table_association",
-            "label": "public_a",
-            "icon": "/icons/aws/route-table.svg",
-            "terraformType": "aws_route_table_association",
-            "terraformKind": "resource",
-            "isContainer": false
-          }
-        },
-        {
-          "id": "node-1e5fd7c2-305e-47b8-a382-c80dd4bb5312",
-          "type": "terraformResource",
-          "position": {
-            "x": 560,
-            "y": 200
-          },
-          "data": {
-            "resourceId": "1e5fd7c2-305e-47b8-a382-c80dd4bb5312",
+            "resourceId": "7edf3fd3-6b72-4a81-91a8-acb531d67354",
             "schemaId": "aws_security_group",
-            "label": "ssh",
-            "icon": "/icons/aws/aws_security_group.svg",
+            "label": "web",
+            "icon": "/icons/aws_security_group.svg",
             "terraformType": "aws_security_group",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": true,
+            "containerKind": "zone",
+            "zoneContainerIds": []
           }
         },
         {
-          "id": "node-93874a02-ef57-4e74-8eb2-1179b1c40d47",
+          "id": "node-aec5748b-e591-4c1b-9830-583099ad7442",
           "type": "terraformResource",
           "position": {
-            "x": 280,
-            "y": 400
+            "x": 20,
+            "y": 58
           },
+          "zIndex": 10,
+          "parentNode": "node-95d6ab7a-a3be-497e-b752-14a598d9a978",
           "data": {
-            "resourceId": "93874a02-ef57-4e74-8eb2-1179b1c40d47",
+            "resourceId": "aec5748b-e591-4c1b-9830-583099ad7442",
+            "schemaId": "aws_internet_gateway",
+            "label": "main",
+            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg",
+            "terraformType": "aws_internet_gateway",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          }
+        },
+        {
+          "id": "node-00b5ce13-3e72-462f-a840-74bda59c0297",
+          "type": "terraformResource",
+          "position": {
+            "x": 220,
+            "y": 58
+          },
+          "style": {
+            "width": 416,
+            "height": 230
+          },
+          "dragHandle": ".container-drag-handle",
+          "zIndex": 0,
+          "parentNode": "node-95d6ab7a-a3be-497e-b752-14a598d9a978",
+          "data": {
+            "resourceId": "00b5ce13-3e72-462f-a840-74bda59c0297",
+            "schemaId": "aws_subnet",
+            "label": "public_a",
+            "icon": "/icons/Private-subnet_32.svg",
+            "terraformType": "aws_subnet",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          }
+        },
+        {
+          "id": "node-23f15ec7-34ed-4fad-b7ed-f4d5666e5cf9",
+          "type": "terraformResource",
+          "position": {
+            "x": 660,
+            "y": 58
+          },
+          "zIndex": 10,
+          "parentNode": "node-95d6ab7a-a3be-497e-b752-14a598d9a978",
+          "data": {
+            "resourceId": "23f15ec7-34ed-4fad-b7ed-f4d5666e5cf9",
+            "schemaId": "aws_route_table",
+            "label": "public",
+            "icon": "/icons/route-table.svg",
+            "terraformType": "aws_route_table",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          }
+        },
+        {
+          "id": "node-2040dffa-9417-4877-aeef-92d89994a798",
+          "type": "terraformResource",
+          "position": {
+            "x": 20,
+            "y": 58
+          },
+          "zIndex": 10,
+          "parentNode": "node-00b5ce13-3e72-462f-a840-74bda59c0297",
+          "data": {
+            "resourceId": "2040dffa-9417-4877-aeef-92d89994a798",
+            "schemaId": "aws_route_table_association",
+            "label": "public_a",
+            "icon": "/icons/route-table.svg",
+            "terraformType": "aws_route_table_association",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          }
+        },
+        {
+          "id": "node-d0b6c810-835f-4201-83d5-91ed87f945d2",
+          "type": "terraformResource",
+          "position": {
+            "x": 220,
+            "y": 58
+          },
+          "zIndex": 10,
+          "parentNode": "node-00b5ce13-3e72-462f-a840-74bda59c0297",
+          "data": {
+            "resourceId": "d0b6c810-835f-4201-83d5-91ed87f945d2",
             "schemaId": "aws_instance",
             "label": "app",
-            "icon": "/icons/aws/EC2-instance-contents_32.svg",
+            "icon": "/icons/EC2-instance-contents_32.svg",
             "terraformType": "aws_instance",
             "terraformKind": "resource",
-            "isContainer": false
+            "isContainer": false,
+            "zoneContainerIds": [
+              "node-7edf3fd3-6b72-4a81-91a8-acb531d67354"
+            ]
           }
         }
       ],
       "edges": [],
-      "codeFiles": []
+      "codeFiles": [
+        {
+          "id": "3a35948c-81c5-47b7-81b8-25b92ab6e6a3",
+          "name": "user_data.sh",
+          "content": "#!/bin/bash\nset -euo pipefail\n\n# Install and start nginx (Amazon Linux 2)\namazon-linux-extras enable nginx1\nyum clean metadata\nyum install -y nginx\n\ncat > /usr/share/nginx/html/index.html <<'HTML'\n<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>LuraStack — nginx</title>\n    <style>\n      body { font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }\n      .card { text-align: center; padding: 2rem 3rem; border: 1px solid #334155; border-radius: 12px; background: #1e293b; }\n      h1 { margin: 0 0 .5rem; }\n      code { color: #38bdf8; }\n    </style>\n  </head>\n  <body>\n    <div class=\"card\">\n      <h1>It works 🎉</h1>\n      <p>nginx is running on this EC2 instance, served on <code>port 80</code>.</p>\n      <p>Provisioned with <strong>LuraStack</strong>.</p>\n    </div>\n  </body>\n</html>\nHTML\n\nsystemctl enable nginx\nsystemctl restart nginx\n"
+        },
+        {
+          "id": "86a49532-4741-490a-a58a-fc7fc95ae958",
+          "name": "output.tf",
+          "content": "output \"instance_public_ip\" {\n  description = \"Public IP of the nginx EC2 instance\"\n  value       = aws_instance.app.public_ip\n}\n\noutput \"instance_port\" {\n  description = \"Port nginx is served on\"\n  value       = 80\n}\n\noutput \"url\" {\n  description = \"Open this URL in a browser to see the nginx welcome page\"\n  value       = \"http://${aws_instance.app.public_ip}:80\"\n}\n"
+        }
+      ]
     }
   ]
 }
