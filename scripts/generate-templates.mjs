@@ -146,7 +146,11 @@ const buildResource = (entry) => {
 //   bounding box of the resources that reference them, so the app's geometric
 //   zone-membership recompute keeps them as members. zoneContainerIds is also
 //   pre-populated to match.
-const buildNodes = (resources, entryByResourceId) => {
+// `fixedLayout` (optional): map of `type.name` → { x, y, width?, height? } in
+// ABSOLUTE canvas coordinates. When provided, these positions/sizes override the
+// automatic grid layout (parent-relative positions are derived from them), and
+// zone memberships are recomputed geometrically against the fixed positions.
+const buildNodes = (resources, entryByResourceId, fixedLayout) => {
   const byKey = new Map(resources.map((r) => [`${r.type}.${r.name}`, r]));
   const refsByResourceId = new Map(
     resources.map((r) => [r.id, collectReferencedKeys(entryByResourceId.get(r.id).attrs)]),
@@ -259,6 +263,22 @@ const buildNodes = (resources, entryByResourceId) => {
   };
   for (const root of roots) computeAbs(root, { x: 0, y: 0 });
 
+  // Apply a template-provided fixed layout (absolute positions/sizes), if any.
+  // Overrides automatic placement for the resources it lists.
+  const hasFixedLayout = fixedLayout && Object.keys(fixedLayout).length > 0;
+  if (hasFixedLayout) {
+    for (const resource of resources) {
+      const fixed = fixedLayout[`${resource.type}.${resource.name}`];
+      if (!fixed) continue;
+      absPos.set(resource.id, { x: fixed.x, y: fixed.y });
+      const current = sizeOf.get(resource.id) ?? { ...RESOURCE_SIZE };
+      sizeOf.set(resource.id, {
+        width: fixed.width ?? current.width,
+        height: fixed.height ?? current.height,
+      });
+    }
+  }
+
   // Zone containers (security groups): span the bounding box of their members
   // (resources that reference them), with padding, placed below the hierarchy.
   const zoneContainers = resources.filter((r) => isZoneContainer(r.type));
@@ -269,6 +289,11 @@ const buildNodes = (resources, entryByResourceId) => {
       return refsByResourceId.get(r.id).has(`${zone.type}.${zone.name}`);
     });
     zoneMembersOf.set(zone.id, members.map((m) => m.id));
+
+    // A fixed layout already pinned this zone's position/size — keep it.
+    if (hasFixedLayout && fixedLayout[`${zone.type}.${zone.name}`]) {
+      continue;
+    }
 
     if (members.length === 0) {
       const size = { ...CONTAINER_SIZE };
@@ -308,9 +333,14 @@ const buildNodes = (resources, entryByResourceId) => {
 
   const zoneIdsByResourceId = new Map(); // resourceId -> zone node ids[]
   for (const resource of resources) {
-    if (isContainerType(resource.type)) continue;
+    // Zone containers themselves never carry zoneContainerIds. With automatic
+    // layout, membership is derived from references (so hierarchical containers
+    // are skipped); with a fixed layout we mirror the app's purely geometric
+    // recompute, which can also nest hierarchical containers inside a zone.
+    if (isZoneContainer(resource.type)) continue;
+    if (!hasFixedLayout && isContainerType(resource.type)) continue;
     const zoneIds = zoneContainers
-      .filter((zone) => (zoneMembersOf.get(zone.id) ?? []).includes(resource.id))
+      .filter((zone) => hasFixedLayout || (zoneMembersOf.get(zone.id) ?? []).includes(resource.id))
       .filter((zone) => centerInside(resource.id, zone.id))
       .map((zone) => `node-${zone.id}`);
     if (zoneIds.length) zoneIdsByResourceId.set(resource.id, zoneIds);
@@ -329,18 +359,33 @@ const buildNodes = (resources, entryByResourceId) => {
   };
   const orderedResources = [...resources].sort((a, b) => depthOf(a.id) - depthOf(b.id));
 
+  // With a fixed layout, child positions are relative to their parent's
+  // absolute position; otherwise the automatic relative positions are used.
+  // Automatic positions are rounded; fixed positions are kept verbatim.
+  const finalPosition = (resource, parentId) => {
+    if (hasFixedLayout) {
+      const abs = absPos.get(resource.id);
+      if (!parentId) return abs;
+      const parentAbs = absPos.get(parentId);
+      return { x: abs.x - parentAbs.x, y: abs.y - parentAbs.y };
+    }
+    const pos = parentId ? relPos.get(resource.id) : absPos.get(resource.id);
+    return { x: Math.round(pos.x), y: Math.round(pos.y) };
+  };
+
   // Emit the React Flow nodes.
   return orderedResources.map((resource) => {
     const container = isContainerType(resource.type);
     const zoneContainer = isZoneContainer(resource.type);
     const parentId = parentOf.get(resource.id);
-    const position = parentId ? relPos.get(resource.id) : absPos.get(resource.id);
+    const position = finalPosition(resource, parentId);
+    const size = sizeOf.get(resource.id);
     const node = {
       id: `node-${resource.id}`,
       type: "terraformResource",
-      position: { x: Math.round(position.x), y: Math.round(position.y) },
+      position: { x: position.x, y: position.y },
       ...(container
-        ? { style: { width: Math.round(sizeOf.get(resource.id).width), height: Math.round(sizeOf.get(resource.id).height) }, dragHandle: ".container-drag-handle", zIndex: 0 }
+        ? { style: { width: hasFixedLayout ? size.width : Math.round(size.width), height: hasFixedLayout ? size.height : Math.round(size.height) }, dragHandle: ".container-drag-handle", zIndex: 0 }
         : { zIndex: 10 }),
       // Nested nodes carry a parent + parent-relative position. We omit
       // extent:"parent" to match the app, which manages child bounds itself.
@@ -361,11 +406,11 @@ const buildNodes = (resources, entryByResourceId) => {
   });
 };
 
-const buildView = (id, provider, entries, codeFiles) => {
+const buildView = (id, provider, entries, codeFiles, fixedLayout) => {
   const resources = entries.map(buildResource);
   const entryByResourceId = new Map(resources.map((r, i) => [r.id, entries[i]]));
   // Containers must render under their children: parents before descendants.
-  const nodes = buildNodes(resources, entryByResourceId);
+  const nodes = buildNodes(resources, entryByResourceId, fixedLayout);
   return {
     id,
     name: "View 1",
@@ -382,7 +427,7 @@ const buildView = (id, provider, entries, codeFiles) => {
   };
 };
 
-const buildProject = (templateName, provider, entries, codeFiles) => {
+const buildProject = (templateName, provider, entries, codeFiles, fixedLayout) => {
   const now = "2026-01-01T00:00:00.000Z";
   const viewId = `view-${randomUUID()}`;
   return {
@@ -390,11 +435,11 @@ const buildProject = (templateName, provider, entries, codeFiles) => {
     meta: { name: templateName, createdAt: now, updatedAt: now },
     settings: { autosave: false },
     activeViewId: viewId,
-    views: [buildView(viewId, provider, entries, codeFiles)],
+    views: [buildView(viewId, provider, entries, codeFiles, fixedLayout)],
   };
 };
 
-const writeTemplate = ({ provider, id, name, description, tags, entries, codeFiles }) => {
+const writeTemplate = ({ provider, id, name, description, tags, entries, codeFiles, fixedLayout }) => {
   const dir = resolve(templatesDir, provider, id);
   mkdirSync(dir, { recursive: true });
 
@@ -409,7 +454,7 @@ const writeTemplate = ({ provider, id, name, description, tags, entries, codeFil
   };
   writeFileSync(resolve(dir, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
 
-  const project = buildProject(name, provider, entries, codeFiles);
+  const project = buildProject(name, provider, entries, codeFiles, fixedLayout);
   writeFileSync(resolve(dir, "project.lura"), JSON.stringify(project, null, 2) + "\n");
   return manifest;
 };
@@ -421,18 +466,23 @@ const ROW = 200;
 
 // ============== AWS ==============
 
-// Ingress: HTTP (80) for the nginx welcome page + SSH (22); egress: all.
-// Passed as arrays of objects so the HCL emitter renders one `ingress {}` /
-// `egress {}` block per rule (inline blocks let optional fields be omitted,
-// unlike the typed `ingress = [...]` attribute which requires every field).
-const WEB_SG_INGRESS = [
-  { description: "HTTP", from_port: 80, to_port: 80, protocol: "tcp", cidr_blocks: '["0.0.0.0/0"]' },
-  { description: "SSH", from_port: 22, to_port: 22, protocol: "tcp", cidr_blocks: '["0.0.0.0/0"]' },
-];
-const SG_EGRESS_ALL = [
-  // protocol -1 (number) → emitter renders it as the string "-1" (all protocols).
-  { description: "All outbound", from_port: 0, to_port: 0, protocol: -1, cidr_blocks: '["0.0.0.0/0"]' },
-];
+// Ingress (HTTP 80 + SSH 22) and egress (all), expressed as a SINGLE `ingress`/
+// `egress` list attribute rather than repeated inline blocks. Repeated blocks
+// collapse to one rule when the project is re-saved through the app (block keys
+// like `ingress.from_port` overwrite each other), which silently dropped the
+// HTTP rule. A single list attribute survives that round-trip. The provider's
+// object type requires every field, so each rule lists them all.
+const sgRule = ({ description, from_port, to_port, protocol }) =>
+  `{ description = "${description}", from_port = ${from_port}, to_port = ${to_port}, ` +
+  `protocol = "${protocol}", cidr_blocks = ["0.0.0.0/0"], ipv6_cidr_blocks = [], ` +
+  `prefix_list_ids = [], security_groups = [], self = false }`;
+const WEB_SG_INGRESS =
+  "[" +
+  sgRule({ description: "HTTP", from_port: 80, to_port: 80, protocol: "tcp" }) + ", " +
+  sgRule({ description: "SSH", from_port: 22, to_port: 22, protocol: "tcp" }) +
+  "]";
+const SG_EGRESS_ALL =
+  "[" + sgRule({ description: "All outbound", from_port: 0, to_port: 0, protocol: "-1" }) + "]";
 
 const AWS_BASIC = [
   { type: "aws_vpc", name: "main",
@@ -446,7 +496,11 @@ const AWS_BASIC = [
              map_public_ip_on_launch: true, availability_zone: "us-east-1a" },
     x: 2 * COL, y: 0 },
   { type: "aws_route_table", name: "public",
-    attrs: { vpc_id: "aws_vpc.main.id" },
+    // Default route to the internet gateway so the public subnet can reach the
+    // internet (without it the instance is unreachable even with port 80 open).
+    // A single inline `route {}` block survives the app's save round-trip.
+    attrs: { vpc_id: "aws_vpc.main.id",
+             route: [{ cidr_block: "0.0.0.0/0", gateway_id: "aws_internet_gateway.main.id" }] },
     x: 0, y: ROW },
   { type: "aws_route_table_association", name: "public_a",
     attrs: { subnet_id: "aws_subnet.public_a.id", route_table_id: "aws_route_table.public.id" },
@@ -465,6 +519,20 @@ const AWS_BASIC = [
              tags: '{ Name = "lurastack-basic-web" }' },
     x: COL, y: 2 * ROW },
 ];
+
+// Hand-tuned canvas layout for the basic template (absolute positions/sizes).
+// Keys are `type.name`; values are absolute coordinates — child positions are
+// derived relative to their parent container at emit time.
+const AWS_BASIC_LAYOUT = {
+  "aws_vpc.main": { x: 0, y: 0, width: 848, height: 566.6165161214637 },
+  "aws_security_group.web": { x: 309.28577421152335, y: 276.5149193193618, width: 340, height: 230 },
+  "aws_internet_gateway.main": { x: 286.1464058811032, y: 92.62234682409769 },
+  "aws_subnet.public_a": { x: 33.29701613612758, y: 192.6165161214638, width: 668, height: 354 },
+  "aws_route_table.public": { x: 652.7161693560213, y: 108.98681450785111 },
+  // subnet abs (33.29701613612758, 192.6165161214638) + child rel
+  "aws_route_table_association.public_a": { x: 33.29701613612758 + 20, y: 192.6165161214638 + 222.34587096963418 },
+  "aws_instance.app": { x: 33.29701613612758 + 358.62970161361284, y: 192.6165161214638 + 192.61651612146397 },
+};
 
 // nginx bootstrap (Amazon Linux 2): installs nginx, serves a welcome page on :80.
 const AWS_BASIC_USER_DATA = `#!/bin/bash
@@ -711,7 +779,7 @@ const TEMPLATES = [
     name: "AWS — Basic VPC + EC2 (nginx)",
     description: "VPC con subnet pública y un EC2 con nginx en el puerto 80; output con IP y puerto.",
     tags: ["starter", "networking", "compute", "nginx"],
-    entries: AWS_BASIC, codeFiles: AWS_BASIC_CODE_FILES },
+    entries: AWS_BASIC, codeFiles: AWS_BASIC_CODE_FILES, fixedLayout: AWS_BASIC_LAYOUT },
   { provider: "aws", id: "web-classic-lb",
     name: "AWS — Classic web (ALB + ASG + RDS)",
     description: "ALB + Auto Scaling Group sobre subnets privadas + Aurora.",

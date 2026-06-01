@@ -87,10 +87,19 @@ export function HclCodeArea({
 
   return (
     <div className={`relative overflow-hidden ${containerClassName}`}>
+      {/*
+        Both layers must wrap identically or the caret drifts from the visible
+        text. They use `whitespace-pre` (no wrapping) so each logical line maps
+        to exactly one visual row in both the highlight <pre> and the <textarea>;
+        long lines scroll horizontally instead of wrapping. Wrapping (pre-wrap)
+        desynced the two layers because the <pre> also renders inline type hints
+        (e.g. ` : string`) that the textarea doesn't, shifting where long lines
+        wrapped and making clicks land on the wrong row.
+      */}
       <pre
         ref={preRef}
         aria-hidden
-        className={`pointer-events-none absolute inset-0 m-0 overflow-hidden whitespace-pre-wrap break-words select-none ${innerClassName}`}
+        className={`pointer-events-none absolute inset-0 m-0 overflow-hidden whitespace-pre select-none ${innerClassName}`}
         style={{ color: "#d4d4d4" }}
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: highlighted + "\n\u200B" }}
@@ -104,7 +113,8 @@ export function HclCodeArea({
         onScroll={handleScroll}
         readOnly={!onChange}
         spellCheck={false}
-        className={`absolute inset-0 h-full w-full resize-none bg-transparent outline-none whitespace-pre-wrap ${innerClassName}`}
+        wrap="off"
+        className={`absolute inset-0 h-full w-full resize-none overflow-auto bg-transparent outline-none whitespace-pre ${innerClassName}`}
         style={{ color: "transparent", caretColor: "#d4d4d4" }}
       />
     </div>
