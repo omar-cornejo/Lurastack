@@ -53,38 +53,27 @@
     },
     {
       "id": "aws/web-classic-lb",
-      "name": "AWS — Classic web (ALB + ASG + RDS)",
-      "description": "ALB + Auto Scaling Group sobre subnets privadas + Aurora.",
+      "name": "AWS — Classic web (ALB + ASG)",
+      "description": "ALB + Auto Scaling Group de 3 instancias nginx en subnets públicas; cada instancia sirve una página distinta para ver el balanceo al refrescar.",
       "provider": "aws",
-      "resourceCount": 15,
+      "resourceCount": 14,
       "tags": [
         "web",
         "load-balancer",
-        "database"
+        "autoscaling"
       ],
       "icon": "mdi:aws"
     },
     {
-      "id": "aws/serverless-lambda-s3-dynamo",
-      "name": "AWS — Serverless (Lambda + S3 + DynamoDB)",
-      "description": "S3 dispara Lambda que escribe en DynamoDB.",
+      "id": "aws/serverless-cat-gallery",
+      "name": "AWS — Cat gallery (S3 + Lambda)",
+      "description": "Galería de fotos de gatitos: web estática en S3 que lista las fotos y un botón para subir más vía Lambda (Function URL). Incluye 3 gatitos de inicio.",
       "provider": "aws",
-      "resourceCount": 7,
+      "resourceCount": 18,
       "tags": [
         "serverless",
-        "event-driven"
-      ],
-      "icon": "mdi:aws"
-    },
-    {
-      "id": "aws/data-pipeline-sqs-lambda",
-      "name": "AWS — Data pipeline (SQS + Lambda + DynamoDB)",
-      "description": "Cola SQS consumida por Lambda hacia DynamoDB+S3.",
-      "provider": "aws",
-      "resourceCount": 7,
-      "tags": [
-        "data",
-        "queue"
+        "s3",
+        "lambda"
       ],
       "icon": "mdi:aws"
     },

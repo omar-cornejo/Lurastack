@@ -103,6 +103,13 @@ function providerCardAccent(provider: TemplateProvider): {
 
 export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
   const { t } = useTranslation();
+  // Template name/description come from index.json (manifest), but each template
+  // also has localized `template.<id>.{name,description}` keys. Prefer the
+  // translation, falling back to the manifest value when a key is missing.
+  const localizedTemplateName = (tpl: TemplateManifest) =>
+    t(`template.${tpl.id}.name`, { defaultValue: tpl.name });
+  const localizedTemplateDescription = (tpl: TemplateManifest) =>
+    t(`template.${tpl.id}.description`, { defaultValue: tpl.description });
   const [view, setView] = useState<View>("recent");
   const [recent, setRecent] = useState<RecentProject[]>([]);
   const [error, setError] = useState("");
@@ -546,8 +553,8 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-slate-900 truncate">{selectedTemplate.name}</div>
-                <div className="text-[11px] text-slate-500 mt-0.5">{selectedTemplate.description}</div>
+                <div className="text-sm font-semibold text-slate-900 truncate">{localizedTemplateName(selectedTemplate)}</div>
+                <div className="text-[11px] text-slate-500 mt-0.5">{localizedTemplateDescription(selectedTemplate)}</div>
               </div>
               <button
                 onClick={closeTemplateModal}
@@ -790,6 +797,10 @@ function TemplateCard({
 }) {
   const { t } = useTranslation();
   const accent = providerCardAccent(template.provider);
+  const localizedTemplateName = (tpl: TemplateManifest) =>
+    t(`template.${tpl.id}.name`, { defaultValue: tpl.name });
+  const localizedTemplateDescription = (tpl: TemplateManifest) =>
+    t(`template.${tpl.id}.description`, { defaultValue: tpl.description });
   return (
     <button
       onClick={onClick}
@@ -805,14 +816,14 @@ function TemplateCard({
           />
         </div>
         <div className="flex-1 min-w-0 pt-0.5">
-          <div className="text-sm text-slate-900 font-semibold truncate leading-snug">{template.name}</div>
+          <div className="text-sm text-slate-900 font-semibold truncate leading-snug">{localizedTemplateName(template)}</div>
           <div className={`text-[11px] font-semibold uppercase tracking-widest mt-0.5 ${providerAccent(template.provider)}`}>
             {providerLabel(template.provider)}
           </div>
         </div>
       </div>
       <p className="text-[13px] text-slate-500 leading-relaxed line-clamp-2">
-        {template.description}
+        {localizedTemplateDescription(template)}
       </p>
       <div className="flex items-center gap-2 mt-auto flex-wrap">
         <span className={`text-[11px] px-2 py-0.5 rounded border font-medium ${accent.tagBg}`}>
