@@ -399,12 +399,10 @@
   "template.aws/web-classic-lb.description": "ALB + Auto Scaling Group of 3 nginx instances in public subnets; each instance serves a different page so you can watch the load balancing as you refresh.",
   "template.aws/serverless-cat-gallery.name": "AWS — Cat gallery (S3 + Lambda)",
   "template.aws/serverless-cat-gallery.description": "Cat photo gallery: a static web on S3 that lists the photos plus a button to upload more via Lambda (Function URL). Ships with 3 starter cats.",
-  "template.gcp/basic-network-vm.name": "GCP — Basic VPC + VM",
-  "template.gcp/basic-network-vm.description": "Custom VPC + subnet + firewall + Compute Engine.",
-  "template.gcp/web-classic-lb.name": "GCP — Classic web (LB + MIG + Cloud SQL)",
-  "template.gcp/web-classic-lb.description": "MIG behind a Backend Service + Cloud SQL.",
-  "template.gcp/serverless-functions-storage-bq.name": "GCP — Serverless (Functions + Storage + BigQuery)",
-  "template.gcp/serverless-functions-storage-bq.description": "Cloud Function triggered by Storage, data into BigQuery.",
-  "template.gcp/data-pipeline-pubsub-bq.name": "GCP — Data pipeline (Pub/Sub + Functions + BigQuery)",
-  "template.gcp/data-pipeline-pubsub-bq.description": "Pub/Sub topic processed by a Function into BigQuery."
+  "template.gcp/basic-network-vm.name": "GCP — Basic VPC + VM (nginx)",
+  "template.gcp/basic-network-vm.description": "Custom VPC with a public subnet, firewall, and a Compute Engine VM running nginx on port 80; output with the public IP.",
+  "template.gcp/web-classic-lb.name": "GCP — Classic web (LB + MIG)",
+  "template.gcp/web-classic-lb.description": "HTTP Load Balancer + Managed Instance Group of 3 nginx instances; each instance serves a different page so you can watch the load balancing as you refresh.",
+  "template.gcp/serverless-cat-gallery.name": "GCP — Cat gallery (Storage + Functions)",
+  "template.gcp/serverless-cat-gallery.description": "Cat photo gallery: a static web on Cloud Storage that lists the photos plus a button to upload more via a Cloud Function. Ships with 3 starter cats."
 }

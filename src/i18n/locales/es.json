@@ -399,12 +399,10 @@
   "template.aws/web-classic-lb.description": "ALB + Auto Scaling Group de 3 instancias nginx en subnets públicas; cada instancia sirve una página distinta para ver el balanceo al refrescar.",
   "template.aws/serverless-cat-gallery.name": "AWS — Galería de gatitos (S3 + Lambda)",
   "template.aws/serverless-cat-gallery.description": "Galería de fotos de gatitos: web estática en S3 que lista las fotos y un botón para subir más vía Lambda (Function URL). Incluye 3 gatitos de inicio.",
-  "template.gcp/basic-network-vm.name": "GCP — VPC básica + VM",
-  "template.gcp/basic-network-vm.description": "VPC custom + subnet + firewall + Compute Engine.",
-  "template.gcp/web-classic-lb.name": "GCP — Web clásica (LB + MIG + Cloud SQL)",
-  "template.gcp/web-classic-lb.description": "MIG detrás de Backend Service + Cloud SQL.",
-  "template.gcp/serverless-functions-storage-bq.name": "GCP — Serverless (Functions + Storage + BigQuery)",
-  "template.gcp/serverless-functions-storage-bq.description": "Cloud Function gatillada por Storage, datos a BigQuery.",
-  "template.gcp/data-pipeline-pubsub-bq.name": "GCP — Pipeline de datos (Pub/Sub + Functions + BigQuery)",
-  "template.gcp/data-pipeline-pubsub-bq.description": "Tema Pub/Sub procesado por Function hacia BigQuery."
+  "template.gcp/basic-network-vm.name": "GCP — VPC básica + VM (nginx)",
+  "template.gcp/basic-network-vm.description": "VPC custom con subnet pública, firewall y una VM Compute Engine con nginx en el puerto 80; output con la IP pública.",
+  "template.gcp/web-classic-lb.name": "GCP — Web clásica (LB + MIG)",
+  "template.gcp/web-classic-lb.description": "HTTP Load Balancer + Managed Instance Group de 3 instancias nginx; cada instancia sirve una página distinta para ver el balanceo al refrescar.",
+  "template.gcp/serverless-cat-gallery.name": "GCP — Galería de gatitos (Storage + Functions)",
+  "template.gcp/serverless-cat-gallery.description": "Galería de fotos de gatitos: web estática en Cloud Storage que lista las fotos y un botón para subir más vía Cloud Function. Incluye 3 gatitos de inicio."
 }

@@ -1,13 +1,9 @@
 {
   "id": "gcp/web-classic-lb",
-  "name": "GCP — Classic web (LB + MIG + Cloud SQL)",
-  "description": "MIG detrás de Backend Service + Cloud SQL.",
+  "name": "GCP — Classic web (LB + MIG)",
+  "description": "HTTP Load Balancer + Managed Instance Group de 3 instancias nginx; cada instancia sirve una página distinta para ver el balanceo al refrescar.",
   "provider": "gcp",
   "resourceCount": 10,
-  "tags": [
-    "web",
-    "load-balancer",
-    "database"
-  ],
+  "tags": ["web", "load-balancer", "autoscaling"],
   "icon": "mdi:google-cloud"
 }

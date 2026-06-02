@@ -1,0 +1,9 @@
+{
+  "id": "gcp/serverless-cat-gallery",
+  "name": "GCP — Cat gallery (Storage + Functions)",
+  "description": "Galería de fotos de gatitos: web estática en Cloud Storage que lista las fotos y un botón para subir más vía Cloud Function. Incluye 3 gatitos de inicio.",
+  "provider": "gcp",
+  "resourceCount": 17,
+  "tags": ["serverless", "storage", "functions"],
+  "icon": "mdi:google-cloud"
+}

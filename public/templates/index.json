@@ -79,51 +79,41 @@
     },
     {
       "id": "gcp/basic-network-vm",
-      "name": "GCP — Basic VPC + VM",
-      "description": "VPC custom + subnet + firewall + Compute Engine.",
+      "name": "GCP — Basic VPC + VM (nginx)",
+      "description": "VPC custom con subnet pública, firewall y una VM Compute Engine con nginx en el puerto 80; output con la IP pública.",
       "provider": "gcp",
       "resourceCount": 4,
       "tags": [
         "starter",
         "networking",
-        "compute"
+        "compute",
+        "nginx"
       ],
       "icon": "mdi:google-cloud"
     },
     {
       "id": "gcp/web-classic-lb",
-      "name": "GCP — Classic web (LB + MIG + Cloud SQL)",
-      "description": "MIG detrás de Backend Service + Cloud SQL.",
+      "name": "GCP — Classic web (LB + MIG)",
+      "description": "HTTP Load Balancer + Managed Instance Group de 3 instancias nginx; cada instancia sirve una página distinta para ver el balanceo al refrescar.",
       "provider": "gcp",
       "resourceCount": 10,
       "tags": [
         "web",
         "load-balancer",
-        "database"
+        "autoscaling"
       ],
       "icon": "mdi:google-cloud"
     },
     {
-      "id": "gcp/serverless-functions-storage-bq",
-      "name": "GCP — Serverless (Functions + Storage + BigQuery)",
-      "description": "Cloud Function gatillada por Storage, datos a BigQuery.",
+      "id": "gcp/serverless-cat-gallery",
+      "name": "GCP — Cat gallery (Storage + Functions)",
+      "description": "Galería de fotos de gatitos: web estática en Cloud Storage que lista las fotos y un botón para subir más vía Cloud Function. Incluye 3 gatitos de inicio.",
       "provider": "gcp",
-      "resourceCount": 6,
+      "resourceCount": 17,
       "tags": [
         "serverless",
-        "event-driven"
-      ],
-      "icon": "mdi:google-cloud"
-    },
-    {
-      "id": "gcp/data-pipeline-pubsub-bq",
-      "name": "GCP — Data pipeline (Pub/Sub + Functions + BigQuery)",
-      "description": "Tema Pub/Sub procesado por Function hacia BigQuery.",
-      "provider": "gcp",
-      "resourceCount": 8,
-      "tags": [
-        "data",
-        "pubsub"
+        "storage",
+        "functions"
       ],
       "icon": "mdi:google-cloud"
     }

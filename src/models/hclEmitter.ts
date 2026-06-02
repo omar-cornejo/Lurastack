@@ -202,32 +202,50 @@ export const terraformResourceToHCL = (resource: TerraformResource): string => {
     return `${indent}${key} = ${toHclLiteral(value)}\n`;
   };
 
+  // Renders one object as a nested block `name { ... }`. Properties that are
+  // themselves an array of objects (or a string-encoded one) become nested
+  // blocks recursively — GCP especially nests blocks several levels deep
+  // (e.g. boot_disk > initialize_params, network_interface > access_config).
+  // An empty object still emits an empty block (e.g. `access_config {}` asks
+  // GCP for an ephemeral public IP), so callers can force that with `[{}]`.
   const renderObjectBlock = (
     blockName: string,
     value: Record<string, unknown>,
     indent: string,
   ): string => {
-    const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
-    if (!entries.length) return "";
-
-    let lines = `${indent}${blockName} {\n`;
-    entries.forEach(([k, v]) => {
-      lines += renderAssignment(k, v, `${indent}  `);
+    const inner = `${indent}  `;
+    let body = "";
+    Object.entries(value).forEach(([k, v]) => {
+      if (Array.isArray(v) && v.length && v.every((item) => isPlainObject(item))) {
+        v.forEach((item) => {
+          body += renderObjectBlock(k, item as Record<string, unknown>, inner);
+        });
+        return;
+      }
+      const nestedInline = parseInlineObjectArray(v);
+      if (nestedInline) {
+        nestedInline.forEach((item) => {
+          body += renderObjectBlock(k, item, inner);
+        });
+        return;
+      }
+      if (!isMeaningfulValue(v)) return;
+      body += renderAssignment(k, v, inner);
     });
-    lines += `${indent}}\n`;
-    return lines;
+
+    return `${indent}${blockName} {\n${body}${indent}}\n`;
   };
 
   const renderNode = (node: HclBlockNode, indent: string): string => {
     let lines = "";
 
     Object.entries(node.attributes).forEach(([key, value]) => {
-      if (!isMeaningfulValue(value)) return;
-
-      if (Array.isArray(value) && value.every((item) => isPlainObject(item))) {
+      // Array of objects → one nested block per item. Checked before the
+      // meaningfulness guard so a deliberately-empty block like
+      // `access_config = [{}]` still emits `access_config {}`.
+      if (Array.isArray(value) && value.length && value.every((item) => isPlainObject(item))) {
         value.forEach((item) => {
-          const rendered = renderObjectBlock(key, item as Record<string, unknown>, indent);
-          if (rendered) lines += rendered;
+          lines += renderObjectBlock(key, item as Record<string, unknown>, indent);
         });
         return;
       }
@@ -237,12 +255,12 @@ export const terraformResourceToHCL = (resource: TerraformResource): string => {
       const inlineObjects = parseInlineObjectArray(value);
       if (inlineObjects) {
         inlineObjects.forEach((item) => {
-          const rendered = renderObjectBlock(key, item, indent);
-          if (rendered) lines += rendered;
+          lines += renderObjectBlock(key, item, indent);
         });
         return;
       }
 
+      if (!isMeaningfulValue(value)) return;
       lines += renderAssignment(key, value, indent);
     });
 
@@ -284,6 +302,17 @@ export function buildMultiProviderHcl(
     const cfg = PROVIDER_CONFIG[p];
     const region = providerSettings[p]?.region ?? cfg.defaultRegion;
     hcl += `provider "${cfg.name}" {\n`;
+    // GCP needs a project to deploy (and a zone for Compute). The project comes
+    // from a `var.project` so each template stays portable across accounts;
+    // an explicit setting wins when present. Emitted only for the google provider.
+    if (cfg.name === "google") {
+      const project = providerSettings[p]?.project;
+      hcl += project && project.trim()
+        ? `  project = "${project}"\n`
+        : "  project = var.project\n";
+      const zone = providerSettings[p]?.zone ?? cfg.defaultZone;
+      if (zone && zone.trim()) hcl += `  zone = "${zone}"\n`;
+    }
     if (region.trim()) hcl += `  region = "${region}"\n`;
     hcl += "}\n\n";
   });

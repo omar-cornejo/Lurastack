@@ -314,6 +314,11 @@ export function buildEnvForProvider(
     if (gcpCredentials.projectId) {
       env.GOOGLE_PROJECT = gcpCredentials.projectId;
       env.GOOGLE_CLOUD_PROJECT = gcpCredentials.projectId;
+      // GCP templates declare `variable "project"` and the provider emits
+      // `project = var.project`. Surfacing it as TF_VAR_project lets a saved
+      // project id fill the variable automatically (overriding the empty
+      // terraform.tfvars the templates ship with).
+      env.TF_VAR_project = gcpCredentials.projectId;
     }
     if (gcpCredentials.region) env.GOOGLE_REGION = gcpCredentials.region;
     if (gcpCredentials.serviceAccountFilePath) {

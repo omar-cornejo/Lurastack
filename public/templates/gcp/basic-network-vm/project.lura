@@ -1,28 +1,28 @@
 {
   "version": "1",
   "meta": {
-    "name": "GCP — Basic VPC + VM",
+    "name": "GCP — Basic VPC + VM (nginx)",
     "createdAt": "2026-01-01T00:00:00.000Z",
     "updatedAt": "2026-01-01T00:00:00.000Z"
   },
   "settings": {
     "autosave": false
   },
-  "activeViewId": "view-8d7c17ff-bcb7-44e1-b206-b128aebd080a",
+  "activeViewId": "view-gcp-basic-0001",
   "views": [
     {
-      "id": "view-8d7c17ff-bcb7-44e1-b206-b128aebd080a",
+      "id": "view-gcp-basic-0001",
       "name": "View 1",
       "activeProvider": "gcp",
       "resources": [
         {
-          "id": "8b785f33-d508-4a23-93f1-8a745634a4a2",
+          "id": "r-net",
           "kind": "resource",
           "type": "google_compute_network",
           "name": "main",
           "schemaId": "google_compute_network",
           "origin": "imported-file",
-          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_compute_network                              │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_compute_network\" \"this\" {\n\n  name                                      = \"\"     # string | required | Name of the resource. Provided by the client when the resour…\n  auto_create_subnetworks                   = false  # bool | optional | When set to 'true', the network is created in \"auto subnet m…\n  delete_default_routes_on_create           = false  # bool | optional | If set to 'true', default routes ('0.0.0.0/0') will be delet…\n  description                               = \"\"     # string | optional | An optional description of this resource. The resource must …\n  enable_ula_internal_ipv6                  = false  # bool | optional | Enable ULA internal ipv6 on this network. Enabling this feat…\n  id                                        = \"\"     # string | optional+computed\n  internal_ipv6_range                       = \"\"     # string | optional+computed | When enabling ula internal ipv6, caller optionally can speci…\n  mtu                                       = 0      # number | optional+computed | Maximum Transmission Unit in bytes. The default value is 146…\n  network_firewall_policy_enforcement_order = \"\"     # string | optional | Set the order that Firewall Rules and Firewall Policies are …\n  project                                   = \"\"     # string | optional+computed\n  routing_mode                              = \"\"     # string | optional+computed | The network-wide routing mode to use. If set to 'REGIONAL', …\n\n  # gateway_ipv4                              = \"\"     # string | computed | The gateway address for default routing out of the network. …\n  # numeric_id                                = \"\"     # string | computed | The unique identifier for the resource. This identifier is d…\n  # self_link                                 = \"\"     # string | computed\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "hclTemplate": "# resource: google_compute_network\nresource \"google_compute_network\" \"this\" {\n}\n",
           "config": {
             "attributes": {
               "name": "lurastack-basic-vpc",
@@ -37,90 +37,109 @@
           }
         },
         {
-          "id": "a90f4d56-137e-44f6-8608-9add5602269b",
+          "id": "r-subnet",
           "kind": "resource",
           "type": "google_compute_subnetwork",
           "name": "main",
           "schemaId": "google_compute_subnetwork",
           "origin": "imported-file",
-          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_compute_subnetwork                           │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_compute_subnetwork\" \"this\" {\n\n  ip_cidr_range                    = \"\"     # string | required | The range of internal addresses that are owned by this subne…\n  name                             = \"\"     # string | required | The name of the resource, provided by the client when initia…\n  network                          = \"\"     # string | required | The network this subnet belongs to. Only networks that are i…\n  description                      = \"\"     # string | optional | An optional description of this resource. Provide this prope…\n  external_ipv6_prefix             = \"\"     # string | optional+computed | The range of external IPv6 addresses that are owned by this …\n  id                               = \"\"     # string | optional+computed\n  ipv6_access_type                 = \"\"     # string | optional | The access type of IPv6 address this subnet holds. It's immu…\n  private_ip_google_access         = false  # bool | optional+computed | When enabled, VMs in this subnetwork without external IP add…\n  private_ipv6_google_access       = \"\"     # string | optional+computed | The private IPv6 google access type for the VMs in this subn…\n  project                          = \"\"     # string | optional+computed\n  purpose                          = \"\"     # string | optional+computed | The purpose of the resource. This field can be either 'PRIVA…\n  region                           = \"\"     # string | optional+computed | The GCP region for this subnetwork.\n  role                             = \"\"     # string | optional | The role of subnetwork. Currently, this field is only used w…\n  secondary_ip_range               = []     # list(object({ ip_cidr_range: string, range_name: string })) | optional+computed | An array of configurations for secondary IP ranges for VM in…\n  send_secondary_ip_range_if_empty = false  # bool | optional | Controls the removal behavior of secondary_ip_range. When fa…\n  stack_type                       = \"\"     # string | optional+computed | The stack type for this subnet to identify whether the IPv6 …\n\n  # creation_timestamp               = \"\"     # string | computed | Creation timestamp in RFC3339 text format.\n  # fingerprint                      = \"\"     # string | computed+DEPRECATED | Fingerprint of this resource. This field is used internally …\n  # gateway_address                  = \"\"     # string | computed | The gateway address for default routes to reach destination …\n  # internal_ipv6_prefix             = \"\"     # string | computed | The internal IPv6 address range that is assigned to this sub…\n  # ipv6_cidr_range                  = \"\"     # string | computed | The range of internal IPv6 addresses that are owned by this …\n  # self_link                        = \"\"     # string | computed\n\n  log_config { # list [0..1]\n    aggregation_interval = \"\"     # string | optional | Can only be specified if VPC flow logging for this subnetwor…\n    filter_expr          = \"\"     # string | optional | Export filter used to define which VPC flow logs should be l…\n    flow_sampling        = 0      # number | optional | Can only be specified if VPC flow logging for this subnetwor…\n    metadata             = \"\"     # string | optional | Can only be specified if VPC flow logging for this subnetwor…\n    metadata_fields      = []     # set(string) | optional | List of metadata fields that should be added to reported log…\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "hclTemplate": "# resource: google_compute_subnetwork\nresource \"google_compute_subnetwork\" \"this\" {\n}\n",
           "config": {
             "attributes": {
               "name": "lurastack-basic-subnet",
+              "ip_cidr_range": "10.0.1.0/24",
               "region": "us-central1",
-              "network": "google_compute_network.main.id",
-              "ip_cidr_range": "10.0.1.0/24"
+              "network": "google_compute_network.main.id"
             },
             "blocks": {}
           },
           "ui": {
-            "x": 280,
+            "x": 300,
             "y": 0,
             "icon": "/icons/gcp_networking.svg"
           }
         },
         {
-          "id": "8b840351-16fc-4224-b7fd-17d88c3f9756",
+          "id": "r-fw",
           "kind": "resource",
           "type": "google_compute_firewall",
-          "name": "ssh",
+          "name": "allow",
           "schemaId": "google_compute_firewall",
           "origin": "imported-file",
-          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_compute_firewall                             │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_compute_firewall\" \"this\" {\n\n  name                    = \"\"     # string | required | Name of the resource. Provided by the client when the resour…\n  network                 = \"\"     # string | required | The name or self_link of the network to attach this firewall…\n  description             = \"\"     # string | optional | An optional description of this resource. Provide this prope…\n  destination_ranges      = []     # set(string) | optional+computed | If destination ranges are specified, the firewall will apply…\n  direction               = \"\"     # string | optional+computed | Direction of traffic to which this firewall applies; default…\n  disabled                = false  # bool | optional | Denotes whether the firewall rule is disabled, i.e not appli…\n  enable_logging          = false  # bool | optional+computed+DEPRECATED | This field denotes whether to enable logging for a particula…\n  id                      = \"\"     # string | optional+computed\n  priority                = 0      # number | optional | Priority for this rule. This is an integer between 0 and 655…\n  project                 = \"\"     # string | optional+computed\n  source_ranges           = []     # set(string) | optional | If source ranges are specified, the firewall will apply only…\n  source_service_accounts = []     # set(string) | optional | If source service accounts are specified, the firewall will …\n  source_tags             = []     # set(string) | optional | If source tags are specified, the firewall will apply only t…\n  target_service_accounts = []     # set(string) | optional | A list of service accounts indicating sets of instances loca…\n  target_tags             = []     # set(string) | optional | A list of instance tags indicating sets of instances located…\n\n  # creation_timestamp      = \"\"     # string | computed | Creation timestamp in RFC3339 text format.\n  # self_link               = \"\"     # string | computed\n\n  allow { # set\n    protocol = \"\"     # string | required | The IP protocol to which this rule applies. The protocol typ…\n    ports    = []     # list(string) | optional | An optional list of ports to which this rule applies. This f…\n\n  }\n\n  deny { # set\n    protocol = \"\"     # string | required | The IP protocol to which this rule applies. The protocol typ…\n    ports    = []     # list(string) | optional | An optional list of ports to which this rule applies. This f…\n\n  }\n\n  log_config { # list [0..1]\n    metadata = \"\"     # string | required | This field denotes whether to include or exclude metadata fo…\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "hclTemplate": "# resource: google_compute_firewall\nresource \"google_compute_firewall\" \"this\" {\n}\n",
           "config": {
             "attributes": {
-              "name": "lurastack-basic-allow-ssh",
+              "name": "lurastack-basic-allow-web-ssh",
               "network": "google_compute_network.main.id",
               "direction": "INGRESS",
-              "source_ranges": "[\"0.0.0.0/0\"]"
+              "source_ranges": "[\"0.0.0.0/0\"]",
+              "allow": [
+                {
+                  "protocol": "tcp",
+                  "ports": "[\"22\", \"80\"]"
+                }
+              ]
             },
             "blocks": {}
           },
           "ui": {
-            "x": 560,
+            "x": 600,
             "y": 0,
             "icon": "/icons/gcp_security_identity.svg"
           }
         },
         {
-          "id": "225401a3-3501-4c8a-adbf-184b4a1a1ee5",
+          "id": "r-vm",
           "kind": "resource",
           "type": "google_compute_instance",
           "name": "vm",
           "schemaId": "google_compute_instance",
           "origin": "imported-file",
-          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: google_compute_instance                             │\n# └──────────────────────────────────────────────────────────────┘\nresource \"google_compute_instance\" \"this\" {\n\n  machine_type              = \"\"     # string | required | The machine type to create.\n  name                      = \"\"     # string | required | The name of the instance. One of name or self_link must be p…\n  allow_stopping_for_update = false  # bool | optional | If true, allows Terraform to stop the instance to update its…\n  can_ip_forward            = false  # bool | optional | Whether sending and receiving of packets with non-matching s…\n  deletion_protection       = false  # bool | optional | Whether deletion protection is enabled on this instance.\n  description               = \"\"     # string | optional | A brief description of the resource.\n  desired_status            = \"\"     # string | optional | Desired status of the instance. Either \"RUNNING\" or \"TERMINA…\n  enable_display            = false  # bool | optional | Whether the instance has virtual displays enabled.\n  guest_accelerator         = []     # list(object({ count: number, type: string })) | optional+computed | List of the type and count of accelerator cards attached to …\n  hostname                  = \"\"     # string | optional | A custom hostname for the instance. Must be a fully qualifie…\n  id                        = \"\"     # string | optional+computed\n  labels                    = {}     # map(string) | optional | A set of key/value label pairs assigned to the instance.  \t\t…\n  metadata                  = {}     # map(string) | optional | Metadata key/value pairs made available within the instance.\n  metadata_startup_script   = \"\"     # string | optional | Metadata startup scripts made available within the instance.\n  min_cpu_platform          = \"\"     # string | optional+computed | The minimum CPU platform specified for the VM instance.\n  project                   = \"\"     # string | optional+computed | The ID of the project in which the resource belongs. If self…\n  resource_policies         = []     # list(string) | optional | A list of self_links of resource policies to attach to the i…\n  tags                      = []     # set(string) | optional | The list of tags attached to the instance.\n  zone                      = \"\"     # string | optional+computed | The zone of the instance. If self_link is provided, this val…\n\n  # cpu_platform              = \"\"     # string | computed | The CPU platform used by this instance.\n  # current_status            = \"\"     # string | computed |  \t\t\t\t\tCurrent status of the instance. \t\t\t\t\tThis could be one…\n  # effective_labels          = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…\n  # instance_id               = \"\"     # string | computed | The server-assigned unique identifier of this instance.\n  # label_fingerprint         = \"\"     # string | computed | The unique fingerprint of the labels.\n  # metadata_fingerprint      = \"\"     # string | computed | The unique fingerprint of the metadata.\n  # self_link                 = \"\"     # string | computed | The URI of the created resource.\n  # tags_fingerprint          = \"\"     # string | computed | The unique fingerprint of the tags.\n  # terraform_labels          = {}     # map(string) | computed | The combination of labels configured directly on the resourc…\n\n  advanced_machine_features { # list [0..1]\n    enable_nested_virtualization = false  # bool | optional | Whether to enable nested virtualization or not.\n    threads_per_core             = 0      # number | optional | The number of threads per physical core. To disable simultan…\n    visible_core_count           = 0      # number | optional | The number of physical cores to expose to an instance. Multi…\n\n  }\n\n  attached_disk { # list\n    source                     = \"\"     # string | required | The name or self_link of the disk attached to this instance.\n    device_name                = \"\"     # string | optional+computed | Name with which the attached disk is accessible under /dev/d…\n    disk_encryption_key_raw    = \"\"     # string | optional+sensitive | A 256-bit customer-supplied encryption key, encoded in RFC 4…\n    kms_key_self_link          = \"\"     # string | optional+computed | The self_link of the encryption key that is stored in Google…\n    mode                       = \"\"     # string | optional | Read/write mode for the disk. One of \"READ_ONLY\" or \"READ_WR…\n\n    # disk_encryption_key_sha256 = \"\"     # string | computed | The RFC 4648 base64 encoded SHA-256 hash of the customer-sup…\n\n  }\n\n  boot_disk { # list [1..1]\n    auto_delete                = false  # bool | optional | Whether the disk will be auto-deleted when the instance is d…\n    device_name                = \"\"     # string | optional+computed | Name with which attached disk will be accessible under /dev/…\n    disk_encryption_key_raw    = \"\"     # string | optional+sensitive | A 256-bit customer-supplied encryption key, encoded in RFC 4…\n    kms_key_self_link          = \"\"     # string | optional+computed | The self_link of the encryption key that is stored in Google…\n    mode                       = \"\"     # string | optional | Read/write mode for the disk. One of \"READ_ONLY\" or \"READ_WR…\n    source                     = \"\"     # string | optional+computed | The name or self_link of the disk attached to this instance.\n\n    # disk_encryption_key_sha256 = \"\"     # string | computed | The RFC 4648 base64 encoded SHA-256 hash of the customer-sup…\n\n    initialize_params { # list [0..1]\n      enable_confidential_compute = false  # bool | optional | A flag to enable confidential compute mode on boot disk\n      image                       = \"\"     # string | optional+computed | The image from which this disk was initialised.\n      labels                      = {}     # map(string) | optional+computed | A set of key/value label pairs assigned to the disk.\n      provisioned_iops            = 0      # number | optional+computed | Indicates how many IOPS to provision for the disk. This sets…\n      provisioned_throughput      = 0      # number | optional+computed | Indicates how much throughput to provision for the disk. Thi…\n      resource_manager_tags       = {}     # map(string) | optional | A map of resource manager tags. Resource manager tag keys an…\n      size                        = 0      # number | optional+computed | The size of the image in gigabytes.\n      storage_pool                = \"\"     # string | optional | The URL of the storage pool in which the new disk is created\n      type                        = \"\"     # string | optional+computed | The Google Compute Engine disk type. Such as pd-standard, pd…\n\n    }\n\n  }\n\n  confidential_instance_config { # list [0..1]\n    confidential_instance_type  = \"\"     # string | optional |  \t\t\t\t\t\t\t\tThe confidential computing technology the instance …\n    enable_confidential_compute = false  # bool | optional | Defines whether the instance should have confidential comput…\n\n  }\n\n  network_interface { # list [1..*]\n    internal_ipv6_prefix_length = 0      # number | optional+computed | The prefix length of the primary internal IPv6 range.\n    ipv6_address                = \"\"     # string | optional+computed | An IPv6 internal network address for this network interface.…\n    network                     = \"\"     # string | optional+computed | The name or self_link of the network attached to this interf…\n    network_ip                  = \"\"     # string | optional+computed | The private IP address assigned to the instance.\n    nic_type                    = \"\"     # string | optional | The type of vNIC to be used on this interface. Possible valu…\n    queue_count                 = 0      # number | optional | The networking queue count that's specified by users for the…\n    stack_type                  = \"\"     # string | optional+computed | The stack type for this network interface to identify whethe…\n    subnetwork                  = \"\"     # string | optional+computed | The name or self_link of the subnetwork attached to this int…\n    subnetwork_project          = \"\"     # string | optional+computed | The project in which the subnetwork belongs.\n\n    # ipv6_access_type            = \"\"     # string | computed | One of EXTERNAL, INTERNAL to indicate whether the IP can be …\n    # name                        = \"\"     # string | computed | The name of the interface\n\n    access_config { # list\n      nat_ip                 = \"\"     # string | optional+computed | The IP address that is be 1:1 mapped to the instance's netwo…\n      network_tier           = \"\"     # string | optional+computed | The networking tier used for configuring this instance. One …\n      public_ptr_domain_name = \"\"     # string | optional | The DNS domain name for the public PTR record.\n\n    }\n\n    alias_ip_range { # list\n      ip_cidr_range         = \"\"     # string | required | The IP CIDR range represented by this alias IP range.\n      subnetwork_range_name = \"\"     # string | optional | The subnetwork secondary range name specifying the secondary…\n\n    }\n\n    ipv6_access_config { # list\n      network_tier                = \"\"     # string | required | The service-level to be provided for IPv6 traffic when the s…\n      external_ipv6               = \"\"     # string | optional+computed | The first IPv6 address of the external IPv6 range associated…\n      external_ipv6_prefix_length = \"\"     # string | optional+computed | The prefix length of the external IPv6 range.\n      name                        = \"\"     # string | optional+computed | The name of this access configuration. In ipv6AccessConfigs,…\n      public_ptr_domain_name      = \"\"     # string | optional | The domain name to be used when creating DNSv6 records for t…\n\n    }\n\n  }\n\n  network_performance_config { # list [0..1]\n    total_egress_bandwidth_tier = \"\"     # string | required | The egress bandwidth tier to enable. Possible values:TIER_1,…\n\n  }\n\n  params { # list [0..1]\n    resource_manager_tags = {}     # map(string) | optional | A map of resource manager tags. Resource manager tag keys an…\n\n  }\n\n  reservation_affinity { # list [0..1]\n    type = \"\"     # string | required | The type of reservation from which this instance can consume…\n\n    specific_reservation { # list [0..1]\n      key    = \"\"     # string | required | Corresponds to the label key of a reservation resource. To t…\n      values = []     # list(string) | required | Corresponds to the label values of a reservation resource.\n\n    }\n\n  }\n\n  scheduling { # list [0..1]\n    automatic_restart           = false  # bool | optional | Specifies if the instance should be restarted if it was term…\n    instance_termination_action = \"\"     # string | optional | Specifies the action GCE should take when SPOT VM is preempt…\n    min_node_cpus               = 0      # number | optional\n    on_host_maintenance         = \"\"     # string | optional+computed | Describes maintenance behavior for the instance. One of MIGR…\n    preemptible                 = false  # bool | optional | Whether the instance is preemptible.\n    provisioning_model          = \"\"     # string | optional+computed | Whether the instance is spot. If this is set as SPOT.\n\n    local_ssd_recovery_timeout { # list [0..1]\n      seconds = 0      # number | required | Span of time at a resolution of a second. Must be from 0 to …\n      nanos   = 0      # number | optional | Span of time that's a fraction of a second at nanosecond res…\n\n    }\n\n    max_run_duration { # list [0..1]\n      seconds = 0      # number | required | Span of time at a resolution of a second. Must be from 0 to …\n      nanos   = 0      # number | optional | Span of time that's a fraction of a second at nanosecond res…\n\n    }\n\n    node_affinities { # set\n      key      = \"\"     # string | required\n      operator = \"\"     # string | required\n      values   = []     # set(string) | required\n\n    }\n\n    on_instance_stop_action { # list [0..1]\n      discard_local_ssd = false  # bool | optional | If true, the contents of any attached Local SSD disks will b…\n\n    }\n\n  }\n\n  scratch_disk { # list\n    interface   = \"\"     # string | required | The disk interface used for attaching this disk. One of SCSI…\n    device_name = \"\"     # string | optional+computed | Name with which the attached disk is accessible under /dev/d…\n    size        = 0      # number | optional | The size of the disk in gigabytes. One of 375 or 3000.\n\n  }\n\n  service_account { # list [0..1]\n    scopes = []     # set(string) | required | A list of service scopes.\n    email  = \"\"     # string | optional+computed | The service account e-mail address.\n\n  }\n\n  shielded_instance_config { # list [0..1]\n    enable_integrity_monitoring = false  # bool | optional | Whether integrity monitoring is enabled for the instance.\n    enable_secure_boot          = false  # bool | optional | Whether secure boot is enabled for the instance.\n    enable_vtpm                 = false  # bool | optional | Whether the instance uses vTPM.\n\n  }\n\n  timeouts { # single\n    create = \"\"     # string | optional\n    delete = \"\"     # string | optional\n    update = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "hclTemplate": "# resource: google_compute_instance\nresource \"google_compute_instance\" \"this\" {\n}\n",
           "config": {
             "attributes": {
               "name": "lurastack-basic-vm",
+              "machine_type": "e2-micro",
               "zone": "us-central1-a",
-              "machine_type": "e2-micro"
+              "tags": "[\"http-server\"]",
+              "boot_disk": [
+                {
+                  "initialize_params": [
+                    {
+                      "image": "debian-cloud/debian-12"
+                    }
+                  ]
+                }
+              ],
+              "network_interface": [
+                {
+                  "subnetwork": "google_compute_subnetwork.main.id",
+                  "access_config": [
+                    {}
+                  ]
+                }
+              ],
+              "metadata_startup_script": "file(\"${path.module}/startup.sh\")"
             },
             "blocks": {}
           },
           "ui": {
-            "x": 280,
-            "y": 200,
+            "x": 900,
+            "y": 0,
             "icon": "/icons/gcp_compute_engine.svg"
           }
         }
       ],
       "nodes": [
         {
-          "id": "node-8b785f33-d508-4a23-93f1-8a745634a4a2",
+          "id": "node-r-net",
           "type": "terraformResource",
           "position": {
-            "x": 0,
-            "y": 0
+            "x": -38,
+            "y": -146.7
           },
-          "style": {
-            "width": 580,
-            "height": 332
-          },
-          "dragHandle": ".container-drag-handle",
-          "zIndex": 0,
           "data": {
-            "resourceId": "8b785f33-d508-4a23-93f1-8a745634a4a2",
+            "resourceId": "r-net",
             "schemaId": "google_compute_network",
             "label": "main",
             "icon": "/icons/gcp_networking.svg",
@@ -129,43 +148,23 @@
             "isContainer": true,
             "containerKind": "hierarchical",
             "zoneContainerIds": []
-          }
-        },
-        {
-          "id": "node-225401a3-3501-4c8a-adbf-184b4a1a1ee5",
-          "type": "terraformResource",
-          "position": {
-            "x": 660,
-            "y": 0
           },
-          "zIndex": 10,
-          "data": {
-            "resourceId": "225401a3-3501-4c8a-adbf-184b4a1a1ee5",
-            "schemaId": "google_compute_instance",
-            "label": "vm",
-            "icon": "/icons/gcp_compute_engine.svg",
-            "terraformType": "google_compute_instance",
-            "terraformKind": "resource",
-            "isContainer": false,
-            "zoneContainerIds": []
+          "width": 457,
+          "height": 388,
+          "style": {
+            "width": 457,
+            "height": 388
           }
         },
         {
-          "id": "node-a90f4d56-137e-44f6-8608-9add5602269b",
+          "id": "node-r-subnet",
           "type": "terraformResource",
           "position": {
             "x": 20,
-            "y": 58
+            "y": 78.5
           },
-          "style": {
-            "width": 340,
-            "height": 230
-          },
-          "dragHandle": ".container-drag-handle",
-          "zIndex": 0,
-          "parentNode": "node-8b785f33-d508-4a23-93f1-8a745634a4a2",
           "data": {
-            "resourceId": "a90f4d56-137e-44f6-8608-9add5602269b",
+            "resourceId": "r-subnet",
             "schemaId": "google_compute_subnetwork",
             "label": "main",
             "icon": "/icons/gcp_networking.svg",
@@ -174,31 +173,81 @@
             "isContainer": true,
             "containerKind": "hierarchical",
             "zoneContainerIds": []
+          },
+          "parentNode": "node-r-net",
+          "width": 411,
+          "height": 290,
+          "style": {
+            "width": 411,
+            "height": 290
           }
         },
         {
-          "id": "node-8b840351-16fc-4224-b7fd-17d88c3f9756",
+          "id": "node-r-fw",
           "type": "terraformResource",
           "position": {
-            "x": 384,
-            "y": 58
+            "x": 61.5,
+            "y": 97.4
           },
-          "zIndex": 10,
-          "parentNode": "node-8b785f33-d508-4a23-93f1-8a745634a4a2",
           "data": {
-            "resourceId": "8b840351-16fc-4224-b7fd-17d88c3f9756",
+            "resourceId": "r-fw",
             "schemaId": "google_compute_firewall",
-            "label": "ssh",
+            "label": "allow",
             "icon": "/icons/gcp_security_identity.svg",
             "terraformType": "google_compute_firewall",
             "terraformKind": "resource",
             "isContainer": false,
             "zoneContainerIds": []
-          }
+          },
+          "parentNode": "node-r-subnet",
+          "width": 209,
+          "height": 68
+        },
+        {
+          "id": "node-r-vm",
+          "type": "terraformResource",
+          "position": {
+            "x": 159.7,
+            "y": 201.7
+          },
+          "data": {
+            "resourceId": "r-vm",
+            "schemaId": "google_compute_instance",
+            "label": "vm",
+            "icon": "/icons/gcp_compute_engine.svg",
+            "terraformType": "google_compute_instance",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 209,
+          "height": 68
         }
       ],
       "edges": [],
-      "codeFiles": []
+      "codeFiles": [
+        {
+          "id": "cf-startup",
+          "name": "startup.sh",
+          "content": "#!/bin/bash\nset -uo pipefail\n\n# Debian/Ubuntu images on GCE use apt.\napt-get update -y\napt-get install -y nginx\n\ncat > /var/www/html/index.html <<'HTML'\n<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>LuraStack — nginx on GCE</title>\n    <style>\n      body { font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }\n      .card { text-align: center; padding: 2rem 3rem; border: 1px solid #334155; border-radius: 12px; background: #1e293b; }\n      h1 { margin: 0 0 .5rem; }\n      code { color: #34d399; }\n    </style>\n  </head>\n  <body>\n    <div class=\"card\">\n      <h1>It works 🎉</h1>\n      <p>nginx is running on this Compute Engine VM, served on <code>port 80</code>.</p>\n      <p>Provisioned with <strong>LuraStack</strong>.</p>\n    </div>\n  </body>\n</html>\nHTML\n\nsystemctl enable nginx\nsystemctl restart nginx\n"
+        },
+        {
+          "id": "cf-var",
+          "name": "variable.tf",
+          "content": "variable \"project\" {\n  description = \"GCP project ID to deploy into\"\n  type        = string\n}\n"
+        },
+        {
+          "id": "cf-output",
+          "name": "output.tf",
+          "content": "output \"instance_public_ip\" {\n  description = \"Public IP of the nginx VM\"\n  value       = google_compute_instance.vm.network_interface[0].access_config[0].nat_ip\n}\n\noutput \"url\" {\n  description = \"Open this URL to see the nginx welcome page\"\n  value       = \"http://${google_compute_instance.vm.network_interface[0].access_config[0].nat_ip}\"\n}\n"
+        },
+        {
+          "id": "cf-tfvars",
+          "name": "terraform.tfvars",
+          "content": "# GCP project id.\n#\n# Leave this commented out to use the project from your saved GCP credentials\n# (LuraStack exports it as TF_VAR_project at deploy time).\n#\n# If you are not using LuraStack credentials, uncomment the next line and set it:\n# project = \"my-gcp-project-id\"\n"
+        }
+      ]
     }
   ]
 }

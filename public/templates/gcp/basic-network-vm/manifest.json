@@ -1,13 +1,9 @@
 {
   "id": "gcp/basic-network-vm",
-  "name": "GCP — Basic VPC + VM",
-  "description": "VPC custom + subnet + firewall + Compute Engine.",
+  "name": "GCP — Basic VPC + VM (nginx)",
+  "description": "VPC custom con subnet pública, firewall y una VM Compute Engine con nginx en el puerto 80; output con la IP pública.",
   "provider": "gcp",
   "resourceCount": 4,
-  "tags": [
-    "starter",
-    "networking",
-    "compute"
-  ],
+  "tags": ["starter", "networking", "compute", "nginx"],
   "icon": "mdi:google-cloud"
 }

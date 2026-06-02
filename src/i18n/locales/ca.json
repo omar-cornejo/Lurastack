@@ -399,12 +399,10 @@
   "template.aws/web-classic-lb.description": "ALB + Auto Scaling Group de 3 instàncies nginx en subxarxes públiques; cada instància serveix una pàgina diferent per veure el balanceig en refrescar.",
   "template.aws/serverless-cat-gallery.name": "AWS — Galeria de gatets (S3 + Lambda)",
   "template.aws/serverless-cat-gallery.description": "Galeria de fotos de gatets: web estàtica a S3 que llista les fotos i un botó per pujar-ne més via Lambda (Function URL). Inclou 3 gatets d'inici.",
-  "template.gcp/basic-network-vm.name": "GCP — VPC bàsica + VM",
-  "template.gcp/basic-network-vm.description": "VPC personalitzada + subxarxa + tallafocs + Compute Engine.",
-  "template.gcp/web-classic-lb.name": "GCP — Web clàssica (LB + MIG + Cloud SQL)",
-  "template.gcp/web-classic-lb.description": "MIG darrere d'un Backend Service + Cloud SQL.",
-  "template.gcp/serverless-functions-storage-bq.name": "GCP — Serverless (Functions + Storage + BigQuery)",
-  "template.gcp/serverless-functions-storage-bq.description": "Cloud Function activada per Storage, dades cap a BigQuery.",
-  "template.gcp/data-pipeline-pubsub-bq.name": "GCP — Pipeline de dades (Pub/Sub + Functions + BigQuery)",
-  "template.gcp/data-pipeline-pubsub-bq.description": "Tema Pub/Sub processat per una Function cap a BigQuery."
+  "template.gcp/basic-network-vm.name": "GCP — VPC bàsica + VM (nginx)",
+  "template.gcp/basic-network-vm.description": "VPC personalitzada amb subxarxa pública, tallafocs i una VM Compute Engine amb nginx al port 80; output amb la IP pública.",
+  "template.gcp/web-classic-lb.name": "GCP — Web clàssica (LB + MIG)",
+  "template.gcp/web-classic-lb.description": "HTTP Load Balancer + Managed Instance Group de 3 instàncies nginx; cada instància serveix una pàgina diferent per veure el balanceig en refrescar.",
+  "template.gcp/serverless-cat-gallery.name": "GCP — Galeria de gatets (Storage + Functions)",
+  "template.gcp/serverless-cat-gallery.description": "Galeria de fotos de gatets: web estàtica a Cloud Storage que llista les fotos i un botó per pujar-ne més via Cloud Function. Inclou 3 gatets d'inici."
 }

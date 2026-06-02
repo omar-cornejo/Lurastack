@@ -4,7 +4,7 @@ export type CloudProvider = "aws" | "gcp" | "azure";
 
 export const PROVIDER_CONFIG: Record<
   CloudProvider,
-  { name: string; source: string; version: string; defaultRegion: string }
+  { name: string; source: string; version: string; defaultRegion: string; defaultZone?: string }
 > = {
   aws: {
     name: "aws",
@@ -17,6 +17,7 @@ export const PROVIDER_CONFIG: Record<
     source: "hashicorp/google",
     version: "~> 5.0",
     defaultRegion: "europe-west1",
+    defaultZone: "europe-west1-b",
   },
   azure: {
     name: "azurerm",
@@ -54,12 +55,19 @@ export function detectProvidersInUse(
   return PROVIDER_ORDER.filter((p) => found.has(p));
 }
 
-export type ProviderSettings = Record<CloudProvider, { region: string }>;
+// `project` and `zone` are GCP-specific and optional: GCP requires a project
+// (and Compute resources a zone) to deploy, whereas AWS/Azure use only region.
+// They stay optional so call sites that build settings with just `region`
+// keep compiling.
+export type ProviderSettings = Record<
+  CloudProvider,
+  { region: string; project?: string; zone?: string }
+>;
 
 export function defaultProviderSettings(): ProviderSettings {
   return {
     aws: { region: PROVIDER_CONFIG.aws.defaultRegion },
-    gcp: { region: PROVIDER_CONFIG.gcp.defaultRegion },
+    gcp: { region: PROVIDER_CONFIG.gcp.defaultRegion, zone: PROVIDER_CONFIG.gcp.defaultZone },
     azure: { region: PROVIDER_CONFIG.azure.defaultRegion },
   };
 }
@@ -72,7 +80,11 @@ export function mergeProviderSettings(
   for (const p of PROVIDER_ORDER) {
     const override = partial[p];
     if (override && typeof override.region === "string") {
-      base[p] = { region: override.region };
+      base[p] = {
+        region: override.region,
+        ...(typeof override.project === "string" ? { project: override.project } : {}),
+        ...(typeof override.zone === "string" ? { zone: override.zone } : base[p].zone ? { zone: base[p].zone } : {}),
+      };
     }
   }
   return base;
