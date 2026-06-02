@@ -95,6 +95,79 @@ const toHclLiteral = (value: unknown): string => {
   return JSON.stringify(String(value));
 };
 
+// Splits a comma/brace/bracket-aware HCL fragment at top-level commas only,
+// ignoring commas nested inside [...], {...}, or "...". Used to break an inline
+// object's entries or an inline array's items into pieces.
+const splitTopLevel = (input: string): string[] => {
+  const parts: string[] = [];
+  let depth = 0;
+  let inString = false;
+  let current = "";
+  for (let i = 0; i < input.length; i += 1) {
+    const ch = input[i];
+    if (inString) {
+      current += ch;
+      if (ch === '"' && input[i - 1] !== "\\") inString = false;
+      continue;
+    }
+    if (ch === '"') {
+      inString = true;
+      current += ch;
+      continue;
+    }
+    if (ch === "[" || ch === "{") depth += 1;
+    if (ch === "]" || ch === "}") depth -= 1;
+    if (ch === "," && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += ch;
+  }
+  if (current.trim()) parts.push(current);
+  return parts;
+};
+
+// Parses a single inline HCL object literal body (without the outer braces),
+// e.g. `description = "HTTP", from_port = 80` → { description: '"HTTP"', from_port: '80' }.
+// Values are kept as raw HCL strings so the emitter renders them verbatim.
+const parseInlineObjectBody = (body: string): Record<string, unknown> | null => {
+  const result: Record<string, unknown> = {};
+  for (const entry of splitTopLevel(body)) {
+    const eq = entry.indexOf("=");
+    if (eq < 0) return null;
+    const key = entry.slice(0, eq).trim();
+    const value = entry.slice(eq + 1).trim();
+    if (!/^[a-zA-Z_][a-zA-Z0-9_-]*$/.test(key)) return null;
+    result[key] = value;
+  }
+  return result;
+};
+
+// Detects strings shaped like an inline HCL array of objects
+// (`[{ ... }, { ... }]`) and parses them into a real array of objects so the
+// emitter can render each element as its own nested block. Returns null when the
+// string is not an array-of-objects literal (e.g. a list of strings).
+const parseInlineObjectArray = (
+  value: unknown,
+): Array<Record<string, unknown>> | null => {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("[") || !trimmed.endsWith("]")) return null;
+  const inner = trimmed.slice(1, -1).trim();
+  if (!inner.startsWith("{")) return null;
+
+  const items: Array<Record<string, unknown>> = [];
+  for (const rawItem of splitTopLevel(inner)) {
+    const item = rawItem.trim();
+    if (!item.startsWith("{") || !item.endsWith("}")) return null;
+    const parsed = parseInlineObjectBody(item.slice(1, -1).trim());
+    if (!parsed) return null;
+    items.push(parsed);
+  }
+  return items.length ? items : null;
+};
+
 export const terraformResourceToHCL = (resource: TerraformResource): string => {
   const blockKind = resource.kind ?? "resource";
   const attrs = resource.config.attributes ?? {};
@@ -154,6 +227,17 @@ export const terraformResourceToHCL = (resource: TerraformResource): string => {
       if (Array.isArray(value) && value.every((item) => isPlainObject(item))) {
         value.forEach((item) => {
           const rendered = renderObjectBlock(key, item as Record<string, unknown>, indent);
+          if (rendered) lines += rendered;
+        });
+        return;
+      }
+
+      // String-encoded array of objects (e.g. `ingress = "[{ ... }, { ... }]"`,
+      // as stored by templates) → render each element as its own nested block.
+      const inlineObjects = parseInlineObjectArray(value);
+      if (inlineObjects) {
+        inlineObjects.forEach((item) => {
+          const rendered = renderObjectBlock(key, item, indent);
           if (rendered) lines += rendered;
         });
         return;

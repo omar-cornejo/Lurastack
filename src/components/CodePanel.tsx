@@ -213,6 +213,59 @@ const parseHclValueToAttribute = (rawValue: string): unknown | typeof INVALID_HC
   return trimmed;
 };
 
+// Parses the body of a resource/data block (the lines between its braces) into
+// an attribute map. Scalar assignments become plain keys; repeated named blocks
+// (e.g. multiple `ingress { ... }`) are collected into an ARRAY of objects under
+// the block name so the emitter can re-render each one as its own nested block.
+// Single nested blocks also become a one-element array — round-trip safe.
+const parseBlockBody = (
+  lines: string[],
+  startIndex: number,
+): { attributes: Record<string, unknown>; nextIndex: number } => {
+  const attributes: Record<string, unknown> = {};
+  let index = startIndex;
+
+  while (index < lines.length) {
+    const line = lines[index] ?? "";
+    const trimmed = line.trim();
+
+    // Closing brace of the current block — stop and report where we ended.
+    if (trimmed === "}" || trimmed.startsWith("}")) {
+      return { attributes, nextIndex: index + 1 };
+    }
+
+    // Named nested block opener, e.g. `ingress {` or `tags = {` is NOT this
+    // (that's an assignment). A block opener has no `=` before the brace.
+    const blockOpener = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*\{$/);
+    if (blockOpener) {
+      const blockName = blockOpener[1];
+      const nested = parseBlockBody(lines, index + 1);
+      const existing = attributes[blockName];
+      const item = nested.attributes;
+      if (Array.isArray(existing)) {
+        existing.push(item);
+      } else {
+        attributes[blockName] = [item];
+      }
+      index = nested.nextIndex;
+      continue;
+    }
+
+    const assignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
+    if (assignment) {
+      const [, key, rawValue] = assignment;
+      const parsed = parseHclValueToAttribute(rawValue);
+      if (parsed !== INVALID_HCL_VALUE) {
+        attributes[key] = parsed;
+      }
+    }
+
+    index += 1;
+  }
+
+  return { attributes, nextIndex: index };
+};
+
 const parseMainTfBlocks = (hcl: string): ParsedMainTfBlock[] => {
   const lines = hcl.split("\n");
   const blocks: ParsedMainTfBlock[] = [];
@@ -229,48 +282,9 @@ const parseMainTfBlocks = (hcl: string): ParsedMainTfBlock[] => {
     const blockKind = match[1] as "resource" | "data";
     const blockType = match[2] ?? "";
     const blockName = match[3] ?? "";
-    const attributes: Record<string, unknown> = {};
 
-    // Stack of block-name prefixes for nested blocks (e.g. "route" → "route.")
-    const prefixStack: string[] = [];
-    let depth = 1;
-    index += 1;
-
-    while (index < lines.length && depth > 0) {
-      const line = lines[index] ?? "";
-      const trimmed = line.trim();
-
-      // Detect a named block opener at any depth (e.g. `route {`)
-      const blockOpener = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*\{$/);
-
-      if (blockOpener && prefixStack.length === depth - 1) {
-        // Push the block name so child attributes are prefixed with it
-        prefixStack.push(blockOpener[1]);
-      } else {
-        const assignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
-        if (assignment) {
-          const [, key, rawValue] = assignment;
-          const parsed = parseHclValueToAttribute(rawValue);
-          if (parsed !== INVALID_HCL_VALUE) {
-            const prefix = prefixStack.join(".");
-            const fullKey = prefix ? `${prefix}.${key}` : key;
-            attributes[fullKey] = parsed;
-          }
-        }
-      }
-
-      const opens = (line.match(/{/g) ?? []).length;
-      const closes = (line.match(/}/g) ?? []).length;
-      const nextDepth = depth + opens - closes;
-
-      // When depth decreases, pop the matching prefix (closing a nested block)
-      if (nextDepth < depth && prefixStack.length >= nextDepth) {
-        prefixStack.splice(nextDepth - 1);
-      }
-
-      depth = nextDepth;
-      index += 1;
-    }
+    const { attributes, nextIndex } = parseBlockBody(lines, index + 1);
+    index = nextIndex;
 
     blocks.push({
       kind: blockKind,
@@ -1356,6 +1370,7 @@ export default function CodePanel({
                     containerClassName="h-full min-h-0"
                     innerClassName="px-3 py-2 font-mono text-xs leading-5"
                     attributeMode={!isFreeEditMode}
+                    tabInsertsSpaces={isFreeEditMode}
                     typeHints={mainTfTypeHints}
                   />
                 </div>
@@ -1381,6 +1396,7 @@ export default function CodePanel({
                   containerClassName="h-full min-h-0"
                   innerClassName="px-3 py-2 font-mono text-xs leading-5"
                   attributeMode={!isFreeEditMode}
+                  tabInsertsSpaces={isFreeEditMode}
                 />
               </div>
             )}

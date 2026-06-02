@@ -13,6 +13,8 @@ type HclCodeAreaProps = {
   innerClassName?: string;
   /** When true, dims structural lines and highlights only editable attribute values */
   attributeMode?: boolean;
+  /** When true, the Tab key inserts spaces instead of moving focus (free edit mode) */
+  tabInsertsSpaces?: boolean;
   /** Resolver for inline type hints rendered next to attribute lines (attribute mode only) */
   typeHints?: TypeHintResolver;
 };
@@ -26,8 +28,10 @@ export function HclCodeArea({
   containerClassName = "",
   innerClassName = "",
   attributeMode = false,
+  tabInsertsSpaces = false,
   typeHints,
 }: HclCodeAreaProps) {
+  const TAB_SPACES = "  ";
   const internalRef = useRef<HTMLTextAreaElement>(null);
   const textareaRef = (externalRef ?? internalRef) as RefObject<HTMLTextAreaElement | null>;
   const preRef = useRef<HTMLPreElement>(null);
@@ -85,6 +89,72 @@ export function HclCodeArea({
     onChange?.(event.target.value);
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Tab" || !tabInsertsSpaces || !onChange) return;
+    event.preventDefault();
+    const el = event.currentTarget;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const text = el.value;
+
+    if (event.shiftKey) {
+      // Outdent: remove up to TAB_SPACES.length leading spaces from each line in
+      // the selection (or the caret's line when there's no selection).
+      const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+      const segment = text.slice(lineStart, end);
+      const dedented = segment.replace(
+        new RegExp(`^ {1,${TAB_SPACES.length}}`, "gm"),
+        "",
+      );
+      const removed = segment.length - dedented.length;
+      if (removed === 0) return;
+      const next = text.slice(0, lineStart) + dedented + text.slice(end);
+      // Caret offset shrinks by however many spaces were stripped before it.
+      const beforeCaret = text.slice(lineStart, start);
+      const caretRemoved = beforeCaret.length - beforeCaret.replace(
+        new RegExp(`^ {1,${TAB_SPACES.length}}`, "gm"),
+        "",
+      ).length;
+      const nextStart = Math.max(lineStart, start - caretRemoved);
+      selectionRef.current = {
+        start: nextStart,
+        end: Math.max(nextStart, end - removed),
+        scrollTop: el.scrollTop,
+        scrollLeft: el.scrollLeft,
+      };
+      onChange(next);
+      return;
+    }
+
+    if (start !== end && text.slice(start, end).includes("\n")) {
+      // Multi-line selection: indent every line in range.
+      const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+      const segment = text.slice(lineStart, end);
+      const indented = segment.replace(/^/gm, TAB_SPACES);
+      const added = indented.length - segment.length;
+      const next = text.slice(0, lineStart) + indented + text.slice(end);
+      selectionRef.current = {
+        start: start + TAB_SPACES.length,
+        end: end + added,
+        scrollTop: el.scrollTop,
+        scrollLeft: el.scrollLeft,
+      };
+      onChange(next);
+      return;
+    }
+
+    // Plain Tab: insert spaces at the caret.
+    const next = text.slice(0, start) + TAB_SPACES + text.slice(end);
+    const caret = start + TAB_SPACES.length;
+    selectionRef.current = {
+      start: caret,
+      end: caret,
+      scrollTop: el.scrollTop,
+      scrollLeft: el.scrollLeft,
+    };
+    onChange(next);
+  };
+
   return (
     <div className={`relative overflow-hidden ${containerClassName}`}>
       {/*
@@ -109,6 +179,7 @@ export function HclCodeArea({
         value={value}
         onChange={onChange ? handleChange : undefined}
         onBeforeInput={onChange ? handleBeforeInput : undefined}
+        onKeyDown={onChange ? handleKeyDown : undefined}
         onPaste={onChange ? onPaste : undefined}
         onScroll={handleScroll}
         readOnly={!onChange}
