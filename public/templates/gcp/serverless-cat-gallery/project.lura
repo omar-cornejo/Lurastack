@@ -286,7 +286,7 @@
               "name": "index.html",
               "bucket": "google_storage_bucket.gallery.name",
               "content_type": "text/html",
-              "content": "templatefile(\"${path.module}/index.html.tpl\", { api_url = google_cloudfunctions2_function.api.url })"
+              "content": "templatefile(\"${path.module}/index.html.tpl\", { api_url = google_cloudfunctions2_function.api.url, bucket_url = \"https://storage.googleapis.com/${google_storage_bucket.gallery.name}\" })"
             },
             "blocks": {}
           },
@@ -434,8 +434,8 @@
           "id": "node-r-random",
           "type": "terraformResource",
           "position": {
-            "x": 0,
-            "y": 0
+            "x": 209.08690551700244,
+            "y": 42.4915998990015
           },
           "data": {
             "resourceId": "r-random",
@@ -447,15 +447,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 160,
           "height": 68
         },
         {
           "id": "node-r-bucket",
           "type": "terraformResource",
           "position": {
-            "x": 300,
-            "y": 0
+            "x": 678.0133158099744,
+            "y": 280.03394548256887
           },
           "data": {
             "resourceId": "r-bucket",
@@ -467,15 +467,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 199,
           "height": 68
         },
         {
           "id": "node-r-bucket-iam",
           "type": "terraformResource",
           "position": {
-            "x": 600,
-            "y": 0
+            "x": 498.2127163099759,
+            "y": 419.11631709703306
           },
           "data": {
             "resourceId": "r-bucket-iam",
@@ -487,15 +487,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 256,
           "height": 68
         },
         {
           "id": "node-r-src-bucket",
           "type": "terraformResource",
           "position": {
-            "x": 900,
-            "y": 0
+            "x": 107.00631114808647,
+            "y": 296.1646992686553
           },
           "data": {
             "resourceId": "r-src-bucket",
@@ -507,15 +507,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 199,
           "height": 68
         },
         {
           "id": "node-d-archive",
           "type": "terraformResource",
           "position": {
-            "x": 1200,
-            "y": 0
+            "x": -14.604781300545056,
+            "y": 425.9102093370703
           },
           "data": {
             "resourceId": "d-archive",
@@ -527,15 +527,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 160,
           "height": 68
         },
         {
           "id": "node-r-src-obj",
           "type": "terraformResource",
           "position": {
-            "x": 0,
-            "y": 200
+            "x": 232.79509276506207,
+            "y": 429.42254948703015
           },
           "data": {
             "resourceId": "r-src-obj",
@@ -547,15 +547,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 235,
           "height": 68
         },
         {
           "id": "node-r-sa",
           "type": "terraformResource",
           "position": {
-            "x": 300,
-            "y": 200
+            "x": 110.43356230787757,
+            "y": 518.4256638683618
           },
           "data": {
             "resourceId": "r-sa",
@@ -567,15 +567,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 204,
           "height": 68
         },
         {
           "id": "node-r-sa-iam",
           "type": "terraformResource",
           "position": {
-            "x": 600,
-            "y": 200
+            "x": 646.8960179752862,
+            "y": 506.0818962014747
           },
           "data": {
             "resourceId": "r-sa-iam",
@@ -587,15 +587,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 256,
           "height": 68
         },
         {
           "id": "node-r-fn",
           "type": "terraformResource",
           "position": {
-            "x": 900,
-            "y": 200
+            "x": 311.95278205935364,
+            "y": 178.04155279954264
           },
           "data": {
             "resourceId": "r-fn",
@@ -607,15 +607,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 250,
           "height": 68
         },
         {
           "id": "node-r-fn-iam",
           "type": "terraformResource",
           "position": {
-            "x": 1200,
-            "y": 200
+            "x": 594.7807179198443,
+            "y": 80.30945349707011
           },
           "data": {
             "resourceId": "r-fn-iam",
@@ -627,15 +627,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 271,
           "height": 68
         },
         {
           "id": "node-r-obj-index",
           "type": "terraformResource",
           "position": {
-            "x": 0,
-            "y": 400
+            "x": 773.5299821032648,
+            "y": 423.6509652991856
           },
           "data": {
             "resourceId": "r-obj-index",
@@ -647,15 +647,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 235,
           "height": 68
         },
         {
           "id": "node-d-cat1",
           "type": "terraformResource",
           "position": {
-            "x": 300,
-            "y": 400
+            "x": 1118.9553837945828,
+            "y": 498.0466663101049
           },
           "data": {
             "resourceId": "d-cat1",
@@ -667,15 +667,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 160,
           "height": 68
         },
         {
           "id": "node-r-obj-cat1",
           "type": "terraformResource",
           "position": {
-            "x": 600,
-            "y": 400
+            "x": 1080.7518713828106,
+            "y": 398.3886051131541
           },
           "data": {
             "resourceId": "r-obj-cat1",
@@ -687,15 +687,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 235,
           "height": 68
         },
         {
           "id": "node-d-cat2",
           "type": "terraformResource",
           "position": {
-            "x": 900,
-            "y": 400
+            "x": 1635.268248364554,
+            "y": 506.4525757336139
           },
           "data": {
             "resourceId": "d-cat2",
@@ -707,15 +707,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 160,
           "height": 68
         },
         {
           "id": "node-r-obj-cat2",
           "type": "terraformResource",
           "position": {
-            "x": 1200,
-            "y": 400
+            "x": 1333.3476374754232,
+            "y": 401.3146323163741
           },
           "data": {
             "resourceId": "r-obj-cat2",
@@ -727,15 +727,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 235,
           "height": 68
         },
         {
           "id": "node-d-cat3",
           "type": "terraformResource",
           "position": {
-            "x": 0,
-            "y": 600
+            "x": 1368.5358588670833,
+            "y": 501.30073881539397
           },
           "data": {
             "resourceId": "d-cat3",
@@ -747,15 +747,15 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 160,
           "height": 68
         },
         {
           "id": "node-r-obj-cat3",
           "type": "terraformResource",
           "position": {
-            "x": 300,
-            "y": 600
+            "x": 1599.2633589712395,
+            "y": 403.58858008023105
           },
           "data": {
             "resourceId": "r-obj-cat3",
@@ -767,11 +767,155 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "width": 220,
+          "width": 235,
           "height": 68
         }
       ],
-      "edges": [],
+      "edges": [
+        {
+          "id": "reactflow__edge-node-r-obj-indextop-node-r-bucketbottom",
+          "source": "node-r-obj-index",
+          "target": "node-r-bucket",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-r-bucket-iamtop-node-r-bucketbottom",
+          "source": "node-r-bucket-iam",
+          "target": "node-r-bucket",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-d-archivetop-node-r-src-bucketbottom",
+          "source": "node-d-archive",
+          "target": "node-r-src-bucket",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-r-src-objtop-node-r-src-bucketbottom",
+          "source": "node-r-src-obj",
+          "target": "node-r-src-bucket",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-r-sa-iamtop-node-r-bucketbottom",
+          "source": "node-r-sa-iam",
+          "target": "node-r-bucket",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-r-src-buckettop-node-r-fnbottom",
+          "source": "node-r-src-bucket",
+          "target": "node-r-fn",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-d-cat1top-node-r-obj-cat1bottom",
+          "source": "node-d-cat1",
+          "target": "node-r-obj-cat1",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-d-cat2top-node-r-obj-cat3bottom",
+          "source": "node-d-cat2",
+          "target": "node-r-obj-cat3",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-d-cat3top-node-r-obj-cat2bottom",
+          "source": "node-d-cat3",
+          "target": "node-r-obj-cat2",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-r-obj-cat1top-node-r-buckettop",
+          "source": "node-r-obj-cat1",
+          "target": "node-r-bucket",
+          "sourceHandle": "top",
+          "targetHandle": "top",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-r-obj-cat2top-node-r-buckettop",
+          "source": "node-r-obj-cat2",
+          "target": "node-r-bucket",
+          "sourceHandle": "top",
+          "targetHandle": "top",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-r-obj-cat3top-node-r-buckettop",
+          "source": "node-r-obj-cat3",
+          "target": "node-r-bucket",
+          "sourceHandle": "top",
+          "targetHandle": "top",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-r-fn-iamtop-node-r-fntop",
+          "source": "node-r-fn-iam",
+          "target": "node-r-fn",
+          "sourceHandle": "top",
+          "targetHandle": "top",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        }
+      ],
       "codeFiles": [
         {
           "id": "cf-index",
@@ -786,7 +930,7 @@
         {
           "id": "cf-html",
           "name": "index.html.tpl",
-          "content": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <title>LuraStack — Cat Gallery 🐱 (GCP)</title>\n    <style>\n      :root { color-scheme: dark; }\n      body { font-family: system-ui, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }\n      header { padding: 2rem 1rem 1rem; text-align: center; }\n      h1 { margin: 0 0 .25rem; }\n      .muted { color: #94a3b8; font-size: .9rem; }\n      .bar { display: flex; gap: .75rem; justify-content: center; align-items: center; padding: 1rem; flex-wrap: wrap; }\n      button, label.btn { background: #34d399; color: #0f172a; border: none; padding: .6rem 1.1rem; border-radius: 8px; font-weight: 600; cursor: pointer; }\n      #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; padding: 1rem 1.5rem 3rem; max-width: 1100px; margin: 0 auto; }\n      .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; }\n      .card img { width: 100%; height: 170px; object-fit: cover; display: block; }\n      .card .name { padding: .5rem .75rem; font-size: .8rem; color: #94a3b8; word-break: break-all; }\n      #status { text-align: center; min-height: 1.2rem; color: #94a3b8; }\n    </style>\n  </head>\n  <body>\n    <header>\n      <h1>Cat Gallery 🐱</h1>\n      <p class=\"muted\">Served from Cloud Storage · uploads handled by a Cloud Function · provisioned with LuraStack</p>\n    </header>\n\n    <div class=\"bar\">\n      <label class=\"btn\">\n        Upload a cat\n        <input id=\"file\" type=\"file\" accept=\"image/*\" hidden />\n      </label>\n      <button id=\"refresh\">Refresh</button>\n    </div>\n    <p id=\"status\"></p>\n\n    <div id=\"grid\"></div>\n\n    <script>\n      // Injected by Terraform via templatefile().\n      const API = \"${api_url}\";\n      // Same public bucket website, so photos are reachable by relative key.\n      const photoUrl = (key) => \"/\" + key;\n\n      const grid = document.getElementById(\"grid\");\n      const statusEl = document.getElementById(\"status\");\n\n      async function load() {\n        statusEl.textContent = \"Loading cats…\";\n        try {\n          const res = await fetch(API, { method: \"GET\" });\n          const { photos = [] } = await res.json();\n          grid.innerHTML = \"\";\n          if (!photos.length) { statusEl.textContent = \"No cats yet — upload one!\"; return; }\n          for (const key of photos) {\n            const card = document.createElement(\"div\");\n            card.className = \"card\";\n            card.innerHTML =\n              '<img src=\"' + photoUrl(key) + '\" alt=\"cat\" loading=\"lazy\" />' +\n              '<div class=\"name\">' + key.replace(\"cats/\", \"\") + \"</div>\";\n            grid.appendChild(card);\n          }\n          statusEl.textContent = photos.length + \" cat(s) 🐾\";\n        } catch (e) {\n          statusEl.textContent = \"Could not load photos: \" + e;\n        }\n      }\n\n      function toBase64(file) {\n        return new Promise((resolve, reject) => {\n          const reader = new FileReader();\n          reader.onload = () => resolve(String(reader.result).split(\",\")[1]);\n          reader.onerror = reject;\n          reader.readAsDataURL(file);\n        });\n      }\n\n      document.getElementById(\"file\").addEventListener(\"change\", async (ev) => {\n        const file = ev.target.files[0];\n        if (!file) return;\n        statusEl.textContent = \"Uploading \" + file.name + \"…\";\n        try {\n          const data = await toBase64(file);\n          await fetch(API, {\n            method: \"POST\",\n            headers: { \"content-type\": \"application/json\" },\n            body: JSON.stringify({ data, contentType: file.type || \"image/jpeg\" }),\n          });\n          setTimeout(load, 1200);\n        } catch (e) {\n          statusEl.textContent = \"Upload failed: \" + e;\n        }\n        ev.target.value = \"\";\n      });\n\n      document.getElementById(\"refresh\").addEventListener(\"click\", load);\n      load();\n    </script>\n  </body>\n</html>\n"
+          "content": "<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />\n    <title>LuraStack — Cat Gallery 🐱 (GCP)</title>\n    <style>\n      :root { color-scheme: dark; }\n      body { font-family: system-ui, sans-serif; margin: 0; background: #0f172a; color: #e2e8f0; }\n      header { padding: 2rem 1rem 1rem; text-align: center; }\n      h1 { margin: 0 0 .25rem; }\n      .muted { color: #94a3b8; font-size: .9rem; }\n      .bar { display: flex; gap: .75rem; justify-content: center; align-items: center; padding: 1rem; flex-wrap: wrap; }\n      button, label.btn { background: #34d399; color: #0f172a; border: none; padding: .6rem 1.1rem; border-radius: 8px; font-weight: 600; cursor: pointer; }\n      #grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; padding: 1rem 1.5rem 3rem; max-width: 1100px; margin: 0 auto; }\n      .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; overflow: hidden; }\n      .card img { width: 100%; height: 170px; object-fit: cover; display: block; }\n      .card .name { padding: .5rem .75rem; font-size: .8rem; color: #94a3b8; word-break: break-all; }\n      #status { text-align: center; min-height: 1.2rem; color: #94a3b8; }\n    </style>\n  </head>\n  <body>\n    <header>\n      <h1>Cat Gallery 🐱</h1>\n      <p class=\"muted\">Served from Cloud Storage · uploads handled by a Cloud Function · provisioned with LuraStack</p>\n    </header>\n\n    <div class=\"bar\">\n      <label class=\"btn\">\n        Upload a cat\n        <input id=\"file\" type=\"file\" accept=\"image/*\" hidden />\n      </label>\n      <button id=\"refresh\">Refresh</button>\n    </div>\n    <p id=\"status\"></p>\n\n    <div id=\"grid\"></div>\n\n    <script>\n      // Injected by Terraform via templatefile().\n      const API = \"${api_url}\";\n      // Public GCS base for this bucket; photos are objects under it.\n      const BUCKET_URL = \"${bucket_url}\";\n      const photoUrl = (key) => BUCKET_URL + \"/\" + key;\n\n      const grid = document.getElementById(\"grid\");\n      const statusEl = document.getElementById(\"status\");\n\n      async function load() {\n        statusEl.textContent = \"Loading cats…\";\n        try {\n          const res = await fetch(API, { method: \"GET\" });\n          const { photos = [] } = await res.json();\n          grid.innerHTML = \"\";\n          if (!photos.length) { statusEl.textContent = \"No cats yet — upload one!\"; return; }\n          for (const key of photos) {\n            const card = document.createElement(\"div\");\n            card.className = \"card\";\n            card.innerHTML =\n              '<img src=\"' + photoUrl(key) + '\" alt=\"cat\" loading=\"lazy\" />' +\n              '<div class=\"name\">' + key.replace(\"cats/\", \"\") + \"</div>\";\n            grid.appendChild(card);\n          }\n          statusEl.textContent = photos.length + \" cat(s) 🐾\";\n        } catch (e) {\n          statusEl.textContent = \"Could not load photos: \" + e;\n        }\n      }\n\n      function toBase64(file) {\n        return new Promise((resolve, reject) => {\n          const reader = new FileReader();\n          reader.onload = () => resolve(String(reader.result).split(\",\")[1]);\n          reader.onerror = reject;\n          reader.readAsDataURL(file);\n        });\n      }\n\n      document.getElementById(\"file\").addEventListener(\"change\", async (ev) => {\n        const file = ev.target.files[0];\n        if (!file) return;\n        statusEl.textContent = \"Uploading \" + file.name + \"…\";\n        try {\n          const data = await toBase64(file);\n          await fetch(API, {\n            method: \"POST\",\n            headers: { \"content-type\": \"application/json\" },\n            body: JSON.stringify({ data, contentType: file.type || \"image/jpeg\" }),\n          });\n          setTimeout(load, 1200);\n        } catch (e) {\n          statusEl.textContent = \"Upload failed: \" + e;\n        }\n        ev.target.value = \"\";\n      });\n\n      document.getElementById(\"refresh\").addEventListener(\"click\", load);\n      load();\n    </script>\n  </body>\n</html>\n"
         },
         {
           "id": "cf-cat1",

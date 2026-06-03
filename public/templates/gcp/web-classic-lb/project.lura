@@ -304,19 +304,19 @@
             "containerKind": "hierarchical",
             "zoneContainerIds": []
           },
-          "width": 760,
-          "height": 620,
+          "width": 708,
+          "height": 604,
           "style": {
-            "width": 760,
-            "height": 620
+            "width": 708.4709445602035,
+            "height": 604.0607920158805
           }
         },
         {
           "id": "node-r-subnet",
           "type": "terraformResource",
           "position": {
-            "x": 30,
-            "y": 60
+            "x": 26.24139650872818,
+            "y": 90.06882793017456
           },
           "data": {
             "resourceId": "r-subnet",
@@ -330,19 +330,19 @@
             "zoneContainerIds": []
           },
           "parentNode": "node-r-net",
-          "width": 420,
-          "height": 300,
+          "width": 662,
+          "height": 494,
           "style": {
-            "width": 420,
-            "height": 300
+            "width": 662.2295480514754,
+            "height": 493.9919640857059
           }
         },
         {
           "id": "node-r-fw",
           "type": "terraformResource",
           "position": {
-            "x": 20,
-            "y": 60
+            "x": 26.095254397467066,
+            "y": 214.5097229774512
           },
           "data": {
             "resourceId": "r-fw",
@@ -355,15 +355,15 @@
             "zoneContainerIds": []
           },
           "parentNode": "node-r-subnet",
-          "width": 220,
+          "width": 209,
           "height": 68
         },
         {
           "id": "node-r-mig",
           "type": "terraformResource",
           "position": {
-            "x": 20,
-            "y": 160
+            "x": 23.75860349127182,
+            "y": 116.77605985037405
           },
           "data": {
             "resourceId": "r-mig",
@@ -376,15 +376,15 @@
             "zoneContainerIds": []
           },
           "parentNode": "node-r-subnet",
-          "width": 220,
+          "width": 282,
           "height": 68
         },
         {
           "id": "node-r-tpl",
           "type": "terraformResource",
           "position": {
-            "x": 480,
-            "y": 60
+            "x": 23.735658139545954,
+            "y": 311.78603694396895
           },
           "data": {
             "resourceId": "r-tpl",
@@ -396,16 +396,16 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "parentNode": "node-r-net",
-          "width": 220,
+          "parentNode": "node-r-subnet",
+          "width": 256,
           "height": 68
         },
         {
           "id": "node-r-hc",
           "type": "terraformResource",
           "position": {
-            "x": 480,
-            "y": 160
+            "x": 371.06932668329193,
+            "y": 292.665837442722
           },
           "data": {
             "resourceId": "r-hc",
@@ -417,16 +417,16 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "parentNode": "node-r-net",
-          "width": 220,
+          "parentNode": "node-r-subnet",
+          "width": 230,
           "height": 68
         },
         {
           "id": "node-r-backend",
           "type": "terraformResource",
           "position": {
-            "x": 480,
-            "y": 260
+            "x": 371.40648108218943,
+            "y": 110.25685853244528
           },
           "data": {
             "resourceId": "r-backend",
@@ -438,16 +438,16 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "parentNode": "node-r-net",
-          "width": 220,
+          "parentNode": "node-r-subnet",
+          "width": 245,
           "height": 68
         },
         {
           "id": "node-r-urlmap",
           "type": "terraformResource",
           "position": {
-            "x": 480,
-            "y": 360
+            "x": 373.1890179522514,
+            "y": 203.3406497332196
           },
           "data": {
             "resourceId": "r-urlmap",
@@ -459,16 +459,16 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "parentNode": "node-r-net",
-          "width": 220,
+          "parentNode": "node-r-subnet",
+          "width": 204,
           "height": 68
         },
         {
           "id": "node-r-proxy",
           "type": "terraformResource",
           "position": {
-            "x": 480,
-            "y": 460
+            "x": 26.902360842829204,
+            "y": 405.9919640857059
           },
           "data": {
             "resourceId": "r-proxy",
@@ -480,16 +480,16 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "parentNode": "node-r-net",
-          "width": 220,
+          "parentNode": "node-r-subnet",
+          "width": 256,
           "height": 68
         },
         {
           "id": "node-r-fr",
           "type": "terraformResource",
           "position": {
-            "x": 480,
-            "y": 540
+            "x": 360.2295480514754,
+            "y": 403.45892802410833
           },
           "data": {
             "resourceId": "r-fr",
@@ -501,8 +501,8 @@
             "isContainer": false,
             "zoneContainerIds": []
           },
-          "parentNode": "node-r-net",
-          "width": 220,
+          "parentNode": "node-r-subnet",
+          "width": 282,
           "height": 68
         }
       ],
