@@ -38,8 +38,10 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
-      - name: Test (vitest)
-        run: npm run test
+      - name: Test (vitest + coverage report)
+        # Coverage is informational only — reported in the job log, never gated.
+        # Running with --coverage executes the same suite once, so no extra time.
+        run: npm run test:coverage
 
       - name: Build frontend
         run: npm run build

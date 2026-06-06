@@ -71,21 +71,31 @@ fn grants_file() -> Result<PathBuf, String> {
     Ok(dir.join(GRANTS_FILE))
 }
 
-fn load_grants() -> GrantStore {
-    let Ok(path) = grants_file() else {
-        return GrantStore::default();
-    };
-    match fs::read_to_string(&path) {
+// Read/write split into path-taking helpers so the store round-trip can be
+// tested against a temp dir without touching the user's real data directory.
+fn load_grants_from(path: &Path) -> GrantStore {
+    match fs::read_to_string(path) {
         Ok(raw) => serde_json::from_str(&raw).unwrap_or_default(),
         Err(_) => GrantStore::default(),
     }
 }
 
-fn save_grants(store: &GrantStore) -> Result<(), String> {
-    let path = grants_file()?;
+fn save_grants_to(path: &Path, store: &GrantStore) -> Result<(), String> {
     let serialized = serde_json::to_string_pretty(store)
         .map_err(|e| format!("No se pudo serializar los permisos: {e}"))?;
-    fs::write(&path, serialized).map_err(|e| format!("No se pudo guardar los permisos: {e}"))
+    fs::write(path, serialized).map_err(|e| format!("No se pudo guardar los permisos: {e}"))
+}
+
+fn load_grants() -> GrantStore {
+    let Ok(path) = grants_file() else {
+        return GrantStore::default();
+    };
+    load_grants_from(&path)
+}
+
+fn save_grants(store: &GrantStore) -> Result<(), String> {
+    let path = grants_file()?;
+    save_grants_to(&path, store)
 }
 
 /// Normalize and validate a path before it is granted. Rejects relative paths,
@@ -215,5 +225,48 @@ mod tests {
         // path component — starts_with on Path compares whole components, so it
         // must be accepted.
         assert!(validate_path("/etcetera/projects").is_ok());
+    }
+
+    // ── L6: grant store persistence round-trip (tempfile) ──────────────────
+
+    #[test]
+    fn grant_store_round_trips_through_a_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("project-access.json");
+
+        let mut store = GrantStore::default();
+        store.paths.insert("/home/u/a".to_string());
+        store.paths.insert("/home/u/b".to_string());
+        save_grants_to(&path, &store).unwrap();
+
+        let loaded = load_grants_from(&path);
+        assert!(loaded.paths.contains("/home/u/a"));
+        assert!(loaded.paths.contains("/home/u/b"));
+        assert_eq!(loaded.paths.len(), 2);
+    }
+
+    #[test]
+    fn load_grants_from_missing_file_yields_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("does-not-exist.json");
+        assert!(load_grants_from(&path).paths.is_empty());
+    }
+
+    #[test]
+    fn load_grants_from_corrupt_json_yields_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("corrupt.json");
+        fs::write(&path, "{ not valid json ").unwrap();
+        // A corrupt store must not crash startup — it falls back to empty.
+        assert!(load_grants_from(&path).paths.is_empty());
+    }
+
+    #[test]
+    fn validate_path_accepts_a_real_temp_directory() {
+        let dir = tempfile::tempdir().unwrap();
+        // A real, existing directory canonicalizes and validates fine (assuming
+        // the temp dir is not under a forbidden prefix, which it never is).
+        let result = validate_path(dir.path().to_str().unwrap());
+        assert!(result.is_ok(), "expected acceptance, got {result:?}");
     }
 }

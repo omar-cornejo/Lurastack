@@ -565,4 +565,62 @@ mod tests {
             Some("from_file"),
         );
     }
+
+    // ── L6: credentials/config INI file reads against temp files ───────────
+
+    #[test]
+    fn load_credentials_ini_reads_a_profile_from_a_file() {
+        let f = write_temp(
+            "[default]\naws_access_key_id = AKIADEFAULT\naws_secret_access_key = sek\n\n\
+             [work]\naws_access_key_id = AKIAWORK\naws_secret_access_key = wsk\n",
+        );
+        let map = load_credentials_ini(Some(f.path().to_str().unwrap()));
+        assert_eq!(
+            map["default"].get("aws_access_key_id").unwrap(),
+            "AKIADEFAULT"
+        );
+        assert_eq!(map["work"].get("aws_access_key_id").unwrap(), "AKIAWORK");
+    }
+
+    #[test]
+    fn load_config_ini_strips_the_profile_prefix() {
+        // The AWS config file names non-default profiles `[profile NAME]`; the
+        // loader normalizes that to `NAME`.
+        let f = write_temp("[default]\nregion = eu-west-1\n\n[profile work]\nregion = us-east-1\n");
+        let map = load_config_ini(Some(f.path().to_str().unwrap()));
+        assert_eq!(map["default"].get("region").unwrap(), "eu-west-1");
+        assert_eq!(map["work"].get("region").unwrap(), "us-east-1");
+    }
+
+    #[test]
+    fn resolve_profile_credentials_sync_assembles_creds_and_region() {
+        let creds =
+            write_temp("[work]\naws_access_key_id = AKIAWORK\naws_secret_access_key = wsk\n");
+        let config = write_temp("[profile work]\nregion = us-east-1\n");
+        let resolved = resolve_profile_credentials_sync(
+            "work",
+            Some(creds.path().to_str().unwrap()),
+            Some(config.path().to_str().unwrap()),
+        )
+        .unwrap();
+        assert_eq!(resolved.access_key_id, "AKIAWORK");
+        assert_eq!(resolved.secret_access_key, "wsk");
+        assert_eq!(resolved.region.as_deref(), Some("us-east-1"));
+    }
+
+    #[test]
+    fn resolve_profile_credentials_sync_errors_on_missing_profile() {
+        let creds = write_temp("[default]\naws_access_key_id = X\naws_secret_access_key = Y\n");
+        let result =
+            resolve_profile_credentials_sync("ghost", Some(creds.path().to_str().unwrap()), None);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn resolve_profile_credentials_sync_errors_when_access_key_missing() {
+        let creds = write_temp("[work]\naws_secret_access_key = only_secret\n");
+        let result =
+            resolve_profile_credentials_sync("work", Some(creds.path().to_str().unwrap()), None);
+        assert!(result.is_err());
+    }
 }
