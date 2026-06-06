@@ -61,9 +61,22 @@ A few properties of the design are relevant when assessing reports:
   (never through a shell), which removes command-injection by construction.
 - **The frontend has no direct disk or process access.** All sensitive
   operations are confined to the Rust backend and exposed through a narrow,
-  audited command surface, with a deny-list for sensitive paths
-  (`~/.ssh`, `~/.aws/credentials`, `~/.gnupg`, etc.) and a strict
-  Content-Security-Policy on the webview.
+  audited command surface, with a strict Content-Security-Policy on the webview.
+- **Filesystem access is granted per folder, on demand.** The app does not hold
+  a broad standing grant over the user's home directory. A project folder is
+  granted (recursively) only when the user explicitly opens or creates it
+  through the native dialog; the grant is validated (relative paths, `..`
+  traversal, and system locations such as `/dev`, `/proc`, `/etc` are rejected)
+  and persisted so it survives restarts. A **deny-list always wins** over any
+  grant, keeping sensitive paths (`~/.ssh`, `~/.aws/credentials`, `~/.gnupg`,
+  `~/.kube`, `~/.docker`, …) out of reach even if a parent folder is granted.
+  The relevant logic lives in `src-tauri/src/project_access.rs`.
+
+The security-sensitive helpers — path validation, the deny-list behaviour,
+credential/INI parsing, and `.tf` filename sanitization — are covered by unit
+tests (`src-tauri/src/*.rs` `#[cfg(test)]` modules), and `cargo test`,
+`cargo clippy -- -D warnings`, a Rust/npm dependency audit, and secret scanning
+all run in CI on every pull request.
 
 For a deeper description of the threat model and mitigations, see the
 architecture and security documentation in `docs/`.

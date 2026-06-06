@@ -86,6 +86,17 @@ npm run tauri dev
 Pick a template from the welcome screen, drop nodes on the canvas, and hit
 **Plan** to see what Terraform would do.
 
+### Run the tests
+
+```bash
+npm test                      # frontend (Vitest)
+cd src-tauri && cargo test    # backend (Rust)
+```
+
+CI runs the same suite — plus type-check, lint, build, and dependency/secret
+scans — on every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md#testing)
+for the full workflow.
+
 ### Build a release binary
 
 ```bash

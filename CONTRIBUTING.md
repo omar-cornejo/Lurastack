@@ -72,6 +72,42 @@ npm run tauri dev
 - The single source of truth for resource → HCL is `src/models/hclEmitter.ts`. Don't fork the logic; if you need different output, extend `terraformResourceToHCL`.
 - Dotted-key attributes (`"default_action.type": "forward"`) become nested HCL blocks. Tests and templates rely on this convention.
 
+## Testing
+
+The project ships with an automated test suite, and **CI runs it on every pull
+request** (see [`.github/workflows/ci.yml`](.github/workflows/ci.yml)). You don't
+need to wait for CI — you can run exactly what it runs, locally:
+
+```bash
+# Frontend (TypeScript / React) — Vitest
+npm test               # run the whole suite once
+npm run test:watch     # watch mode while developing
+npm run test:coverage  # same suite + a coverage report
+
+# Backend (Rust) — built-in test harness
+cd src-tauri && cargo test
+```
+
+If your PR passes `npm test` and `cargo test` locally, it will pass the test
+stage in CI. The full CI gate is: `tsc --noEmit`, `npm test` (with coverage),
+`npm run build`, `cargo fmt --check`, `cargo clippy -- -D warnings`,
+`cargo test`, dependency audit, and secret scanning.
+
+**Where tests live**
+
+- Frontend tests are **colocated** next to the source as `*.test.ts(x)` (e.g.
+  `src/models/hclEmitter.test.ts`). The adjacent test is the best template to
+  copy when you touch a module.
+- Rust tests live in an in-file `#[cfg(test)] mod tests` at the bottom of each
+  `.rs` file, so they can exercise private helpers directly.
+- Cross-cutting fixture checks live under `src/__fixtures__/`.
+
+**When you add or change behaviour, add or update the test next to it.** Pure
+logic (parsing, emission, validation, geometry) is the priority; the big
+canvas/terminal components are intentionally not unit-tested (they need a real
+DOM/WebGL). Coverage is reported but **not gated** — don't let a coverage number
+block a sensible change; the gate is simply "the tests pass".
+
 ## Commit messages
 
 Use [Conventional Commits](https://www.conventionalcommits.org/):
@@ -90,7 +126,8 @@ Scope is optional (`feat(canvas): ...`).
 Before requesting review:
 
 - [ ] `npx tsc --noEmit` passes
-- [ ] `cd src-tauri && cargo check` passes (and `cargo clippy` if you touched Rust)
+- [ ] `npm test` passes (add or update tests for the behaviour you changed)
+- [ ] `cd src-tauri && cargo check` passes — and if you touched Rust, also `cargo test`, `cargo clippy -- -D warnings`, and `cargo fmt`
 - [ ] App boots: `npm run tauri dev` doesn't error on start
 - [ ] You manually exercised the change (describe how in the PR body)
 - [ ] No secrets, credentials, or absolute paths in the diff
@@ -107,6 +144,11 @@ PRs are squashed and merged. Write the PR title in the same Conventional Commits
 
 No code change is required for the resource to appear in the sidebar; the registry uses `import.meta.glob({ eager: true })`.
 
+The schema-loading pipeline is smoke-tested in `src/models/nodeRegistry.test.ts`,
+and any resource used by a gallery template must have a schema in the catalog —
+this is enforced by `src/__fixtures__/templates.fixture.test.ts`, so a template
+referencing a type without a schema will fail CI.
+
 ## Adding a new gallery template
 
 Each template is a directory under `public/templates/<provider>/<id>/` with two files:
@@ -115,6 +157,13 @@ Each template is a directory under `public/templates/<provider>/<id>/` with two 
 - `project.lura` — a full `LuraProject` (see `src/types/project.ts`) with the desired resources, nodes and edges.
 
 Then run `npm run templates:index` to rebuild `public/templates/index.json`. The pre-render hook in `src/commands/templateManager.ts` will write a valid `main.tf` to each view directory on instantiation so `terraform plan` works immediately.
+
+Every shipped template is validated by `src/__fixtures__/templates.fixture.test.ts`
+(the index matches what's on disk, `project.lura` parses as a `LuraProject`, the
+`resourceCount` is accurate, and every resource type has a catalog schema), and
+each of its resources is run through the real HCL emitter by
+`src/__fixtures__/emitterTemplate.fixture.test.ts`. Run `npm test` after adding a
+template to catch these before CI does.
 
 ## Questions
 
