@@ -497,4 +497,72 @@ mod tests {
         assert_eq!(mask_access_key("ABCD"), "****");
         assert_eq!(mask_access_key(""), "****");
     }
+
+    use std::io::Write;
+
+    fn write_temp(contents: &str) -> tempfile::NamedTempFile {
+        let mut file = tempfile::NamedTempFile::new().expect("temp file");
+        file.write_all(contents.as_bytes()).expect("write");
+        file
+    }
+
+    #[test]
+    fn read_env_var_from_file_reads_basic_assignment() {
+        let f = write_temp("AWS_ACCESS_KEY_ID=AKIA123\nAWS_REGION=eu-west-1\n");
+        let path = f.path().to_str().unwrap();
+        assert_eq!(
+            read_env_var_from_file(path, "AWS_REGION").as_deref(),
+            Some("eu-west-1")
+        );
+    }
+
+    #[test]
+    fn read_env_var_from_file_strips_export_prefix() {
+        let f = write_temp("export AWS_ACCESS_KEY_ID=AKIA999\n");
+        let path = f.path().to_str().unwrap();
+        assert_eq!(
+            read_env_var_from_file(path, "AWS_ACCESS_KEY_ID").as_deref(),
+            Some("AKIA999"),
+        );
+    }
+
+    #[test]
+    fn read_env_var_from_file_unwraps_quotes() {
+        let f = write_temp("DOUBLE=\"with spaces\"\nSINGLE='single quoted'\n");
+        let path = f.path().to_str().unwrap();
+        assert_eq!(
+            read_env_var_from_file(path, "DOUBLE").as_deref(),
+            Some("with spaces")
+        );
+        assert_eq!(
+            read_env_var_from_file(path, "SINGLE").as_deref(),
+            Some("single quoted")
+        );
+    }
+
+    #[test]
+    fn read_env_var_from_file_skips_comments_and_missing_keys() {
+        let f = write_temp("# a comment\nFOO=bar\n");
+        let path = f.path().to_str().unwrap();
+        assert_eq!(read_env_var_from_file(path, "MISSING"), None);
+        assert_eq!(read_env_var_from_file(path, "FOO").as_deref(), Some("bar"));
+    }
+
+    #[test]
+    fn read_env_var_from_file_returns_none_for_missing_file() {
+        assert_eq!(
+            read_env_var_from_file("/nonexistent/path/.env", "FOO"),
+            None
+        );
+    }
+
+    #[test]
+    fn read_env_or_file_prefers_the_file_over_the_environment() {
+        let f = write_temp("LURASTACK_TEST_ONLY_KEY=from_file\n");
+        let path = f.path().to_str().unwrap();
+        assert_eq!(
+            read_env_or_file(Some(path), "LURASTACK_TEST_ONLY_KEY").as_deref(),
+            Some("from_file"),
+        );
+    }
 }

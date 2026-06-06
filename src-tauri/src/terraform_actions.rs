@@ -1467,3 +1467,137 @@ fn terraform_validate_sync(
 
     Ok(result)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn sanitize_tf_file_name_accepts_plain_tf_files() {
+        assert_eq!(sanitize_tf_file_name("main.tf").unwrap(), "main.tf");
+        assert_eq!(
+            sanitize_tf_file_name("  outputs.tf  ").unwrap(),
+            "outputs.tf"
+        );
+    }
+
+    #[test]
+    fn sanitize_tf_file_name_is_case_insensitive_on_extension() {
+        assert_eq!(sanitize_tf_file_name("Main.TF").unwrap(), "Main.TF");
+    }
+
+    #[test]
+    fn sanitize_tf_file_name_rejects_non_tf_files() {
+        assert!(sanitize_tf_file_name("main.txt").is_err());
+        assert!(sanitize_tf_file_name("secrets").is_err());
+    }
+
+    #[test]
+    fn sanitize_tf_file_name_rejects_empty() {
+        assert!(sanitize_tf_file_name("").is_err());
+        assert!(sanitize_tf_file_name("   ").is_err());
+    }
+
+    #[test]
+    fn sanitize_tf_file_name_strips_directory_components() {
+        // Path traversal attempts are reduced to the basename, so they can't
+        // escape the project dir.
+        assert_eq!(
+            sanitize_tf_file_name("../../etc/evil.tf").unwrap(),
+            "evil.tf"
+        );
+        assert_eq!(
+            sanitize_tf_file_name("subdir/nested.tf").unwrap(),
+            "nested.tf"
+        );
+    }
+
+    #[test]
+    fn severity_from_lsp_maps_known_codes() {
+        assert_eq!(severity_from_lsp(Some(1)), "error");
+        assert_eq!(severity_from_lsp(Some(2)), "warning");
+        assert_eq!(severity_from_lsp(Some(3)), "info");
+        assert_eq!(severity_from_lsp(Some(4)), "info");
+    }
+
+    #[test]
+    fn severity_from_lsp_defaults_to_error() {
+        assert_eq!(severity_from_lsp(None), "error");
+        assert_eq!(severity_from_lsp(Some(99)), "error");
+    }
+
+    #[test]
+    fn basename_from_uri_extracts_filename() {
+        assert_eq!(
+            basename_from_uri("file:///home/user/project/main.tf").as_deref(),
+            Some("main.tf"),
+        );
+    }
+
+    #[test]
+    fn basename_from_uri_decodes_spaces() {
+        assert_eq!(
+            basename_from_uri("file:///home/user/my%20project/main.tf").as_deref(),
+            Some("main.tf"),
+        );
+        assert_eq!(
+            basename_from_uri("file:///path/with%20space.tf").as_deref(),
+            Some("with space.tf"),
+        );
+    }
+
+    #[test]
+    fn to_file_uri_encodes_spaces() {
+        let uri = to_file_uri(Path::new("/home/user/my project/main.tf"));
+        assert_eq!(uri, "file:///home/user/my%20project/main.tf");
+    }
+
+    #[test]
+    fn collect_state_resources_extracts_top_level_resources() {
+        let module = json!({
+            "resources": [
+                { "address": "aws_vpc.main", "type": "aws_vpc", "name": "main", "mode": "managed", "values": { "id": "vpc-1" } },
+                { "address": "aws_subnet.a", "type": "aws_subnet", "name": "a", "mode": "managed", "values": {} }
+            ]
+        });
+        let mut acc = Vec::new();
+        collect_state_resources(&module, &mut acc);
+        assert_eq!(acc.len(), 2);
+        assert_eq!(acc[0].address, "aws_vpc.main");
+        assert_eq!(acc[0].type_name, "aws_vpc");
+    }
+
+    #[test]
+    fn collect_state_resources_recurses_into_child_modules() {
+        let module = json!({
+            "resources": [
+                { "address": "aws_vpc.main", "type": "aws_vpc", "name": "main", "mode": "managed", "values": {} }
+            ],
+            "child_modules": [
+                {
+                    "resources": [
+                        { "address": "module.x.aws_instance.web", "type": "aws_instance", "name": "web", "mode": "managed", "values": {} }
+                    ]
+                }
+            ]
+        });
+        let mut acc = Vec::new();
+        collect_state_resources(&module, &mut acc);
+        assert_eq!(acc.len(), 2);
+        assert!(acc.iter().any(|r| r.type_name == "aws_instance"));
+    }
+
+    #[test]
+    fn collect_state_resources_skips_entries_missing_address_or_type() {
+        let module = json!({
+            "resources": [
+                { "type": "aws_vpc", "name": "no_address", "mode": "managed", "values": {} },
+                { "address": "x.y", "name": "no_type", "mode": "managed", "values": {} }
+            ]
+        });
+        let mut acc = Vec::new();
+        collect_state_resources(&module, &mut acc);
+        assert_eq!(acc.len(), 0);
+    }
+}

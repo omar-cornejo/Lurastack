@@ -282,3 +282,22 @@ pub fn clear_fallback_passphrase() -> Result<(), String> {
     guard.passphrase = None;
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn validate_provider_accepts_the_allowlist() {
+        assert!(validate_provider("aws").is_ok());
+        assert!(validate_provider("gcp").is_ok());
+        assert!(validate_provider("azure").is_ok());
+    }
+
+    #[test]
+    fn validate_provider_rejects_everything_else() {
+        assert!(validate_provider("oracle").is_err());
+        assert!(validate_provider("AWS").is_err()); // case-sensitive
+        assert!(validate_provider("").is_err());
+    }
+}
