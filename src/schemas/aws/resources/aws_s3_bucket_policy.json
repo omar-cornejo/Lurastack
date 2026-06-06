@@ -1,0 +1,24 @@
+{
+  "block": {
+    "attributes": {
+      "bucket": {
+        "description_kind": "plain",
+        "required": true,
+        "type": "string"
+      },
+      "id": {
+        "computed": true,
+        "description_kind": "plain",
+        "optional": true,
+        "type": "string"
+      },
+      "policy": {
+        "description_kind": "plain",
+        "required": true,
+        "type": "string"
+      }
+    },
+    "description_kind": "plain"
+  },
+  "version": 0
+}
