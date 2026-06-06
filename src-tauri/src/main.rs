@@ -1,4 +1,5 @@
 mod aws_credentials;
+mod project_access;
 mod secrets;
 mod terminal_commands;
 mod terraform_actions;
@@ -7,6 +8,10 @@ fn main() {
     tauri::Builder::default()
         .manage(terminal_commands::TerminalState::default())
         .manage(terraform_actions::TerraformInteractiveState::default())
+        .setup(|app| {
+            project_access::restore_grants(&app.handle());
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             terminal_commands::init_terminal_session,
             terminal_commands::write_to_pty,
@@ -35,7 +40,8 @@ fn main() {
             secrets::delete_secret,
             secrets::secrets_backend_info,
             secrets::set_fallback_passphrase,
-            secrets::clear_fallback_passphrase
+            secrets::clear_fallback_passphrase,
+            project_access::grant_project_access
         ])
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())

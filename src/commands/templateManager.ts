@@ -2,7 +2,7 @@ import { writeTextFile, mkdir } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-dialog";
 import type { TemplateIndex, TemplateManifest } from "../types/templates";
 import type { LuraProject, ViewSnapshot } from "../types/project";
-import { projectNameToSlug, getViewDir } from "./projectManager";
+import { projectNameToSlug, getViewDir, grantProjectAccess } from "./projectManager";
 import { buildMultiProviderHcl } from "../models/hclEmitter";
 import { mergeProviderSettings, getProviderFromResourceType, type CloudProvider } from "../models/providerConfig";
 
@@ -50,6 +50,7 @@ export async function pickTemplateDestination(projectName: string): Promise<stri
   if (!parentDir) return null;
   const slug = projectNameToSlug(projectName);
   const projectDir = `${parentDir}/${slug}`;
+  await grantProjectAccess(projectDir);
   await mkdir(projectDir, { recursive: true });
   return `${projectDir}/${slug}.lura`;
 }

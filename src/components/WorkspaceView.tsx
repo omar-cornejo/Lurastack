@@ -549,9 +549,13 @@ export default function WorkspaceView({
       };
 
       lastCommittedSnapshotRef.current = snap;
-      void appendHistoryEntry(projectDir, entry).then(() => {
-        setHistoryRefreshSignal((s) => s + 1);
-      });
+      void appendHistoryEntry(projectDir, entry)
+        .then(() => {
+          setHistoryRefreshSignal((s) => s + 1);
+        })
+        .catch((err) => {
+          console.error("Failed to append local-edit history entry:", err);
+        });
     }, 800);
     return () => clearTimeout(timeout);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1492,9 +1496,13 @@ export default function WorkspaceView({
               snapshotBefore,
               snapshotAfter: isPlanAction ? snapshotBefore : snapshotAfter,
             };
-            void appendHistoryEntry(projectDir, entry).then(() => {
-              setHistoryRefreshSignal((s) => s + 1);
-            });
+            void appendHistoryEntry(projectDir, entry)
+              .then(() => {
+                setHistoryRefreshSignal((s) => s + 1);
+              })
+              .catch((err) => {
+                console.error(`Failed to append ${action} history entry:`, err);
+              });
           }, 300);
         }
       }

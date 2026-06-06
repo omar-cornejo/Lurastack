@@ -9,6 +9,7 @@ import {
   BaseDirectory,
 } from "@tauri-apps/plugin-fs";
 import { open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 import type { LuraProject, ViewSnapshot, RecentProject } from "../types/project";
 import type { Node, Edge } from "reactflow";
 import type { CanvasTerraformNodeData, CanvasEdgeData } from "../canvas/types";
@@ -20,6 +21,18 @@ const isTauri = () =>
 
 const RECENT_KEY = "lurastack:recent-projects";
 const MAX_RECENT = 12;
+
+/**
+ * Grant the backend filesystem scope access to a project folder. Must be called
+ * before any read/write/mkdir inside that folder, since project folders are not
+ * in the static capability scope — access is granted dynamically per folder the
+ * user opens or creates. The grant is persisted and reapplied on next launch.
+ * No-op in the browser (no Tauri backend).
+ */
+export async function grantProjectAccess(projectDir: string): Promise<void> {
+  if (!isTauri()) return;
+  await invoke("grant_project_access", { path: projectDir });
+}
 
 export function getRecentProjects(): RecentProject[] {
   try {
@@ -81,6 +94,11 @@ export async function saveProjectToPath(
 }
 
 export async function loadProjectFromPath(absolutePath: string): Promise<LuraProject> {
+  // Grant access to the project folder before reading anything inside it
+  // (main.tf, history, view files). The .lura path passed here may come from
+  // the native dialog (temporarily granted) or from the recents list (not
+  // granted yet) — granting the parent dir covers both and all sibling files.
+  await grantProjectAccess(getProjectDir(absolutePath));
   const json = await readTextFile(absolutePath);
   const project = JSON.parse(json) as LuraProject;
 
@@ -109,6 +127,7 @@ export async function pickSavePath(projectName: string): Promise<string | null> 
   if (!parentDir) return null;
   const slug = projectNameToSlug(projectName);
   const projectDir = `${parentDir}/${slug}`;
+  await grantProjectAccess(projectDir);
   await mkdir(projectDir, { recursive: true });
   return `${projectDir}/${slug}.lura`;
 }

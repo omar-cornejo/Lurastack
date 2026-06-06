@@ -5,6 +5,7 @@ import {
   exists,
   rename,
 } from "@tauri-apps/plugin-fs";
+import { grantProjectAccess } from "./projectManager";
 import type { HistoryEntry, HistoryIndex } from "../types/history";
 import type { ResourcePlanChange } from "../canvas/types";
 
@@ -24,7 +25,17 @@ function entryPath(projectDir: string, id: string): string {
   return `${historyDir(projectDir)}/${id}.json`;
 }
 
+// The history dir starts with a dot. Tauri's `requireLiteralLeadingDot` (true on
+// Unix) means a recursive grant on the project folder (`<proj>/**`) never matches
+// a hidden component like `.lurastack-history`. Granting the history dir's exact
+// path adds a literal pattern that matches it regardless of that option, so we do
+// it explicitly before any fs op (exists/mkdir/read/write) touches the dir.
+async function grantHistoryAccess(projectDir: string): Promise<void> {
+  await grantProjectAccess(historyDir(projectDir));
+}
+
 export async function ensureHistoryDir(projectDir: string): Promise<void> {
+  await grantHistoryAccess(projectDir);
   const dir = historyDir(projectDir);
   const dirExists = await exists(dir);
   if (!dirExists) {
@@ -33,6 +44,7 @@ export async function ensureHistoryDir(projectDir: string): Promise<void> {
 }
 
 export async function loadHistoryIndex(projectDir: string): Promise<HistoryIndex> {
+  await grantHistoryAccess(projectDir);
   const path = indexPath(projectDir);
   try {
     const pathExists = await exists(path);
@@ -48,6 +60,7 @@ export async function loadHistoryEntry(
   projectDir: string,
   id: string,
 ): Promise<HistoryEntry | null> {
+  await grantHistoryAccess(projectDir);
   const path = entryPath(projectDir, id);
   try {
     const pathExists = await exists(path);
@@ -73,9 +86,19 @@ export async function appendHistoryEntry(
   const updatedEntries = [slim, ...index.entries].slice(0, MAX_ENTRIES);
 
   const updated: HistoryIndex = { version: "1", entries: updatedEntries };
-  const tmpPath = `${indexPath(projectDir)}.tmp`;
-  await writeTextFile(tmpPath, JSON.stringify(updated, null, 2));
-  await rename(tmpPath, indexPath(projectDir));
+  const finalPath = indexPath(projectDir);
+  const tmpPath = `${finalPath}.tmp`;
+  const serialized = JSON.stringify(updated, null, 2);
+
+  // Write to a temp file then atomically swap so a crash mid-write can't
+  // corrupt the index. If rename is unavailable (permissions, cross-device),
+  // fall back to a direct write rather than losing the whole history.
+  try {
+    await writeTextFile(tmpPath, serialized);
+    await rename(tmpPath, finalPath);
+  } catch {
+    await writeTextFile(finalPath, serialized);
+  }
 }
 
 export function summarizePlanChanges(planChanges: Map<string, ResourcePlanChange>): {
