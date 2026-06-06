@@ -184,8 +184,6 @@
   "credentials.toggle.hide": "amaga",
   "credentials.toggle.show": "mostra",
   "credentials.toggle.showEdit": "mostra/edita",
-  "divergence.dismiss": "Descarta",
-  "divergence.message": "El llenç està divergent del cloud. Executa Apply per alinear-lo.",
   "globalbar.autosave": "desament automàtic",
   "globalbar.clickToRename": "Clica per reanomenar",
   "globalbar.item.autosave": "Desament automàtic",

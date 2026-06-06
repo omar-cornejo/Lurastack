@@ -989,7 +989,7 @@ export const RightPanel = ({
             className="flex-1 overflow-y-auto overflow-x-hidden bg-slate-50/60 py-3"
             style={{ scrollbarWidth: "thin", scrollbarColor: "#e2e8f0 transparent" }}
           >
-            {(!selectedNode || !selectedResource || !selectedSchema) && (
+            {activeTab === "info" && (!selectedNode || !selectedResource || !selectedSchema) && (
               <div className="mx-3 flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
                   <Icon icon="mdi:cursor-default-click-outline" className="text-slate-400" width={22} />

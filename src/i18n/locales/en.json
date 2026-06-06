@@ -184,8 +184,6 @@
   "credentials.toggle.hide": "hide",
   "credentials.toggle.show": "show",
   "credentials.toggle.showEdit": "show/edit",
-  "divergence.dismiss": "Dismiss",
-  "divergence.message": "The canvas has diverged from the cloud. Run Apply to align it.",
   "globalbar.autosave": "autosave",
   "globalbar.clickToRename": "Click to rename",
   "globalbar.item.autosave": "Autosave",

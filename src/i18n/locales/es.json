@@ -184,8 +184,6 @@
   "credentials.toggle.hide": "ocultar",
   "credentials.toggle.show": "ver",
   "credentials.toggle.showEdit": "ver/editar",
-  "divergence.dismiss": "Descartar",
-  "divergence.message": "El lienzo está divergente del cloud. Ejecuta Apply para alinearlo.",
   "globalbar.autosave": "autoguardado",
   "globalbar.clickToRename": "Clic para renombrar",
   "globalbar.item.autosave": "Autoguardado",

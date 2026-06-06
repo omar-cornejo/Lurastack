@@ -69,7 +69,6 @@ import { useTranslation } from "react-i18next";
 import { importHclBlocksToResources } from "../commands/hclImporter";
 import { appendHistoryEntry, summarizePlanChanges } from "../commands/historyManager";
 import type { HistoryEntry } from "../types/history";
-import DivergenceBanner from "./DivergenceBanner";
 
 const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 const POPOUT_HEARTBEAT_TTL_MS = 900;
@@ -149,7 +148,6 @@ export default function WorkspaceView({
     "terraform_apply" | "terraform_destroy" | null
   >(null);
   const [historyRefreshSignal, setHistoryRefreshSignal] = useState(0);
-  const [isDivergent, setIsDivergent] = useState(false);
   const planChangesRef = useRef<Map<string, ResourcePlanChange>>(new Map());
   const [showAwsConfig, setShowAwsConfig] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
@@ -491,7 +489,6 @@ export default function WorkspaceView({
       setEdges(restoreEdges(snapshot.edges));
       setProject((prev) => ({ ...prev, resources: snapshot.resources }));
       setCodeFiles(snapshot.codeFiles ?? []);
-      setIsDivergent(true);
       // Treat restored state as the new baseline so we don't emit a giant
       // local-edit entry that "reverts" everything from the previous state.
       lastCommittedSnapshotRef.current = snapshot;
@@ -1469,7 +1466,6 @@ export default function WorkspaceView({
         }
         if (action === "terraform_apply" || action === "terraform_destroy") {
           await refreshCloudState();
-          if (ok) setIsDivergent(false);
         }
       } catch (error) {
         console.error(`${action} error:`, error);
@@ -1593,12 +1589,6 @@ export default function WorkspaceView({
         onConfirmDestroy={() => void confirmTerraformAction(true)}
         onCancelDestroy={() => void confirmTerraformAction(false)}
         isDeploying={isDeploying}
-      />
-
-      <DivergenceBanner
-        visible={isDivergent}
-        onApply={() => triggerDeployAction("terraform_apply")}
-        onDismiss={() => setIsDivergent(false)}
       />
 
       <div className="relative flex flex-1 min-h-0 overflow-hidden">
