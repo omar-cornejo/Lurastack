@@ -38,6 +38,9 @@ jobs:
       - name: Type-check
         run: npx tsc --noEmit
 
+      - name: Test (vitest)
+        run: npm run test
+
       - name: Build frontend
         run: npm run build
 
@@ -69,6 +72,8 @@ jobs:
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
 
       - name: Cache cargo
         uses: actions/cache@v4
@@ -83,6 +88,15 @@ jobs:
 
       - name: Check (locked)
         run: cargo check --locked
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Clippy (deny warnings)
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test (locked)
+        run: cargo test --locked
 
       - name: Install cargo-deny
         uses: taiki-e/install-action@cargo-deny

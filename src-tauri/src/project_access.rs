@@ -26,9 +26,27 @@ const GRANTS_FILE: &str = "project-access.json";
 /// dialog returns. These are system locations a Terraform project has no
 /// legitimate reason to live in; granting them would be a footgun even though
 /// the dialog makes selecting them unlikely.
+// `validate_path` canonicalizes before comparing, which resolves symlinks. On
+// `/usr`-merged distros `/bin`, `/sbin`, `/lib`, `/lib64` are symlinks into
+// `/usr/*`, so the canonical form must be forbidden too — otherwise a grant on
+// `/bin` would slip through as `/usr/bin`.
 #[cfg(unix)]
 const FORBIDDEN_PREFIXES: &[&str] = &[
-    "/dev", "/proc", "/sys", "/etc", "/bin", "/sbin", "/lib", "/lib64", "/boot", "/run", "/var/run",
+    "/dev",
+    "/proc",
+    "/sys",
+    "/etc",
+    "/bin",
+    "/sbin",
+    "/lib",
+    "/lib64",
+    "/boot",
+    "/run",
+    "/var/run",
+    "/usr/bin",
+    "/usr/sbin",
+    "/usr/lib",
+    "/usr/lib64",
 ];
 #[cfg(windows)]
 const FORBIDDEN_PREFIXES: &[&str] = &[
@@ -67,8 +85,7 @@ fn save_grants(store: &GrantStore) -> Result<(), String> {
     let path = grants_file()?;
     let serialized = serde_json::to_string_pretty(store)
         .map_err(|e| format!("No se pudo serializar los permisos: {e}"))?;
-    fs::write(&path, serialized)
-        .map_err(|e| format!("No se pudo guardar los permisos: {e}"))
+    fs::write(&path, serialized).map_err(|e| format!("No se pudo guardar los permisos: {e}"))
 }
 
 /// Normalize and validate a path before it is granted. Rejects relative paths,
@@ -79,11 +96,10 @@ fn validate_path(raw: &str) -> Result<PathBuf, String> {
         return Err(format!("La ruta del proyecto debe ser absoluta: {raw}"));
     }
     // Reject any `..` component so a granted folder can't be widened via traversal.
-    if path
-        .components()
-        .any(|c| matches!(c, Component::ParentDir))
-    {
-        return Err(format!("La ruta del proyecto no puede contener '..': {raw}"));
+    if path.components().any(|c| matches!(c, Component::ParentDir)) {
+        return Err(format!(
+            "La ruta del proyecto no puede contener '..': {raw}"
+        ));
     }
 
     // Compare against the real path when it exists (resolves symlinks); fall
@@ -140,5 +156,64 @@ pub fn restore_grants<R: Runtime>(app: &AppHandle<R>) {
     }
     if let Ok(mut guard) = GRANTS.lock() {
         *guard = Some(store);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rejects_relative_paths() {
+        assert!(validate_path("relative/path").is_err());
+        assert!(validate_path("./project").is_err());
+        assert!(validate_path("project").is_err());
+    }
+
+    #[test]
+    fn rejects_parent_dir_traversal() {
+        // `..` anywhere in the path must be rejected so a granted folder can't
+        // be widened via traversal.
+        assert!(validate_path("/home/user/../../../etc").is_err());
+        assert!(validate_path("/home/user/projects/../secret").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_system_root() {
+        assert!(validate_path("/").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn rejects_forbidden_system_prefixes() {
+        // Every prefix in FORBIDDEN_PREFIXES, plus a path nested under one.
+        for prefix in FORBIDDEN_PREFIXES {
+            assert!(
+                validate_path(prefix).is_err(),
+                "expected {prefix} to be rejected",
+            );
+        }
+        assert!(validate_path("/etc/ssh/sshd_config").is_err());
+        assert!(validate_path("/proc/1/status").is_err());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn accepts_a_normal_absolute_project_path() {
+        // A path that does not exist still validates (falls back to the literal
+        // path) as long as it is absolute, traversal-free and outside the
+        // forbidden prefixes.
+        let result = validate_path("/home/someone/projects/my-stack");
+        assert!(result.is_ok(), "expected acceptance, got {result:?}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn does_not_treat_etcetera_lookalike_as_forbidden() {
+        // `/etcetera` starts with the same bytes as `/etc` but is a different
+        // path component — starts_with on Path compares whole components, so it
+        // must be accepted.
+        assert!(validate_path("/etcetera/projects").is_ok());
     }
 }

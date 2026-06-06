@@ -9,7 +9,7 @@ fn main() {
         .manage(terminal_commands::TerminalState::default())
         .manage(terraform_actions::TerraformInteractiveState::default())
         .setup(|app| {
-            project_access::restore_grants(&app.handle());
+            project_access::restore_grants(app.handle());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

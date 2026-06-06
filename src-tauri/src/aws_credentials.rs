@@ -116,7 +116,9 @@ fn resolve_config_path(custom: Option<&str>) -> Option<PathBuf> {
 }
 
 fn load_credentials_ini(custom: Option<&str>) -> HashMap<String, HashMap<String, String>> {
-    let Some(path) = resolve_credentials_path(custom) else { return HashMap::new(); };
+    let Some(path) = resolve_credentials_path(custom) else {
+        return HashMap::new();
+    };
     match fs::read_to_string(&path) {
         Ok(text) => parse_ini(&text),
         Err(_) => HashMap::new(),
@@ -124,7 +126,9 @@ fn load_credentials_ini(custom: Option<&str>) -> HashMap<String, HashMap<String,
 }
 
 fn load_config_ini(custom: Option<&str>) -> HashMap<String, HashMap<String, String>> {
-    let Some(path) = resolve_config_path(custom) else { return HashMap::new(); };
+    let Some(path) = resolve_config_path(custom) else {
+        return HashMap::new();
+    };
     let text = match fs::read_to_string(&path) {
         Ok(text) => text,
         Err(_) => return HashMap::new(),
@@ -296,7 +300,9 @@ pub async fn get_aws_env_source() -> Result<AwsEnvSource, String> {
     let cwd = std::env::current_dir()
         .map(|p| p.to_string_lossy().to_string())
         .unwrap_or_else(|_| "(desconocido)".to_string());
-    let env_file_path = std::env::var("LURASTACK_ENV_FILE").ok().filter(|s| !s.is_empty());
+    let env_file_path = std::env::var("LURASTACK_ENV_FILE")
+        .ok()
+        .filter(|s| !s.is_empty());
     let env_file_exists = env_file_path
         .as_deref()
         .map(|p| PathBuf::from(p).exists())
@@ -420,4 +426,75 @@ pub async fn resolve_aws_env_credentials(
         session_token,
         region,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_ini_basic_sections_and_keys() {
+        let ini = "[default]\naws_access_key_id = AKIA123\naws_secret_access_key = secret\n";
+        let parsed = parse_ini(ini);
+        let default = parsed.get("default").expect("default section");
+        assert_eq!(default.get("aws_access_key_id").unwrap(), "AKIA123");
+        assert_eq!(default.get("aws_secret_access_key").unwrap(), "secret");
+    }
+
+    #[test]
+    fn parse_ini_lowercases_keys_and_trims_whitespace() {
+        let ini = "[prof]\n   AWS_ACCESS_KEY_ID   =   AKIA456   \n";
+        let parsed = parse_ini(ini);
+        // Keys are lowercased; values trimmed.
+        assert_eq!(parsed["prof"].get("aws_access_key_id").unwrap(), "AKIA456");
+    }
+
+    #[test]
+    fn parse_ini_ignores_comments_and_blank_lines() {
+        let ini = "# a comment\n; another comment\n\n[default]\nkey = value\n";
+        let parsed = parse_ini(ini);
+        assert_eq!(parsed["default"].get("key").unwrap(), "value");
+        assert_eq!(parsed["default"].len(), 1);
+    }
+
+    #[test]
+    fn parse_ini_strips_inline_value_comments() {
+        let ini = "[default]\nregion = eu-west-1 # the region\n";
+        let parsed = parse_ini(ini);
+        assert_eq!(parsed["default"].get("region").unwrap(), "eu-west-1");
+    }
+
+    #[test]
+    fn parse_ini_handles_multiple_sections() {
+        let ini = "[default]\nkey = a\n[other]\nkey = b\n";
+        let parsed = parse_ini(ini);
+        assert_eq!(parsed["default"].get("key").unwrap(), "a");
+        assert_eq!(parsed["other"].get("key").unwrap(), "b");
+    }
+
+    #[test]
+    fn parse_ini_keys_outside_a_section_are_dropped() {
+        let ini = "stray = value\n[default]\nkey = ok\n";
+        let parsed = parse_ini(ini);
+        assert!(parsed.contains_key("default"));
+        // A key before any section header has nowhere to live.
+        assert!(!parsed.values().any(|s| s.contains_key("stray")));
+    }
+
+    #[test]
+    fn parse_ini_empty_input_yields_no_sections() {
+        assert!(parse_ini("").is_empty());
+    }
+
+    #[test]
+    fn mask_access_key_shows_only_last_four() {
+        assert_eq!(mask_access_key("AKIAIOSFODNN7EXAMPLE"), "****MPLE");
+    }
+
+    #[test]
+    fn mask_access_key_fully_masks_short_keys() {
+        assert_eq!(mask_access_key("AB"), "****");
+        assert_eq!(mask_access_key("ABCD"), "****");
+        assert_eq!(mask_access_key(""), "****");
+    }
 }

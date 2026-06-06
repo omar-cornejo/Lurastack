@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fs,
     io::{BufRead, BufReader, Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
     process::{ChildStdin, Command, Stdio},
     sync::{mpsc, Arc, Mutex},
     time::{Duration, Instant},
@@ -30,11 +30,10 @@ impl Default for TerraformInteractiveState {
 pub fn terraform_cancel(
     state: tauri::State<'_, TerraformInteractiveState>,
 ) -> Result<bool, String> {
-    let pid_opt = state
+    let pid_opt = *state
         .current_pid
         .lock()
-        .map_err(|error| format!("Error de lock: {error}"))?
-        .clone();
+        .map_err(|error| format!("Error de lock: {error}"))?;
     let Some(pid) = pid_opt else {
         return Ok(false);
     };
@@ -42,14 +41,22 @@ pub fn terraform_cancel(
     {
         use std::process::Command as StdCommand;
         // Send SIGINT first (graceful), then SIGTERM as a follow-up if still alive.
-        let _ = StdCommand::new("kill").arg("-INT").arg(pid.to_string()).status();
+        let _ = StdCommand::new("kill")
+            .arg("-INT")
+            .arg(pid.to_string())
+            .status();
         std::thread::sleep(Duration::from_millis(800));
-        let _ = StdCommand::new("kill").arg("-TERM").arg(pid.to_string()).status();
+        let _ = StdCommand::new("kill")
+            .arg("-TERM")
+            .arg(pid.to_string())
+            .status();
     }
     #[cfg(windows)]
     {
         use std::process::Command as StdCommand;
-        let _ = StdCommand::new("taskkill").args(["/PID", &pid.to_string(), "/T", "/F"]).status();
+        let _ = StdCommand::new("taskkill")
+            .args(["/PID", &pid.to_string(), "/T", "/F"])
+            .status();
     }
     Ok(true)
 }
@@ -95,9 +102,7 @@ impl AwsCredentials {
                 )?;
                 self.access_key_id = resolved.access_key_id;
                 self.secret_access_key = resolved.secret_access_key;
-                self.session_token = resolved
-                    .session_token
-                    .or(self.session_token);
+                self.session_token = resolved.session_token.or(self.session_token);
                 if self.region.trim().is_empty() {
                     if let Some(r) = resolved.region {
                         self.region = r;
@@ -110,9 +115,7 @@ impl AwsCredentials {
                 )?;
                 self.access_key_id = resolved.access_key_id;
                 self.secret_access_key = resolved.secret_access_key;
-                self.session_token = resolved
-                    .session_token
-                    .or(self.session_token);
+                self.session_token = resolved.session_token.or(self.session_token);
                 if self.region.trim().is_empty() {
                     if let Some(r) = resolved.region {
                         self.region = r;
@@ -222,7 +225,9 @@ fn terraform_init_for_deploy(
         }
     }
 
-    let status = child.wait().map_err(|error| format!("Error esperando terraform init: {error}"))?;
+    let status = child
+        .wait()
+        .map_err(|error| format!("Error esperando terraform init: {error}"))?;
     if !status.success() {
         emit_output(window, "\x1b[31m✗ terraform init falló\x1b[0m\r\n");
         return Err("terraform init falló".to_string());
@@ -264,9 +269,12 @@ fn run_terraform_streaming(
         }
     }
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|error| format!("No se pudo iniciar terraform {}: {error}", args.first().unwrap_or(&"")))?;
+    let mut child = cmd.spawn().map_err(|error| {
+        format!(
+            "No se pudo iniciar terraform {}: {error}",
+            args.first().unwrap_or(&"")
+        )
+    })?;
 
     if let Some(pid_arc) = pid_arc {
         if let Ok(mut guard) = pid_arc.lock() {
@@ -308,7 +316,9 @@ fn run_terraform_streaming(
         }
     }
 
-    let status = child.wait().map_err(|error| format!("Error esperando terraform: {error}"))?;
+    let status = child
+        .wait()
+        .map_err(|error| format!("Error esperando terraform: {error}"))?;
     if let Some(pid_arc) = pid_arc {
         if let Ok(mut guard) = pid_arc.lock() {
             *guard = None;
@@ -351,9 +361,12 @@ fn run_terraform_interactive_inner(
         }
     }
 
-    let mut child = cmd
-        .spawn()
-        .map_err(|error| format!("No se pudo iniciar terraform {}: {error}", args.first().unwrap_or(&"")))?;
+    let mut child = cmd.spawn().map_err(|error| {
+        format!(
+            "No se pudo iniciar terraform {}: {error}",
+            args.first().unwrap_or(&"")
+        )
+    })?;
 
     *pid_arc.lock().unwrap() = Some(child.id());
 
@@ -377,7 +390,10 @@ fn run_terraform_interactive_inner(
                 Ok(0) => break,
                 Ok(n) => {
                     let text = String::from_utf8_lossy(&buf[..n]).into_owned();
-                    let normalized = text.replace("\r\n", "\n").replace('\r', "\n").replace('\n', "\r\n");
+                    let normalized = text
+                        .replace("\r\n", "\n")
+                        .replace('\r', "\n")
+                        .replace('\n', "\r\n");
                     let _ = tx_out.send(normalized);
                 }
                 Err(_) => break,
@@ -393,7 +409,10 @@ fn run_terraform_interactive_inner(
                 Ok(0) => break,
                 Ok(n) => {
                     let text = String::from_utf8_lossy(&buf[..n]).into_owned();
-                    let normalized = text.replace("\r\n", "\n").replace('\r', "\n").replace('\n', "\r\n");
+                    let normalized = text
+                        .replace("\r\n", "\n")
+                        .replace('\r', "\n")
+                        .replace('\n', "\r\n");
                     let colored = format!("\x1b[33m{normalized}\x1b[0m");
                     let _ = tx_err.send(colored);
                 }
@@ -417,7 +436,9 @@ fn run_terraform_interactive_inner(
         }
     }
 
-    let status = child.wait().map_err(|error| format!("Error esperando terraform: {error}"))?;
+    let status = child
+        .wait()
+        .map_err(|error| format!("Error esperando terraform: {error}"))?;
     *stdin_arc.lock().unwrap() = None;
     *pid_arc.lock().unwrap() = None;
     Ok(status.success())
@@ -663,7 +684,7 @@ pub struct TerraformShowResult {
     state_signature: Option<String>,
 }
 
-fn read_state_signature(project_dir_path: &PathBuf) -> Option<String> {
+fn read_state_signature(project_dir_path: &Path) -> Option<String> {
     let state_file = project_dir_path.join("terraform.tfstate");
     let metadata = fs::metadata(&state_file).ok()?;
     let len = metadata.len();
@@ -908,7 +929,9 @@ fn sanitize_tf_file_name(raw_name: &str) -> Result<String, String> {
         .to_string();
 
     if !file_name.to_lowercase().ends_with(".tf") {
-        return Err(format!("Solo se permiten archivos .tf en validate: {file_name}"));
+        return Err(format!(
+            "Solo se permiten archivos .tf en validate: {file_name}"
+        ));
     }
 
     Ok(file_name)
@@ -930,8 +953,12 @@ fn sync_project_tf_files(
         provided_tf_names.insert(file_name.clone());
 
         let file_path = project_dir_path.join(&file_name);
-        fs::write(&file_path, &file.content)
-            .map_err(|error| format!("No se pudo escribir archivo temporal '{}': {error}", file_name))?;
+        fs::write(&file_path, &file.content).map_err(|error| {
+            format!(
+                "No se pudo escribir archivo temporal '{}': {error}",
+                file_name
+            )
+        })?;
 
         normalized_files.push(TerraformSourceFile {
             name: file_name,
@@ -939,11 +966,13 @@ fn sync_project_tf_files(
         });
     }
 
-    let entries = fs::read_dir(project_dir_path)
-        .map_err(|error| format!("No se pudo leer directorio del proyecto para validate: {error}"))?;
+    let entries = fs::read_dir(project_dir_path).map_err(|error| {
+        format!("No se pudo leer directorio del proyecto para validate: {error}")
+    })?;
 
     for entry in entries {
-        let dir_entry = entry.map_err(|error| format!("No se pudo leer entrada de directorio: {error}"))?;
+        let dir_entry =
+            entry.map_err(|error| format!("No se pudo leer entrada de directorio: {error}"))?;
         let path = dir_entry.path();
         if !path.is_file() {
             continue;
@@ -972,7 +1001,7 @@ fn sync_project_tf_files(
     Ok(normalized_files)
 }
 
-fn to_file_uri(path: &PathBuf) -> String {
+fn to_file_uri(path: &Path) -> String {
     let normalized = path.to_string_lossy().replace(' ', "%20");
     format!("file://{normalized}")
 }
@@ -1042,7 +1071,11 @@ fn diagnostics_from_lsp_notification(message: &Value) -> Vec<TerraformValidateDi
                 .unwrap_or("Diagnóstico terraform-ls")
                 .to_string();
 
-            let summary = message_text.lines().next().unwrap_or("Diagnóstico terraform-ls").to_string();
+            let summary = message_text
+                .lines()
+                .next()
+                .unwrap_or("Diagnóstico terraform-ls")
+                .to_string();
 
             let start_line = diagnostic
                 .get("range")
@@ -1073,9 +1106,7 @@ fn diagnostics_from_lsp_notification(message: &Value) -> Vec<TerraformValidateDi
                 .map(|column| column as usize + 1);
 
             TerraformValidateDiagnostic {
-                severity: severity_from_lsp(
-                    diagnostic.get("severity").and_then(Value::as_u64),
-                ),
+                severity: severity_from_lsp(diagnostic.get("severity").and_then(Value::as_u64)),
                 summary,
                 detail: message_text,
                 filename: file_name.clone(),
@@ -1277,13 +1308,19 @@ pub async fn terraform_lsp_diagnostics(
 }
 
 #[tauri::command]
-pub async fn terraform_validate(project_dir: String, files: Vec<TerraformSourceFile>) -> Result<TerraformValidateResult, String> {
+pub async fn terraform_validate(
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+) -> Result<TerraformValidateResult, String> {
     tauri::async_runtime::spawn_blocking(move || terraform_validate_sync(project_dir, files))
         .await
         .map_err(|error| format!("Error interno ejecutando validate: {error}"))?
 }
 
-fn terraform_validate_sync(project_dir: String, files: Vec<TerraformSourceFile>) -> Result<TerraformValidateResult, String> {
+fn terraform_validate_sync(
+    project_dir: String,
+    files: Vec<TerraformSourceFile>,
+) -> Result<TerraformValidateResult, String> {
     if project_dir.trim().is_empty() {
         return Err("No se recibió directorio de proyecto para validate.".to_string());
     }
@@ -1312,8 +1349,12 @@ fn terraform_validate_sync(project_dir: String, files: Vec<TerraformSourceFile>)
         init_ran = true;
 
         if !init_output.status.success() {
-            let stderr = String::from_utf8_lossy(&init_output.stderr).trim().to_string();
-            let stdout = String::from_utf8_lossy(&init_output.stdout).trim().to_string();
+            let stderr = String::from_utf8_lossy(&init_output.stderr)
+                .trim()
+                .to_string();
+            let stdout = String::from_utf8_lossy(&init_output.stdout)
+                .trim()
+                .to_string();
             let detail = if !stderr.is_empty() {
                 stderr
             } else if !stdout.is_empty() {
@@ -1348,7 +1389,9 @@ fn terraform_validate_sync(project_dir: String, files: Vec<TerraformSourceFile>)
         .map_err(|error| format!("No se pudo ejecutar terraform validate: {error}"))?;
 
     let stdout = String::from_utf8_lossy(&validate_output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&validate_output.stderr).trim().to_string();
+    let stderr = String::from_utf8_lossy(&validate_output.stderr)
+        .trim()
+        .to_string();
 
     let mut diagnostics = Vec::<TerraformValidateDiagnostic>::new();
     let mut parsed_ok_from_json = validate_output.status.success();

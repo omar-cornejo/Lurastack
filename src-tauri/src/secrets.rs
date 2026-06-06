@@ -134,8 +134,8 @@ fn read_fallback_map() -> Result<std::collections::HashMap<String, String>, Stri
         return Ok(std::collections::HashMap::new());
     }
     let pass = current_passphrase()?;
-    let mut file = fs::File::open(&path)
-        .map_err(|e| format!("No se pudo abrir el archivo cifrado: {e}"))?;
+    let mut file =
+        fs::File::open(&path).map_err(|e| format!("No se pudo abrir el archivo cifrado: {e}"))?;
     let cocoon = Cocoon::parse_only(pass.as_bytes());
     let plain = cocoon
         .parse(&mut file)
@@ -145,9 +145,7 @@ fn read_fallback_map() -> Result<std::collections::HashMap<String, String>, Stri
     Ok(parsed)
 }
 
-fn write_fallback_map(
-    map: &std::collections::HashMap<String, String>,
-) -> Result<(), String> {
+fn write_fallback_map(map: &std::collections::HashMap<String, String>) -> Result<(), String> {
     let path = fallback_path()?;
     let pass = current_passphrase()?;
     let plain = serde_json::to_vec(map)
@@ -284,4 +282,3 @@ pub fn clear_fallback_passphrase() -> Result<(), String> {
     guard.passphrase = None;
     Ok(())
 }
-
