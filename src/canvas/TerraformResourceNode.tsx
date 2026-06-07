@@ -82,9 +82,7 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
             </div>
           </div>
 
-          <div className="pointer-events-none flex flex-1 items-center justify-center">
-            <span className="text-[10px] font-medium text-violet-300/80">Drop nodes here</span>
-          </div>
+          <div className="pointer-events-none flex flex-1 items-center justify-center" />
 
           <Handle type="source" id="bottom" position={Position.Bottom} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-violet-500" />
           <Handle type="target" id="bottom" position={Position.Bottom} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-violet-500" />
@@ -133,9 +131,7 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
           </div>
         </div>
 
-        <div className={`pointer-events-none flex flex-1 items-center justify-center ${planBg ?? "bg-indigo-50/30"}`}>
-          <span className="text-[10px] font-medium text-indigo-300/80">Drop nodes here</span>
-        </div>
+        <div className={`pointer-events-none flex flex-1 items-center justify-center ${planBg ?? "bg-indigo-50/30"}`} />
 
         <Handle type="source" id="bottom" position={Position.Bottom} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-indigo-500" />
         <Handle type="target" id="bottom" position={Position.Bottom} className="!pointer-events-auto !h-2 !w-2 !rounded-full !border-2 !border-white !bg-indigo-500" />
