@@ -8,8 +8,11 @@ import {
 
 describe("resolveTerraformIcon", () => {
   it("returns the mapped icon for a known type", () => {
-    expect(resolveTerraformIcon("aws_vpc")).toContain("VPC");
-    expect(resolveTerraformIcon("google_compute_instance")).toContain("gcp");
+    // All icons now live under the open-licensed set in /icons/open/.
+    expect(resolveTerraformIcon("aws_vpc")).toBe("/icons/open/service-vpc.svg");
+    expect(resolveTerraformIcon("google_compute_instance")).toBe(
+      "/icons/open/service-instance.svg",
+    );
   });
 
   it("falls back to the default icon for an unknown type", () => {
@@ -42,7 +45,7 @@ describe("isSubnetIconPath", () => {
   });
 
   it("rejects other paths and undefined", () => {
-    expect(isSubnetIconPath("/icons/aws/aws_vpc.svg")).toBe(false);
+    expect(isSubnetIconPath("/icons/open/service-vpc.svg")).toBe(false);
     expect(isSubnetIconPath(undefined)).toBe(false);
   });
 });

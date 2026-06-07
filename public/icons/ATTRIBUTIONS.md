@@ -1,43 +1,32 @@
 # Icon Attributions
 
-This directory contains icon assets from third-party providers, used under
-the terms of each provider's asset licence.
+All icons shipped with LuraStack come from open-licensed icon sets and are
+therefore freely redistributable as part of this repository. They are
+intentionally generic — a clear category or service glyph rather than any cloud
+provider's official, non-redistributable service icons.
 
-## AWS Architecture Icons
+The icons live under [`open/`](open/).
 
-- **Source:** [AWS Architecture Icons](https://aws.amazon.com/architecture/icons/)
-- **Copyright:** © Amazon Web Services, Inc. or its affiliates.
-- **Licence:** AWS Architecture Icons Asset Package terms.
-- **Files:** `aws/` — Arch_Amazon-RDS_64.svg, aws_alb.svg, aws_autoscaling_group.svg,
-  AWS_Availability_Zone.png, AWS-Cloud-logo_32_Dark.svg,
-  aws_cloudwatch_event_rule.svg, aws_dynamodb_table.svg, aws_iam_policy.svg,
-  and related service icons.
+## Material Design Icons (Apache-2.0)
 
-Usage of these icons does not imply affiliation with or endorsement by
-Amazon Web Services.
+- **Source:** [Material Design Icons](https://pictogrammers.com/library/mdi/)
+- **Licence:** [Apache License 2.0](https://github.com/Templarian/MaterialDesign/blob/master/LICENSE)
+- **Files:** all `open/category-*.svg` and `open/service-*.svg` — the generic
+  glyphs used for compute, networking, storage, database, security, serverless,
+  integration, instances, VPCs, subnets, load balancers, queues, topics,
+  regions and availability zones.
 
-## Google Cloud Icons
+## Logos icon set (MIT)
 
-- **Source:** [Google Cloud Icons](https://cloud.google.com/icons)
-- **Copyright:** © Google LLC.
-- **Licence:** [Google Cloud Icon licence terms](https://cloud.google.com/icons#section-6).
-- **Files:** `gcp/` — gcp_bigquery.svg, GCP-Cloud-logo_32_Dark.svg,
-  gcp_cloud_sql.svg, gcp_cloud_storage.svg, gcp_compute_engine.svg,
-  gcp_integration.svg, gcp_networking.svg, gcp_security_identity.svg,
-  and related service icons.
+- **Source:** [Iconify `logos` set](https://icon-sets.iconify.design/logos/)
+- **Licence:** [MIT](https://github.com/gilbarbara/logos/blob/master/LICENSE.txt)
+- **Files:** `open/brand-aws.svg`, `open/brand-gcp.svg`, `open/brand-azure.svg`
+  — the cloud provider brand logos shown in the provider selector and the
+  templates gallery.
 
-Usage of these icons does not imply affiliation with or endorsement by
-Google LLC.
-
-## Azure Icons
-
-- **Source:** [Microsoft Azure Icon Library](https://learn.microsoft.com/azure/architecture/icons/)
-- **Copyright:** © Microsoft Corporation.
-- **Licence:** Microsoft Azure Architecture Icons licence terms.
-- **Files:** `azure/` — Azure-Cloud-logo_32_Dark.svg, devicon--azure.svg.
-
-Usage of these icons does not imply affiliation with or endorsement by
-Microsoft Corporation.
+The provider brand logos are used solely to identify each platform in the UI.
+Use of these logos does not imply affiliation with or endorsement by Amazon Web
+Services, Google LLC, or Microsoft Corporation.
 
 ---
 

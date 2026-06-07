@@ -182,9 +182,9 @@ export const LeftPanel = ({
   }, [providerMenuOpen]);
 
   const PROVIDER_OPTIONS: Array<{ id: "aws" | "gcp" | "azure"; label: string; icon: string }> = [
-    { id: "aws", label: "Amazon Web Services", icon: "/icons/aws/AWS-Cloud-logo_32_Dark.svg" },
-    { id: "gcp", label: "Google Cloud", icon: "/icons/gcp/GCP-Cloud-logo_32_Dark.svg" },
-    { id: "azure", label: "Microsoft Azure", icon: "/icons/azure/Azure-Cloud-logo_32_Dark.svg" },
+    { id: "aws", label: "Amazon Web Services", icon: "/icons/open/brand-aws.svg" },
+    { id: "gcp", label: "Google Cloud", icon: "/icons/open/brand-gcp.svg" },
+    { id: "azure", label: "Microsoft Azure", icon: "/icons/open/brand-azure.svg" },
   ];
   const currentProvider = PROVIDER_OPTIONS.find((p) => p.id === cloudProvider)!;
 

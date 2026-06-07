@@ -41,11 +41,16 @@ External tools invoked as subprocesses (not bundled):
 Icon assets
 ==============================================================================
 
-  - AWS Architecture Icons (Asset Package) — © Amazon Web Services, Inc.
-    https://aws.amazon.com/architecture/icons/
-    Used under the AWS Architecture Icons asset usage terms.
-  - Google Cloud Icons — © Google LLC
-    https://cloud.google.com/icons
-    Used under the Google Cloud Icons license terms.
+All icons shipped with LuraStack come from open-licensed sets and are freely
+redistributable:
+
+  - Material Design Icons (Apache-2.0) — https://pictogrammers.com/library/mdi/
+    Generic category and service glyphs (open/category-*.svg, open/service-*.svg).
+  - Logos icon set (MIT) — https://github.com/gilbarbara/logos
+    Cloud provider brand logos (open/brand-aws.svg, open/brand-gcp.svg,
+    open/brand-azure.svg), used only to identify each platform in the UI.
+
+Provider brand logos do not imply affiliation with or endorsement by Amazon Web
+Services, Google LLC, or Microsoft Corporation.
 
 See public/icons/ATTRIBUTIONS.md for details about specific icons.

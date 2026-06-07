@@ -122,7 +122,7 @@ lurastack/
 ├── src-tauri/              # Rust desktop runtime (Tauri commands, PTY, credentials)
 ├── e2e/                    # Playwright end-to-end specs + Tauri IPC mock fixtures
 ├── public/
-│   ├── icons/              # AWS / GCP / Azure service icons
+│   ├── icons/              # Open-licensed category / service / brand icons
 │   └── templates/          # Gallery templates (8 instantiable architectures)
 └── scripts/                # Build-time helpers (icon import, template index)
 ```
@@ -159,11 +159,10 @@ The gallery ships with 8 instantiable architectures:
 
 ## Roadmap
 
-- [ ] Azure provider catalog and templates
-- [ ] Cross-provider resource references
-- [ ] LSP-aware HCL editor (autocomplete, hover docs)
-- [ ] Richer Diff view (resource-level visual diff, not just text)
-- [ ] MCP server so AI assistants can read / mutate the project
+Near-term highlights — Azure catalog, cross-provider references, an LSP-aware
+HCL editor, a richer Diff view, and an MCP server. See **[ROADMAP.md](ROADMAP.md)**
+for the full picture and how to influence it, and **[CHANGELOG.md](CHANGELOG.md)**
+for what has shipped.
 
 ## Contributing
 
@@ -173,6 +172,8 @@ please read:
 - [CONTRIBUTING.md](CONTRIBUTING.md) — development setup, coding conventions,
   commit style, and PR checklist.
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) — community standards.
+- [ROADMAP.md](ROADMAP.md) — where the project is heading.
+- [CHANGELOG.md](CHANGELOG.md) — notable changes by release.
 
 For non-trivial features, open a discussion or draft issue first so we can
 align on scope before investing real time.

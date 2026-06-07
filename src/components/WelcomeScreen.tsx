@@ -28,9 +28,9 @@ type WelcomeScreenProps = {
 type View = "recent" | "new" | "templates";
 
 const PROVIDER_LOGO: Record<TemplateProvider, string> = {
-  aws: "/icons/aws/AWS-Cloud-logo_32_Dark.svg",
-  gcp: "/icons/gcp/GCP-Cloud-logo_32_Dark.svg",
-  azure: "/icons/azure/Azure-Cloud-logo_32_Dark.svg",
+  aws: "/icons/open/brand-aws.svg",
+  gcp: "/icons/open/brand-gcp.svg",
+  azure: "/icons/open/brand-azure.svg",
 };
 
 const PROVIDERS: Array<{ id: TemplateProvider | "all"; label: string; logo?: string; icon?: string }> = [
