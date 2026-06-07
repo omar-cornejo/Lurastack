@@ -173,6 +173,16 @@ pub fn close_terminal_session(
     Ok(())
 }
 
+// Builds the app URL for a detached terminal window, percent-encoding the cwd
+// and view id as query components. Pure helper extracted so the encoding can be
+// unit-tested without an AppHandle.
+fn build_detached_terminal_url(cwd: &str, view_id: Option<&str>) -> String {
+    let encoded_cwd = utf8_percent_encode(cwd, QUERY_COMPONENT_SET).to_string();
+    let encoded_view_id =
+        utf8_percent_encode(view_id.unwrap_or(""), QUERY_COMPONENT_SET).to_string();
+    format!("/?detachedTerminal=1&cwd={encoded_cwd}&viewId={encoded_view_id}")
+}
+
 #[tauri::command]
 pub fn open_detached_terminal_window(
     app: tauri::AppHandle,
@@ -190,10 +200,7 @@ pub fn open_detached_terminal_window(
         return Ok(());
     }
 
-    let encoded_cwd = utf8_percent_encode(&cwd, QUERY_COMPONENT_SET).to_string();
-    let encoded_view_id =
-        utf8_percent_encode(view_id.as_deref().unwrap_or(""), QUERY_COMPONENT_SET).to_string();
-    let app_url = format!("/?detachedTerminal=1&cwd={encoded_cwd}&viewId={encoded_view_id}");
+    let app_url = build_detached_terminal_url(&cwd, view_id.as_deref());
 
     let window = WebviewWindowBuilder::new(&app, label, WebviewUrl::App(app_url.into()))
         .title("LuraStack Terminal")
@@ -225,4 +232,38 @@ pub fn close_detached_terminal_window(
 
     let _ = window.destroy();
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_url_leaves_a_plain_path_unencoded() {
+        let url = build_detached_terminal_url("/home/user/project", Some("view-1"));
+        assert_eq!(
+            url,
+            "/?detachedTerminal=1&cwd=/home/user/project&viewId=view-1"
+        );
+    }
+
+    #[test]
+    fn build_url_encodes_spaces_and_special_chars() {
+        let url = build_detached_terminal_url("/home/my project", Some("a&b=c"));
+        assert!(url.contains("cwd=/home/my%20project"));
+        // `&` and `=` in the view id must be encoded so they don't break the query.
+        assert!(url.contains("viewId=a%26b%3Dc"));
+    }
+
+    #[test]
+    fn build_url_handles_a_missing_view_id() {
+        let url = build_detached_terminal_url("/tmp", None);
+        assert_eq!(url, "/?detachedTerminal=1&cwd=/tmp&viewId=");
+    }
+
+    #[test]
+    fn build_url_encodes_query_breaking_characters() {
+        let url = build_detached_terminal_url("/p?x#y", None);
+        assert!(url.contains("cwd=/p%3Fx%23y"));
+    }
 }

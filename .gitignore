@@ -10,6 +10,12 @@ build/
 .svelte-kit/
 coverage/
 
+# Playwright E2E artifacts
+playwright-report/
+test-results/
+/blob-report/
+.playwright/
+
 # Rust / Tauri build artifacts
 src-tauri/target/
 src-tauri/**/*.rs.bk

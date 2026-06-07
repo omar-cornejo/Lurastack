@@ -510,6 +510,7 @@ export const LeftPanel = ({
                                   <button
                                     key={node.id}
                                     type="button"
+                                    data-testid={`catalog-item-${node.terraformType}`}
                                     draggable
                                     onClick={() => addResource(node)}
                                     onDragStart={(event) => handleDragStart(event, node)}

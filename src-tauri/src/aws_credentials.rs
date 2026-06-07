@@ -623,4 +623,32 @@ mod tests {
             resolve_profile_credentials_sync("work", Some(creds.path().to_str().unwrap()), None);
         assert!(result.is_err());
     }
+
+    #[test]
+    fn resolve_credentials_path_prefers_an_explicit_custom_path() {
+        // An explicit, non-empty custom path wins over env vars and defaults.
+        let resolved = resolve_credentials_path(Some("/custom/creds"));
+        assert_eq!(
+            resolved.as_deref(),
+            Some(std::path::Path::new("/custom/creds"))
+        );
+    }
+
+    #[test]
+    fn resolve_credentials_path_ignores_a_blank_custom_path() {
+        // A blank custom arg is treated as absent (falls through to env/default).
+        // We can't assert the env/default branch deterministically, but the
+        // custom path must NOT be the blank string.
+        let resolved = resolve_credentials_path(Some("   "));
+        assert_ne!(resolved.as_deref(), Some(std::path::Path::new("   ")));
+    }
+
+    #[test]
+    fn resolve_config_path_prefers_an_explicit_custom_path() {
+        let resolved = resolve_config_path(Some("/custom/config"));
+        assert_eq!(
+            resolved.as_deref(),
+            Some(std::path::Path::new("/custom/config"))
+        );
+    }
 }

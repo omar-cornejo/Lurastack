@@ -2,6 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { HclCodeArea } from "./HclCodeArea";
 import type { TypeHintResolver } from "../utils/hclHighlight";
+import { basename } from "../utils/pathUtils";
+import { parseMainTfBlocks, type ParsedMainTfBlock } from "../utils/hclBlocks";
+import {
+  canEditOnlyInAttributeValues,
+  pruneEmptyAttributeAssignments,
+} from "../utils/hclEditGuards";
 import { invoke } from "@tauri-apps/api/core";
 import { readDir, readTextFile, writeTextFile, remove, rename, mkdir } from "@tauri-apps/plugin-fs";
 import type { TerraformResource } from "../models/terraform";
@@ -31,13 +37,6 @@ type CodePanelProps = {
   onMainTfDraftChange?: (draft: string) => void;
   isFreeEditMode?: boolean;
   onFreeEditModeChange?: (value: boolean) => void;
-};
-
-type ParsedMainTfBlock = {
-  kind: "resource" | "data";
-  type: string;
-  name: string;
-  attributes: Record<string, unknown>;
 };
 
 type TerraformValidationDiagnostic = {
@@ -79,230 +78,6 @@ type PendingDeleteTarget = {
   name: string;
   relativePath: string;
   isDirectory: boolean;
-};
-
-const INVALID_HCL_VALUE = Symbol("invalid-hcl-value");
-
-
-// Returns the character ranges [start, end] that correspond to the value portion
-// of attribute-assignment lines (the part after `=`). Block headers, closing braces,
-// and blank lines produce no ranges. For string values (wrapped in outer quotes),
-// the range covers only the content INSIDE the outer quotes so the wrappers are protected.
-const getAttributeValueRanges = (text: string): Array<{ start: number; end: number }> => {
-  const ranges: Array<{ start: number; end: number }> = [];
-  const lines = text.split("\n");
-  let offset = 0;
-
-  for (const line of lines) {
-    // Attribute lines: optional indent + plain identifier + optional spaces + = + rest
-    // Block headers (resource "..." "..." {) never contain a bare `=` at this position.
-    const match = line.match(/^(\s*[a-zA-Z_][a-zA-Z0-9_-]*\s*=\s*)/);
-    if (match) {
-      const valueStart = offset + match[1].length;
-      const lineEnd = offset + line.trimEnd().length;
-      const valueStr = line.slice(match[1].length).trimEnd();
-
-      if (valueStr.length >= 2 && valueStr.startsWith('"') && valueStr.endsWith('"')) {
-        // String value: restrict editable zone to inside the outer quotes so the
-        // wrapper quotes themselves cannot be accidentally deleted.
-        ranges.push({ start: valueStart + 1, end: Math.max(valueStart + 1, lineEnd - 1) });
-      } else {
-        ranges.push({ start: valueStart, end: Math.max(valueStart, lineEnd) });
-      }
-    }
-
-    offset += line.length + 1; // +1 for the newline character
-  }
-
-  return ranges;
-};
-
-const isPositionInAttributeValue = (text: string, position: number): boolean =>
-  getAttributeValueRanges(text).some(
-    // range.end + 1 allows inserting just before the closing wrapper quote
-    (range) => position >= range.start && position <= range.end + 1,
-  );
-
-const isRangeInAttributeValues = (text: string, start: number, end: number): boolean => {
-  if (end <= start) return true;
-  return getAttributeValueRanges(text).some(
-    (range) => start >= range.start && end <= range.end,
-  );
-};
-
-// Returns true only if the diff between `previous` and `next` falls entirely
-// within attribute-value zones (right-hand side of `key =` lines).
-// Newline insertion is always blocked to prevent structural changes.
-const canEditOnlyInAttributeValues = (previous: string, next: string): boolean => {
-  if (previous === next) return true;
-
-  let prefix = 0;
-  while (
-    prefix < previous.length &&
-    prefix < next.length &&
-    previous[prefix] === next[prefix]
-  ) {
-    prefix += 1;
-  }
-
-  let prevSuffix = previous.length;
-  let nextSuffix = next.length;
-  while (
-    prevSuffix > prefix &&
-    nextSuffix > prefix &&
-    previous[prevSuffix - 1] === next[nextSuffix - 1]
-  ) {
-    prevSuffix -= 1;
-    nextSuffix -= 1;
-  }
-
-  const removedLen = prevSuffix - prefix;
-  const addedLen = nextSuffix - prefix;
-
-  if (removedLen > 0 && !isRangeInAttributeValues(previous, prefix, prevSuffix)) {
-    return false;
-  }
-
-  if (addedLen > 0) {
-    const addedText = next.slice(prefix, nextSuffix);
-    if (addedText.includes("\n")) return false;
-    if (!isPositionInAttributeValue(previous, prefix)) return false;
-  }
-
-  return true;
-};
-
-const pruneEmptyAttributeAssignments = (hcl: string): string => {
-  const lines = hcl.split("\n");
-  const nextLines: string[] = [];
-  let blockDepth = 0;
-
-  lines.forEach((line) => {
-    const trimmed = line.trim();
-    const opens = (line.match(/{/g) ?? []).length;
-    const closes = (line.match(/}/g) ?? []).length;
-    const isInsideBlock = blockDepth > 0;
-
-    const isEmptyAssignment =
-      /^([a-zA-Z0-9_.-]+)\s*=\s*""\s*$/.test(trimmed) ||
-      /^([a-zA-Z0-9_.-]+)\s*=\s*$/.test(trimmed);
-
-    if (!(isInsideBlock && isEmptyAssignment)) {
-      nextLines.push(line);
-    }
-
-    blockDepth += opens;
-    blockDepth -= closes;
-    if (blockDepth < 0) blockDepth = 0;
-  });
-
-  return nextLines.join("\n");
-};
-
-const parseHclValueToAttribute = (rawValue: string): unknown | typeof INVALID_HCL_VALUE => {
-  const trimmed = rawValue.trim();
-  // Empty value or empty HCL string literal → treat as cleared
-  if (!trimmed || trimmed === '""') return "";
-  if (trimmed === "[" || trimmed === "]" || trimmed === "{" || trimmed === "}") {
-    return INVALID_HCL_VALUE;
-  }
-  if ((trimmed.startsWith("[") && !trimmed.endsWith("]")) || (trimmed.startsWith("{") && !trimmed.endsWith("}"))) {
-    return INVALID_HCL_VALUE;
-  }
-  // Store raw HCL value as-is — user is responsible for HCL syntax
-  return trimmed;
-};
-
-// Parses the body of a resource/data block (the lines between its braces) into
-// an attribute map. Scalar assignments become plain keys; repeated named blocks
-// (e.g. multiple `ingress { ... }`) are collected into an ARRAY of objects under
-// the block name so the emitter can re-render each one as its own nested block.
-// Single nested blocks also become a one-element array — round-trip safe.
-const parseBlockBody = (
-  lines: string[],
-  startIndex: number,
-): { attributes: Record<string, unknown>; nextIndex: number } => {
-  const attributes: Record<string, unknown> = {};
-  let index = startIndex;
-
-  while (index < lines.length) {
-    const line = lines[index] ?? "";
-    const trimmed = line.trim();
-
-    // Closing brace of the current block — stop and report where we ended.
-    if (trimmed === "}" || trimmed.startsWith("}")) {
-      return { attributes, nextIndex: index + 1 };
-    }
-
-    // Named nested block opener, e.g. `ingress {` or `tags = {` is NOT this
-    // (that's an assignment). A block opener has no `=` before the brace.
-    const blockOpener = trimmed.match(/^([a-zA-Z_][a-zA-Z0-9_-]*)\s*\{$/);
-    if (blockOpener) {
-      const blockName = blockOpener[1];
-      const nested = parseBlockBody(lines, index + 1);
-      const existing = attributes[blockName];
-      const item = nested.attributes;
-      if (Array.isArray(existing)) {
-        existing.push(item);
-      } else {
-        attributes[blockName] = [item];
-      }
-      index = nested.nextIndex;
-      continue;
-    }
-
-    const assignment = trimmed.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/);
-    if (assignment) {
-      const [, key, rawValue] = assignment;
-      const parsed = parseHclValueToAttribute(rawValue);
-      if (parsed !== INVALID_HCL_VALUE) {
-        attributes[key] = parsed;
-      }
-    }
-
-    index += 1;
-  }
-
-  return { attributes, nextIndex: index };
-};
-
-const parseMainTfBlocks = (hcl: string): ParsedMainTfBlock[] => {
-  const lines = hcl.split("\n");
-  const blocks: ParsedMainTfBlock[] = [];
-
-  let index = 0;
-  while (index < lines.length) {
-    const header = lines[index]?.trim() ?? "";
-    const match = header.match(/^(resource|data)\s+"([^"]+)"\s+"([^"]+)"\s*\{\s*$/);
-    if (!match) {
-      index += 1;
-      continue;
-    }
-
-    const blockKind = match[1] as "resource" | "data";
-    const blockType = match[2] ?? "";
-    const blockName = match[3] ?? "";
-
-    const { attributes, nextIndex } = parseBlockBody(lines, index + 1);
-    index = nextIndex;
-
-    blocks.push({
-      kind: blockKind,
-      type: blockType,
-      name: blockName,
-      attributes,
-    });
-  }
-
-  return blocks;
-};
-
-
-const basename = (input?: string) => {
-  if (!input) return undefined;
-  const normalized = input.replace(/\\/g, "/");
-  const parts = normalized.split("/");
-  return parts[parts.length - 1];
 };
 
 export default function CodePanel({

@@ -2,6 +2,46 @@
   "version": "1",
   "templates": [
     {
+      "id": "aws/basic-vpc-vm",
+      "name": "AWS — Basic VPC + EC2 (nginx)",
+      "description": "VPC con subnet pública y un EC2 con nginx en el puerto 80; output con IP y puerto.",
+      "provider": "aws",
+      "resourceCount": 7,
+      "tags": [
+        "starter",
+        "networking",
+        "compute",
+        "nginx"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
+      "id": "aws/serverless-cat-gallery",
+      "name": "AWS — Cat gallery (S3 + Lambda)",
+      "description": "Galería de fotos de gatitos: web estática en S3 que lista las fotos y un botón para subir más vía Lambda (Function URL). Incluye 3 gatitos de inicio.",
+      "provider": "aws",
+      "resourceCount": 18,
+      "tags": [
+        "serverless",
+        "s3",
+        "lambda"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
+      "id": "aws/web-classic-lb",
+      "name": "AWS — Classic web (ALB + ASG)",
+      "description": "ALB + Auto Scaling Group de 3 instancias nginx en subnets públicas; cada instancia sirve una página distinta para ver el balanceo al refrescar.",
+      "provider": "aws",
+      "resourceCount": 14,
+      "tags": [
+        "web",
+        "load-balancer",
+        "autoscaling"
+      ],
+      "icon": "mdi:aws"
+    },
+    {
       "id": "aws/empty-aws",
       "name": "AWS — Empty project",
       "description": "Proyecto en blanco con un view inicial preparado para AWS.",
@@ -26,58 +66,6 @@
       "icon": "mdi:microsoft-azure"
     },
     {
-      "id": "gcp/empty-gcp",
-      "name": "GCP — Empty project",
-      "description": "Proyecto en blanco con un view inicial preparado para GCP.",
-      "provider": "gcp",
-      "resourceCount": 0,
-      "tags": [
-        "starter",
-        "blank"
-      ],
-      "icon": "mdi:google-cloud"
-    },
-    {
-      "id": "aws/basic-vpc-vm",
-      "name": "AWS — Basic VPC + EC2 (nginx)",
-      "description": "VPC con subnet pública y un EC2 con nginx en el puerto 80; output con IP y puerto.",
-      "provider": "aws",
-      "resourceCount": 7,
-      "tags": [
-        "starter",
-        "networking",
-        "compute",
-        "nginx"
-      ],
-      "icon": "mdi:aws"
-    },
-    {
-      "id": "aws/web-classic-lb",
-      "name": "AWS — Classic web (ALB + ASG)",
-      "description": "ALB + Auto Scaling Group de 3 instancias nginx en subnets públicas; cada instancia sirve una página distinta para ver el balanceo al refrescar.",
-      "provider": "aws",
-      "resourceCount": 14,
-      "tags": [
-        "web",
-        "load-balancer",
-        "autoscaling"
-      ],
-      "icon": "mdi:aws"
-    },
-    {
-      "id": "aws/serverless-cat-gallery",
-      "name": "AWS — Cat gallery (S3 + Lambda)",
-      "description": "Galería de fotos de gatitos: web estática en S3 que lista las fotos y un botón para subir más vía Lambda (Function URL). Incluye 3 gatitos de inicio.",
-      "provider": "aws",
-      "resourceCount": 18,
-      "tags": [
-        "serverless",
-        "s3",
-        "lambda"
-      ],
-      "icon": "mdi:aws"
-    },
-    {
       "id": "gcp/basic-network-vm",
       "name": "GCP — Basic VPC + VM (nginx)",
       "description": "VPC custom con subnet pública, firewall y una VM Compute Engine con nginx en el puerto 80; output con la IP pública.",
@@ -88,6 +76,19 @@
         "networking",
         "compute",
         "nginx"
+      ],
+      "icon": "mdi:google-cloud"
+    },
+    {
+      "id": "gcp/serverless-cat-gallery",
+      "name": "GCP — Cat gallery (Storage + Functions)",
+      "description": "Galería de fotos de gatitos: web estática en Cloud Storage que lista las fotos y un botón para subir más vía Cloud Function. Incluye 3 gatitos de inicio.",
+      "provider": "gcp",
+      "resourceCount": 17,
+      "tags": [
+        "serverless",
+        "storage",
+        "functions"
       ],
       "icon": "mdi:google-cloud"
     },
@@ -105,15 +106,14 @@
       "icon": "mdi:google-cloud"
     },
     {
-      "id": "gcp/serverless-cat-gallery",
-      "name": "GCP — Cat gallery (Storage + Functions)",
-      "description": "Galería de fotos de gatitos: web estática en Cloud Storage que lista las fotos y un botón para subir más vía Cloud Function. Incluye 3 gatitos de inicio.",
+      "id": "gcp/empty-gcp",
+      "name": "GCP — Empty project",
+      "description": "Proyecto en blanco con un view inicial preparado para GCP.",
       "provider": "gcp",
-      "resourceCount": 17,
+      "resourceCount": 0,
       "tags": [
-        "serverless",
-        "storage",
-        "functions"
+        "starter",
+        "blank"
       ],
       "icon": "mdi:google-cloud"
     }

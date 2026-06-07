@@ -11,6 +11,12 @@ import type { BottomPanelLogEntry } from "../types/logs";
 const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 const POPOUT_HEARTBEAT_INTERVAL_MS = 300;
 
+// E2E (Playwright) runs headless where xterm can't init its renderer; the
+// harness sets this flag so the terminal is suppressed there.
+const IS_E2E =
+  typeof window !== "undefined" &&
+  !!(window as unknown as { __LURASTACK_E2E__?: boolean }).__LURASTACK_E2E__;
+
 const readQueryParam = (key: string) => {
   if (typeof window === "undefined") return "";
   const params = new URLSearchParams(window.location.search);
@@ -101,10 +107,11 @@ export default function DetachedTerminalWindow() {
   }, [viewId]);
 
   return (
-    <div className="h-screen w-screen overflow-hidden bg-gray-100">
+    <div data-testid="detached-terminal-root" className="h-screen w-screen overflow-hidden bg-gray-100">
       <div className="h-9 flex items-center justify-end border-b border-gray-300 bg-white px-2">
         <button
           type="button"
+          data-testid="detached-terminal-popdown"
           onClick={() => void handlePopdown()}
           className="px-2 py-1 rounded text-xs border border-gray-300 text-gray-600 hover:text-gray-800 bg-white"
           title="Return BottomPanel to main window"
@@ -122,6 +129,7 @@ export default function DetachedTerminalWindow() {
           schemas={NODE_SCHEMAS}
           projectDir={cwd}
           viewId={viewId}
+          suppressTerminal={IS_E2E}
           showPopoutButton={false}
           terminalEnvVars={syncedEnv}
           isTerraformRunning={syncedTfRunning}

@@ -417,10 +417,19 @@ export default function BottomPanel({
     if (!terminalRef.current) return;
     terminalDisposedRef.current = false;
     terminalReadyRef.current = false;
-    term.current = new Terminal({ cursorBlink: true, theme: { background: "#111827" } });
-    fitAddon.current = new FitAddon();
-    term.current.loadAddon(fitAddon.current);
-    term.current.open(terminalRef.current);
+    try {
+      term.current = new Terminal({ cursorBlink: true, theme: { background: "#111827" } });
+      fitAddon.current = new FitAddon();
+      term.current.loadAddon(fitAddon.current);
+      term.current.open(terminalRef.current);
+    } catch {
+      // xterm can fail to initialize its renderer in environments without a
+      // real layout (e.g. headless). Abort the terminal mount rather than
+      // letting the error tear down the whole workspace.
+      term.current = null;
+      fitAddon.current = null;
+      return;
+    }
     setTimeout(() => {
       if (terminalDisposedRef.current) return;
       scheduleSafeFitTerminal();

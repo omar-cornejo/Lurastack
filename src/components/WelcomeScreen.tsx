@@ -309,6 +309,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
             shortcut="N"
             onClick={openNewForm}
             active={view === "new"}
+            testId="welcome-new-project"
           />
           <SideAction
             icon="mdi:view-grid-outline"
@@ -368,6 +369,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                     {t("welcome.form.projectName")}
                   </label>
                   <input
+                    data-testid="new-project-name"
                     autoFocus
                     type="text"
                     value={newName}
@@ -393,6 +395,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                       )}
                     </div>
                     <button
+                      data-testid="new-project-browse"
                       onClick={handlePickSavePath}
                       disabled={pickingDir}
                       className="shrink-0 flex items-center gap-2 px-4 py-3 text-[13px] rounded-lg border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 transition-colors disabled:opacity-40"
@@ -414,6 +417,7 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
                       {t("common.cancel")}
                     </button>
                     <button
+                      data-testid="new-project-create"
                       onClick={handleCreateProject}
                       disabled={!chosenPath || !newName.trim()}
                       className="flex-1 py-3 text-sm rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-medium transition-colors"
@@ -633,6 +637,7 @@ function SideAction({
   onClick,
   active,
   shortcut,
+  testId,
 }: {
   icon: string;
   label: string;
@@ -640,9 +645,11 @@ function SideAction({
   onClick: () => void;
   active?: boolean;
   shortcut?: string;
+  testId?: string;
 }) {
   return (
     <button
+      data-testid={testId}
       onClick={onClick}
       className={`group flex items-center gap-3 px-3.5 py-3 rounded-lg text-left transition-colors w-full
         ${active

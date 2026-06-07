@@ -74,6 +74,7 @@ export default function Header({
           {sections.map((section) => (
             <button
               key={section}
+              data-testid={`section-tab-${section}`}
               type="button"
               onClick={() => onSectionChange?.(section)}
               className={`rounded-md px-4 py-1.5 text-[14px] font-medium transition-colors ${

@@ -7,7 +7,21 @@ import type { CanvasTerraformNodeData } from "../canvas/types";
 
 import type { TerraformResource } from "../models/terraform";
 import type { ResourcePlanChange } from "../canvas/types";
-import { NODE_SCHEMAS, type TerraformNodeSchema } from "../models/nodeRegistry";
+import { type TerraformNodeSchema } from "../models/nodeRegistry";
+import { isObjectCollection, getObjectFields } from "../utils/objectCollection";
+import { buildHclFromResource } from "../utils/hclBlocks";
+import {
+  normalizeMappedReference,
+  readNestedAttribute,
+  writeNestedAttribute,
+} from "../utils/mappingRef";
+import {
+  INVALID_HCL_VALUE,
+  parseHclValueToAttribute,
+  parseInspectorInputValue,
+  formatInspectorInputValue,
+  toHclLiteral,
+} from "../utils/hclAttributes";
 import {
   SUBNET_PRIVATE_ICON_PATH,
   SUBNET_PUBLIC_ICON_PATH,
@@ -71,66 +85,11 @@ const OBJECT_MAPPER_REF_MIME = "application/x-lurastack-object-mapper-ref";
 const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 let latestMapperDragPayload = "";
 
-const terraformRefPattern = /^(?:data\.)?[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+(?:\.[a-zA-Z0-9_]+)+$/;
-const INVALID_HCL_VALUE = Symbol("invalid-hcl-value");
 const RIGHT_PANEL_MIN_WIDTH = 350;
 const RIGHT_PANEL_MAX_WIDTH = 600;
 const RIGHT_PANEL_KEYBOARD_STEP = 12;
 const RIGHT_PANEL_KEYBOARD_FAST_STEP = 32;
 
-
-const normalizeMappedReference = (
-  rawValue: string,
-  targetPropertyName: string,
-  resources: TerraformResource[],
-) => {
-  const trimmed = rawValue.trim();
-  if (!trimmed) return rawValue;
-  if (terraformRefPattern.test(trimmed) || trimmed.startsWith("var.")) {
-    return trimmed;
-  }
-
-  const match = trimmed.match(/^([a-zA-Z0-9_-]+)\.([a-zA-Z0-9_]+)(?:\.([a-zA-Z0-9_]+))?$/);
-  if (!match) return rawValue;
-
-  const [, schemaOrType, resourceName, explicitAttr] = match;
-  const schema = NODE_SCHEMAS.find(
-    (candidate) =>
-      candidate.id.toLowerCase() === schemaOrType.toLowerCase() ||
-      candidate.terraformType.toLowerCase() === schemaOrType.toLowerCase(),
-  );
-
-  if (!schema) return rawValue;
-
-  const resource = resources.find(
-    (candidate) =>
-      candidate.name === resourceName &&
-      (candidate.schemaId === schema.id || candidate.type === schema.terraformType),
-  );
-
-  if (!resource) return rawValue;
-
-  const attr = explicitAttr ?? (targetPropertyName.endsWith("_id") ? "id" : "id");
-  const prefix = resource.kind === "data" ? "data." : "";
-  return `${prefix}${schema.terraformType}.${resource.name}.${attr}`;
-};
-
-const parseHclValueToAttribute = (input: string): unknown | typeof INVALID_HCL_VALUE => {
-  const trimmed = input.trim();
-  // Empty value or empty HCL string literal → treat as cleared
-  if (!trimmed || trimmed === '""') return "";
-  if (trimmed === "[" || trimmed === "]" || trimmed === "{" || trimmed === "}") {
-    return INVALID_HCL_VALUE;
-  }
-  if (
-    (trimmed.startsWith("[") && !trimmed.endsWith("]")) ||
-    (trimmed.startsWith("{") && !trimmed.endsWith("}"))
-  ) {
-    return INVALID_HCL_VALUE;
-  }
-  // Store raw HCL as-is — user is responsible for HCL syntax.
-  return trimmed;
-};
 
 const parseHclAttributesForAllowedKeys = (
   hcl: string,
@@ -207,70 +166,8 @@ const parseHclAttributesForAllowedKeys = (
   return attributes;
 };
 
-const parseInspectorInputValue = (input: string): unknown => {
-  return input;
-};
-
-const formatInspectorInputValue = (value: unknown): string => {
-  if (value === undefined || value === null) return "";
-  if (typeof value === "string") {
-    return value;
-  }
-  if (Array.isArray(value)) return JSON.stringify(value);
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-};
-
-const toHclLiteral = (value: unknown): string => {
-  if (value === null || value === undefined) return "null";
-  if (typeof value === "boolean" || typeof value === "number") return String(value);
-  if (Array.isArray(value)) {
-    if (value.length === 0) return "[]";
-    if (value.every((item) => typeof item === "object" && item !== null && !Array.isArray(item))) {
-      const entries = (value as Array<Record<string, unknown>>).map((item) => {
-        const fields = Object.entries(item)
-          .filter(([, v]) => v !== undefined)
-          .map(([k, v]) => `      ${k} = ${toHclLiteral(v)}`)
-          .join("\n");
-        return `    {\n${fields}\n    }`;
-      });
-      return `[\n${entries.join(",\n")}\n  ]`;
-    }
-    return `[${value.map(toHclLiteral).join(", ")}]`;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return '""';
-    if (terraformRefPattern.test(trimmed) || trimmed.startsWith("var.")) return trimmed;
-    if (
-      trimmed === "true" || trimmed === "false" ||
-      /^-?\d+(\.\d+)?$/.test(trimmed) ||
-      (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
-      (trimmed.startsWith("[") && trimmed.endsWith("]")) ||
-      (trimmed.startsWith("{") && trimmed.endsWith("}"))
-    ) return trimmed;
-    return JSON.stringify(value);
-  }
-  return JSON.stringify(String(value));
-};
-
 // Returns true for set(object({...})) and list(object({...})) types —
 // these are rendered as attribute-as-blocks lists, not simple scalars.
-const isObjectCollection = (rawType: unknown): boolean => {
-  if (!Array.isArray(rawType) || rawType.length < 2) return false;
-  const [container, inner] = rawType as [unknown, unknown];
-  if (container !== "set" && container !== "list") return false;
-  return Array.isArray(inner) && inner[0] === "object";
-};
-
-// Returns the field-name → raw-type map for the object inside the collection.
-const getObjectFields = (rawType: unknown): Record<string, unknown> => {
-  if (!Array.isArray(rawType) || rawType.length < 2) return {};
-  const inner = rawType[1] as unknown[];
-  if (!Array.isArray(inner) || inner.length < 2 || inner[0] !== "object") return {};
-  return (inner[1] as Record<string, unknown>) ?? {};
-};
-
 const renderSubFieldType = (rawType: unknown): string => {
   if (typeof rawType === "string") return rawType;
   if (Array.isArray(rawType) && rawType.length >= 2) {
@@ -283,174 +180,6 @@ const renderSubFieldType = (rawType: unknown): string => {
 
 const displaySubFieldValue = (value: unknown): string => {
   return formatInspectorInputValue(value);
-};
-
-type HclBlockNode = {
-  attributes: Record<string, unknown>;
-  blocks: Record<string, HclBlockNode>;
-};
-
-const isPlainObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
-
-const isMeaningfulValue = (value: unknown): boolean => {
-  if (value === undefined || value === null) return false;
-  if (typeof value === "string") return value.trim().length > 0;
-  if (Array.isArray(value)) {
-    if (!value.length) return false;
-    if (value.every((item) => isPlainObject(item))) {
-      return value.some((item) => Object.values(item).some((nested) => isMeaningfulValue(nested)));
-    }
-    return value.some((item) => isMeaningfulValue(item));
-  }
-  if (isPlainObject(value)) return Object.values(value).some((nested) => isMeaningfulValue(nested));
-  return true;
-};
-
-// Read an attribute by its dotted key, falling back to a nested lookup
-// inside block-shaped containers ({foo: [{bar: ...}]} or {foo: {bar: ...}}),
-// which is the shape applyEdgeMapping persists for non-root targets.
-const readNestedAttribute = (attrs: Record<string, unknown>, dottedKey: string): unknown => {
-  if (Object.prototype.hasOwnProperty.call(attrs, dottedKey)) {
-    return attrs[dottedKey];
-  }
-  const parts = dottedKey.split(".").filter(Boolean);
-  if (parts.length < 2) return undefined;
-
-  let cursor: unknown = attrs[parts[0]];
-  for (let i = 1; i < parts.length; i++) {
-    if (cursor === undefined || cursor === null) return undefined;
-    if (Array.isArray(cursor)) {
-      // Block-list form: read from the first entry (the only one applyEdgeMapping writes to)
-      if (cursor.length === 0) return undefined;
-      cursor = cursor[0];
-    }
-    if (!isPlainObject(cursor)) return undefined;
-    const childKey = parts.slice(i).join(".");
-    if (Object.prototype.hasOwnProperty.call(cursor, childKey)) {
-      return (cursor as Record<string, unknown>)[childKey];
-    }
-    cursor = (cursor as Record<string, unknown>)[parts[i]];
-  }
-  return cursor;
-};
-
-// Write/remove an attribute keyed by a dotted path, mirroring the convention
-// applyEdgeMapping uses so the inspector and the edge mapper agree.
-const writeNestedAttribute = (
-  attrs: Record<string, unknown>,
-  dottedKey: string,
-  value: unknown,
-): Record<string, unknown> => {
-  const next = { ...attrs };
-  const shouldDelete = value === "" || value === null || value === undefined;
-  const parts = dottedKey.split(".").filter(Boolean);
-
-  if (parts.length <= 1) {
-    if (shouldDelete) delete next[dottedKey];
-    else next[dottedKey] = value;
-    return next;
-  }
-
-  // Always clean up a legacy dotted-key entry if present.
-  delete next[dottedKey];
-
-  const blockKey = parts[0];
-  const childPath = parts.slice(1).join(".");
-  const existing = next[blockKey];
-
-  if (Array.isArray(existing) && existing.length > 0 && existing.every((it) => isPlainObject(it))) {
-    const items = existing.map((item, idx) => {
-      if (idx !== 0) return item;
-      const copy = { ...(item as Record<string, unknown>) };
-      if (shouldDelete) delete copy[childPath];
-      else copy[childPath] = value;
-      return copy;
-    });
-    const firstHasContent = isPlainObject(items[0]) && Object.keys(items[0]).length > 0;
-    if (!firstHasContent && items.length === 1) {
-      delete next[blockKey];
-    } else {
-      next[blockKey] = items;
-    }
-  } else if (isPlainObject(existing)) {
-    const copy = { ...(existing as Record<string, unknown>) };
-    if (shouldDelete) delete copy[childPath];
-    else copy[childPath] = value;
-    if (Object.keys(copy).length === 0) {
-      delete next[blockKey];
-    } else {
-      next[blockKey] = copy;
-    }
-  } else if (!shouldDelete) {
-    next[blockKey] = [{ [childPath]: value }];
-  }
-
-  return next;
-};
-
-const buildHclFromResource = (resource: TerraformResource) => {
-  const blockKind = resource.kind ?? "resource";
-  const attrs = resource.config.attributes ?? {};
-  const root: HclBlockNode = { attributes: {}, blocks: {} };
-
-  Object.entries(attrs).forEach(([rawKey, rawValue]) => {
-    if (!isMeaningfulValue(rawValue)) return;
-    const pathParts = rawKey.split(".").filter(Boolean);
-    if (!pathParts.length) return;
-
-    if (pathParts.length === 1) {
-      root.attributes[pathParts[0]] = rawValue;
-      return;
-    }
-
-    let cursor = root;
-    for (const blockName of pathParts.slice(0, -1)) {
-      if (!cursor.blocks[blockName]) {
-        cursor.blocks[blockName] = { attributes: {}, blocks: {} };
-      }
-      cursor = cursor.blocks[blockName];
-    }
-    cursor.attributes[pathParts[pathParts.length - 1]] = rawValue;
-  });
-
-  const renderAssignment = (key: string, value: unknown, indent: string): string =>
-    `${indent}${key} = ${toHclLiteral(value)}\n`;
-
-  const renderObjectBlock = (blockName: string, value: Record<string, unknown>, indent: string): string => {
-    const entries = Object.entries(value).filter(([, item]) => isMeaningfulValue(item));
-    if (!entries.length) return "";
-    let lines = `${indent}${blockName} {\n`;
-    entries.forEach(([k, v]) => { lines += renderAssignment(k, v, `${indent}  `); });
-    lines += `${indent}}\n`;
-    return lines;
-  };
-
-  const renderNode = (node: HclBlockNode, indent: string): string => {
-    let lines = "";
-    Object.entries(node.attributes).forEach(([key, value]) => {
-      if (!isMeaningfulValue(value)) return;
-      if (Array.isArray(value) && value.every((item) => isPlainObject(item))) {
-        value.forEach((item) => {
-          const rendered = renderObjectBlock(key, item as Record<string, unknown>, indent);
-          if (rendered) lines += rendered;
-        });
-        return;
-      }
-      lines += renderAssignment(key, value, indent);
-    });
-    Object.entries(node.blocks).forEach(([blockName, blockNode]) => {
-      const inner = renderNode(blockNode, `${indent}  `);
-      if (!inner.trim()) return;
-      lines += `${indent}${blockName} {\n`;
-      lines += inner;
-      lines += `${indent}}\n`;
-    });
-    return lines;
-  };
-
-  const body = renderNode(root, "  ");
-  return `${blockKind} "${resource.type}" "${resource.name}" {\n${body}}`;
 };
 
 export const RightPanel = ({

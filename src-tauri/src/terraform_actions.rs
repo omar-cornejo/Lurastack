@@ -1600,4 +1600,116 @@ mod tests {
         collect_state_resources(&module, &mut acc);
         assert_eq!(acc.len(), 0);
     }
+
+    // ── AwsCredentials::resolve (manual mode) ──────────────────────────────
+
+    fn manual_creds(access: &str, secret: &str, region: &str) -> AwsCredentials {
+        serde_json::from_value(json!({
+            "mode": "manual",
+            "accessKeyId": access,
+            "secretAccessKey": secret,
+            "region": region,
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn resolve_manual_accepts_complete_credentials() {
+        let resolved = manual_creds("AKIA", "secret", "eu-west-1").resolve();
+        assert!(resolved.is_ok());
+    }
+
+    #[test]
+    fn resolve_manual_rejects_empty_access_key() {
+        assert!(manual_creds("", "secret", "eu-west-1").resolve().is_err());
+        assert!(manual_creds("   ", "secret", "eu-west-1")
+            .resolve()
+            .is_err());
+    }
+
+    #[test]
+    fn resolve_manual_rejects_empty_secret() {
+        assert!(manual_creds("AKIA", "", "eu-west-1").resolve().is_err());
+    }
+
+    #[test]
+    fn resolve_manual_rejects_empty_region() {
+        assert!(manual_creds("AKIA", "secret", "").resolve().is_err());
+        assert!(manual_creds("AKIA", "secret", "  ").resolve().is_err());
+    }
+
+    // ── diagnostics_from_lsp_notification ──────────────────────────────────
+
+    #[test]
+    fn lsp_diagnostics_ignores_non_publish_notifications() {
+        let msg = json!({ "method": "window/logMessage", "params": {} });
+        assert!(diagnostics_from_lsp_notification(&msg).is_empty());
+    }
+
+    #[test]
+    fn lsp_diagnostics_handles_missing_params() {
+        let msg = json!({ "method": "textDocument/publishDiagnostics" });
+        assert!(diagnostics_from_lsp_notification(&msg).is_empty());
+    }
+
+    #[test]
+    fn lsp_diagnostics_converts_zero_index_to_one_index() {
+        let msg = json!({
+            "method": "textDocument/publishDiagnostics",
+            "params": {
+                "uri": "file:///project/main.tf",
+                "diagnostics": [{
+                    "message": "first line\nmore detail",
+                    "severity": 1,
+                    "range": {
+                        "start": { "line": 0, "character": 4 },
+                        "end": { "line": 0, "character": 10 }
+                    }
+                }]
+            }
+        });
+        let diags = diagnostics_from_lsp_notification(&msg);
+        assert_eq!(diags.len(), 1);
+        let d = &diags[0];
+        // LSP is 0-indexed; output is 1-indexed.
+        assert_eq!(d.start_line, Some(1));
+        assert_eq!(d.start_column, Some(5));
+        assert_eq!(d.end_column, Some(11));
+        assert_eq!(d.severity, "error");
+        assert_eq!(d.summary, "first line");
+        assert_eq!(d.filename.as_deref(), Some("main.tf"));
+    }
+
+    #[test]
+    fn lsp_diagnostics_tolerates_a_missing_range() {
+        let msg = json!({
+            "method": "textDocument/publishDiagnostics",
+            "params": { "diagnostics": [{ "message": "no range" }] }
+        });
+        let diags = diagnostics_from_lsp_notification(&msg);
+        assert_eq!(diags.len(), 1);
+        assert_eq!(diags[0].start_line, None);
+    }
+
+    // ── read_state_signature ───────────────────────────────────────────────
+
+    #[test]
+    fn read_state_signature_is_none_without_a_state_file() {
+        let dir = tempfile::tempdir().unwrap();
+        assert!(read_state_signature(dir.path()).is_none());
+    }
+
+    #[test]
+    fn read_state_signature_changes_with_content() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = dir.path().join("terraform.tfstate");
+        fs::write(&state, "{}").unwrap();
+        let first = read_state_signature(dir.path());
+        assert!(first.is_some());
+
+        fs::write(&state, "{\"longer\": true}").unwrap();
+        let second = read_state_signature(dir.path());
+        assert!(second.is_some());
+        assert_ne!(first, second);
+    }
 }

@@ -14,6 +14,10 @@ export default defineConfig({
     environment: "node",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    // Unit tests live under src/. The Playwright E2E specs in e2e/ use a
+    // different runner (@playwright/test) and must not be picked up here.
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["e2e/**", "node_modules/**"],
     coverage: {
       provider: "v8",
       // Report only — no thresholds yet (see testing plan). Keeps the suite

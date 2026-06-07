@@ -67,12 +67,19 @@ import { buildMultiProviderHcl } from "../models/hclEmitter";
 import { sileo } from "sileo";
 import { useTranslation } from "react-i18next";
 import { importHclBlocksToResources } from "../commands/hclImporter";
+import { computeLocalEditDiff } from "../utils/snapshotDiff";
 import { appendHistoryEntry, summarizePlanChanges } from "../commands/historyManager";
 import type { HistoryEntry } from "../types/history";
 
 const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 const POPOUT_HEARTBEAT_TTL_MS = 900;
 const POPOUT_HEARTBEAT_CHECK_MS = 250;
+
+// E2E (Playwright) runs in a headless browser where xterm can't initialize its
+// renderer; the harness sets this flag so the terminal is suppressed there.
+const IS_E2E =
+  typeof window !== "undefined" &&
+  !!(window as unknown as { __LURASTACK_E2E__?: boolean }).__LURASTACK_E2E__;
 
 type WorkspaceViewProps = {
   viewId: string;
@@ -433,55 +440,6 @@ export default function WorkspaceView({
   // (resource add/remove, attribute change, edge add/remove) produces ONE entry.
   // Pure node-position drags are ignored to avoid spam during canvas dragging.
   const lastCommittedSnapshotRef = useRef<import("../types/project").ViewSnapshot | null>(null);
-
-  const computeLocalEditDiff = (
-    before: import("../types/project").ViewSnapshot,
-    after: import("../types/project").ViewSnapshot,
-  ): {
-    changes: Array<{ address: string; action: "create" | "change" | "destroy" }>;
-    summary: { created: number; changed: number; destroyed: number };
-  } => {
-    const beforeRes = new Map(before.resources.map((r) => [`${r.type}.${r.name}`, r]));
-    const afterRes = new Map(after.resources.map((r) => [`${r.type}.${r.name}`, r]));
-    const changes: Array<{ address: string; action: "create" | "change" | "destroy" }> = [];
-    let created = 0, changed = 0, destroyed = 0;
-
-    for (const [key, afterR] of afterRes) {
-      const beforeR = beforeRes.get(key);
-      if (!beforeR) {
-        changes.push({ address: key, action: "create" });
-        created++;
-      } else if (JSON.stringify(beforeR.config) !== JSON.stringify(afterR.config)) {
-        changes.push({ address: key, action: "change" });
-        changed++;
-      }
-    }
-    for (const key of beforeRes.keys()) {
-      if (!afterRes.has(key)) {
-        changes.push({ address: key, action: "destroy" });
-        destroyed++;
-      }
-    }
-
-    // Edges added / removed (identified by source→target pair, ignoring id changes)
-    const edgeKey = (e: { source: string; target: string }) => `${e.source}→${e.target}`;
-    const beforeEdges = new Set(before.edges.map(edgeKey));
-    const afterEdges = new Set(after.edges.map(edgeKey));
-    for (const key of afterEdges) {
-      if (!beforeEdges.has(key)) {
-        changes.push({ address: `edge: ${key}`, action: "create" });
-        created++;
-      }
-    }
-    for (const key of beforeEdges) {
-      if (!afterEdges.has(key)) {
-        changes.push({ address: `edge: ${key}`, action: "destroy" });
-        destroyed++;
-      }
-    }
-
-    return { changes, summary: { created, changed, destroyed } };
-  };
 
   const handleRestoreFromHistory = useCallback(
     (snapshot: import("../types/project").ViewSnapshot) => {
@@ -1737,7 +1695,7 @@ export default function WorkspaceView({
           logs={codeLogs}
           projectDir={projectDir}
           viewId={viewId}
-          suppressTerminal={terminalPoppedOut}
+          suppressTerminal={terminalPoppedOut || IS_E2E}
           enabled={isVisible}
           openSignal={bottomOpenSignal}
           preferredTab={bottomPreferredTab}

@@ -792,6 +792,7 @@ export default function CenterPanel({
     <section className="flex h-full min-h-0 w-full flex-1 overflow-hidden bg-slate-100">
       <div
         ref={rootRef}
+        data-testid="canvas-root"
         className="relative h-full w-full min-h-0"
         style={{ visibility: isCanvasReady ? "visible" : "hidden" }}
         onDragLeave={handleDragLeave}

@@ -7,19 +7,7 @@ import {
   type EdgeProps,
 } from "reactflow";
 import type { CanvasEdgeData } from "./types";
-
-const parseOutAttr = (sourceExpression: string) => {
-  const parts = sourceExpression.trim().split(".");
-  return parts[parts.length - 1] || sourceExpression.trim();
-};
-
-const routeKey = (route: {
-  fromNodeId: string;
-  toNodeId: string;
-  sourceExpression: string;
-  targetAttribute: string;
-}) =>
-  [route.fromNodeId, route.toNodeId, route.sourceExpression.trim(), route.targetAttribute.trim()].join("|");
+import { parseOutAttr, routeKey } from "./edgeGeometry";
 
 export function MappingEdge({
   id,
