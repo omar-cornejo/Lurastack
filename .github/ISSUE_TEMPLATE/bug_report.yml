@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Thanks for taking the time to report a bug! Please fill in as much detail as you can.
-        For security vulnerabilities, please follow the [Security Policy](../../SECURITY.md) instead.
+        For security vulnerabilities, please follow the [Security Policy](https://github.com/omar-cornejo/Lurastack/blob/main/SECURITY.md) instead.
 
   - type: textarea
     id: description
