@@ -50,12 +50,12 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
           className={`pointer-events-none relative flex h-full w-full flex-col rounded-xl border-2 border-dashed transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""} ${cloudClass}`}
         >
           {planBadge && (
-            <span className={`absolute right-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${planBadge.cls}`}>
+            <span className={`absolute right-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[0.5rem] font-bold tracking-wide ${planBadge.cls}`}>
               {planBadge.label}
             </span>
           )}
           {cloudBadge && (
-            <span className={`absolute left-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${cloudBadge.cls}`}>
+            <span className={`absolute left-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[0.5rem] font-bold tracking-wide ${cloudBadge.cls}`}>
               {cloudBadge.label}
             </span>
           )}
@@ -75,8 +75,8 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
               <img src={data.icon} alt={data.label} className="h-full w-full object-cover drop-shadow-sm" draggable={false} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[12.5px] font-semibold leading-snug text-slate-800">{data.label}</p>
-              <span className="mt-1 inline-block max-w-full truncate rounded-[4px] bg-violet-50 px-1.5 py-[1.5px] font-mono text-[9px] font-medium tracking-tight text-violet-700">
+              <p className="truncate text-[0.78125rem] font-semibold leading-snug text-slate-800">{data.label}</p>
+              <span className="mt-1 inline-block max-w-full truncate rounded-[4px] bg-violet-50 px-1.5 py-[1.5px] font-mono text-[0.5625rem] font-medium tracking-tight text-violet-700">
                 {data.terraformType}
               </span>
             </div>
@@ -99,12 +99,12 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
         className={`pointer-events-none relative flex h-full w-full flex-col rounded-xl border-2 transition-colors ${defaultBorder} ${planBg ?? ""} ${data.isLayerGhost ? "opacity-40 grayscale" : ""} ${cloudClass}`}
       >
         {planBadge && (
-          <span className={`absolute right-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${planBadge.cls}`}>
+          <span className={`absolute right-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[0.5rem] font-bold tracking-wide ${planBadge.cls}`}>
             {planBadge.label}
           </span>
         )}
         {cloudBadge && (
-          <span className={`absolute left-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${cloudBadge.cls}`}>
+          <span className={`absolute left-2 top-2 z-10 rounded-[4px] px-1.5 py-[1px] text-[0.5rem] font-bold tracking-wide ${cloudBadge.cls}`}>
             {cloudBadge.label}
           </span>
         )}
@@ -124,8 +124,8 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
             <img src={data.icon} alt={data.label} className="h-full w-full object-cover drop-shadow-sm" draggable={false} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[12.5px] font-semibold leading-snug text-slate-800">{data.label}</p>
-            <span className="mt-1 inline-block max-w-full truncate rounded-[4px] bg-indigo-50 px-1.5 py-[1.5px] font-mono text-[9px] font-medium tracking-tight text-indigo-700">
+            <p className="truncate text-[0.78125rem] font-semibold leading-snug text-slate-800">{data.label}</p>
+            <span className="mt-1 inline-block max-w-full truncate rounded-[4px] bg-indigo-50 px-1.5 py-[1.5px] font-mono text-[0.5625rem] font-medium tracking-tight text-indigo-700">
               {data.terraformType}
             </span>
           </div>
@@ -154,7 +154,7 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
   return (
     <div
       className={`
-        relative inline-flex min-w-[160px] items-start gap-3
+        relative inline-flex min-w-[10rem] items-start gap-3
         rounded-xl border
         p-3
         shadow-[0_2px_10px_rgba(0,0,0,0.07),0_0_0_1px_rgba(0,0,0,0.04)]
@@ -166,12 +166,12 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
       `}
     >
       {planBadge && (
-        <span className={`absolute -top-2 right-2 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${planBadge.cls}`}>
+        <span className={`absolute -top-2 right-2 rounded-[4px] px-1.5 py-[1px] text-[0.5rem] font-bold tracking-wide ${planBadge.cls}`}>
           {planBadge.label}
         </span>
       )}
       {cloudBadge && (
-        <span className={`absolute -top-2 left-2 rounded-[4px] px-1.5 py-[1px] text-[8px] font-bold tracking-wide ${cloudBadge.cls}`}>
+        <span className={`absolute -top-2 left-2 rounded-[4px] px-1.5 py-[1px] text-[0.5rem] font-bold tracking-wide ${cloudBadge.cls}`}>
           {cloudBadge.label}
         </span>
       )}
@@ -197,11 +197,11 @@ export const TerraformResourceNode = memo(function TerraformResourceNode({ data,
       </div>
 
       <div className="flex flex-col">
-        <p className="whitespace-nowrap text-[12.5px] font-semibold leading-snug text-slate-800">
+        <p className="whitespace-nowrap text-[0.78125rem] font-semibold leading-snug text-slate-800">
           {data.label}
         </p>
         <span
-          className={`mt-1 inline-block whitespace-nowrap rounded-[4px] px-1.5 py-[1.5px] font-mono text-[9px] font-medium tracking-tight ${badgeBg}`}
+          className={`mt-1 inline-block whitespace-nowrap rounded-[4px] px-1.5 py-[1.5px] font-mono text-[0.5625rem] font-medium tracking-tight ${badgeBg}`}
         >
           {data.terraformType}
         </span>

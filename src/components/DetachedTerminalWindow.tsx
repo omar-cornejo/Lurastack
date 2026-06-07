@@ -7,6 +7,7 @@ import type { CanvasEdgeData, CanvasTerraformNodeData } from "../canvas/types";
 import type { TerraformResource } from "../models/terraform";
 import { NODE_SCHEMAS } from "../models/nodeRegistry";
 import type { BottomPanelLogEntry } from "../types/logs";
+import { useRootFontScale } from "../hooks/useRootFontScale";
 
 const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 const POPOUT_HEARTBEAT_INTERVAL_MS = 300;
@@ -24,6 +25,7 @@ const readQueryParam = (key: string) => {
 };
 
 export default function DetachedTerminalWindow() {
+  useRootFontScale();
   const cwd = useMemo(() => readQueryParam("cwd"), []);
   const viewId = useMemo(() => readQueryParam("viewId"), []);
   const [syncedNodes, setSyncedNodes] = useState<Node<CanvasTerraformNodeData>[]>([]);

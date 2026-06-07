@@ -69,7 +69,7 @@ export default function Header({
   return (
     <header className="flex items-center justify-between gap-4 border-b border-slate-800 bg-slate-900 px-4 py-2.5">
       <div className="flex items-center gap-4 min-w-0">
-        <div className="text-[17px] font-semibold tracking-tight text-slate-100 truncate">{t("header.workspace")}</div>
+        <div className="text-[1.0625rem] font-semibold tracking-tight text-slate-100 truncate">{t("header.workspace")}</div>
         <nav className="flex items-center gap-0.5 rounded-lg bg-slate-800/80 p-1 ring-1 ring-slate-700/60">
           {sections.map((section) => (
             <button
@@ -77,7 +77,7 @@ export default function Header({
               data-testid={`section-tab-${section}`}
               type="button"
               onClick={() => onSectionChange?.(section)}
-              className={`rounded-md px-4 py-1.5 text-[14px] font-medium transition-colors ${
+              className={`rounded-md px-4 py-1.5 text-[0.875rem] font-medium transition-colors ${
                 activeSection === section
                   ? "bg-slate-100 text-slate-900 shadow-sm"
                   : "text-slate-300 hover:bg-slate-700/70 hover:text-white"
@@ -94,7 +94,7 @@ export default function Header({
           type="button"
           onClick={onOpenAwsConfig}
           title={isConfigured ? t("header.credentials.configured", { provider: badge.label }) : t("header.credentials.configure", { provider: badge.label })}
-          className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[14px] font-medium border transition-colors ${
+          className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-[0.875rem] font-medium border transition-colors ${
             isConfigured
               ? badge.configuredClass
               : "border-slate-700 text-slate-300 hover:bg-slate-800"
@@ -113,7 +113,7 @@ export default function Header({
           onClick={onPlan}
           disabled={isDeploying || !isConfigured}
           title={!isConfigured ? t("header.configureFirst", { provider: badge.label }) : t("header.tooltip.plan")}
-          className="rounded-lg px-3.5 py-1.5 text-[14px] font-medium border border-slate-700 text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          className="rounded-lg px-3.5 py-1.5 text-[0.875rem] font-medium border border-slate-700 text-slate-200 hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {isDeploying ? "..." : "Plan"}
         </button>
@@ -129,7 +129,7 @@ export default function Header({
               ? t("header.configureFirst", { provider: badge.label })
               : t("header.tooltip.apply")
           }
-          className={`rounded-lg px-3.5 py-1.5 text-[14px] font-medium border transition-colors ${
+          className={`rounded-lg px-3.5 py-1.5 text-[0.875rem] font-medium border transition-colors ${
             isApplyConfirming
               ? "border-emerald-500 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
               : "border-slate-700 text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -142,7 +142,7 @@ export default function Header({
             type="button"
             onClick={onCancelApply}
             title={t("header.tooltip.cancelApply")}
-            className="rounded-lg px-3.5 py-1.5 text-[14px] font-medium border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
+            className="rounded-lg px-3.5 py-1.5 text-[0.875rem] font-medium border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
           >
             {t("header.btn.no")}
           </button>
@@ -159,7 +159,7 @@ export default function Header({
               ? t("header.configureFirst", { provider: badge.label })
               : t("header.tooltip.destroy")
           }
-          className={`rounded-lg px-3.5 py-1.5 text-[14px] font-medium border transition-colors ${
+          className={`rounded-lg px-3.5 py-1.5 text-[0.875rem] font-medium border transition-colors ${
             isDestroyConfirming
               ? "border-emerald-500 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
               : "border-red-500/60 text-red-300 hover:bg-red-500/15 disabled:opacity-40 disabled:cursor-not-allowed"
@@ -172,7 +172,7 @@ export default function Header({
             type="button"
             onClick={onCancelDestroy}
             title={t("header.tooltip.cancelDestroy")}
-            className="rounded-lg px-3.5 py-1.5 text-[14px] font-medium border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
+            className="rounded-lg px-3.5 py-1.5 text-[0.875rem] font-medium border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
           >
             {t("header.btn.no")}
           </button>
@@ -183,7 +183,7 @@ export default function Header({
         <button
           type="button"
           onClick={onClearCanvas}
-          className="rounded-lg bg-red-600 px-3.5 py-1.5 text-[14px] font-medium text-white hover:bg-red-500 transition-colors"
+          className="rounded-lg bg-red-600 px-3.5 py-1.5 text-[0.875rem] font-medium text-white hover:bg-red-500 transition-colors"
         >
           {t("header.clearCanvas")}
         </button>

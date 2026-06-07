@@ -34,6 +34,7 @@ import {
 } from "../commands/schemaInspector";
 import HistoryTab from "./HistoryTab";
 import type { ViewSnapshot } from "../types/project";
+import { scaledPx } from "../utils/uiScale";
 
 type RightPanelTab = "info" | "hcl";
 type RightPanelMode = "inspector" | "history";
@@ -206,7 +207,7 @@ export const RightPanel = ({
 }: RightPanelProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
-  const [width, setWidth] = useState(288);
+  const [width, setWidth] = useState(() => scaledPx(288));
   const [isResizing, setIsResizing] = useState(false);
   const [activeTab, setActiveTab] = useState<RightPanelTab>("info");
   const [activeMode, setActiveMode] = useState<RightPanelMode>("inspector");
@@ -568,7 +569,7 @@ export const RightPanel = ({
           e.stopPropagation();
           setVisible((v) => !v);
         }}
-        className="absolute left-0 top-1/2 z-20 flex h-10 w-[18px] -translate-x-full -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md border border-r-0 border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50"
+        className="absolute left-0 top-1/2 z-20 flex h-10 w-[1.125rem] -translate-x-full -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md border border-r-0 border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50"
         type="button"
         aria-expanded={visible}
         aria-label={visible ? t("inspector.close") : t("inspector.open")}
@@ -592,7 +593,7 @@ export const RightPanel = ({
                   key={mode}
                   type="button"
                   onClick={() => setActiveMode(mode)}
-                  className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-[11px] font-medium transition-colors ${
+                  className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 px-3 py-2.5 text-[0.6875rem] font-medium transition-colors ${
                     isActive
                       ? "border-slate-900 text-slate-900"
                       : "border-transparent text-slate-500 hover:text-slate-800"
@@ -619,7 +620,7 @@ export const RightPanel = ({
                   <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
                     <Icon icon="mdi:history" className="text-slate-400" width={20} />
                   </div>
-                  <p className="text-[12px] text-slate-500">{t("inspector.openProjectForHistory")}</p>
+                  <p className="text-[0.75rem] text-slate-500">{t("inspector.openProjectForHistory")}</p>
                 </div>
               )}
             </div>
@@ -650,7 +651,7 @@ export const RightPanel = ({
                           if (e.key === "Escape") cancelEditingName();
                         }}
                         autoFocus
-                        className="w-full rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[12.5px] font-semibold text-slate-900 focus:border-slate-300 focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
+                        className="w-full rounded-md border border-slate-300 bg-white px-1.5 py-0.5 text-[0.78125rem] font-semibold text-slate-900 focus:border-slate-300 focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
                       />
                     ) : (
                       <button
@@ -659,7 +660,7 @@ export const RightPanel = ({
                         disabled={!selectedResource || diffMode || cloudMode}
                         className="group flex w-full items-center gap-1 text-left disabled:cursor-default"
                       >
-                        <span className="truncate text-[12.5px] font-semibold text-slate-900">
+                        <span className="truncate text-[0.78125rem] font-semibold text-slate-900">
                           {selectedResource?.name ?? selectedNode.data.label}
                         </span>
                         {selectedResource && !diffMode && !cloudMode && (
@@ -672,10 +673,10 @@ export const RightPanel = ({
                       </button>
                     )}
                     <div className="mt-0.5 flex items-center gap-1.5">
-                      <span className="truncate font-mono text-[9.5px] text-slate-400">
+                      <span className="truncate font-mono text-[0.59375rem] text-slate-400">
                         {selectedNode.data.terraformType}
                       </span>
-                      <span className={`shrink-0 rounded-full px-1.5 py-[1px] text-[8.5px] font-semibold ring-1 ${
+                      <span className={`shrink-0 rounded-full px-1.5 py-[1px] text-[0.53125rem] font-semibold ring-1 ${
                         selectedSchema?.terraformKind === "data"
                           ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
                           : "bg-slate-100 text-slate-600 ring-slate-200"
@@ -690,7 +691,7 @@ export const RightPanel = ({
                   <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 ring-1 ring-slate-200">
                     <Icon icon="mdi:tune-variant" className="text-slate-400" width={18} />
                   </div>
-                  <p className="text-[13px] font-semibold text-slate-800">{t("inspector.modeInspector")}</p>
+                  <p className="text-[0.8125rem] font-semibold text-slate-800">{t("inspector.modeInspector")}</p>
                 </div>
               )}
             </div>
@@ -701,7 +702,7 @@ export const RightPanel = ({
                   key={tab}
                   type="button"
                   onClick={() => setActiveTab(tab)}
-                  className={`border-b-2 px-3 py-2 text-[11px] font-semibold transition-colors ${
+                  className={`border-b-2 px-3 py-2 text-[0.6875rem] font-semibold transition-colors ${
                     activeTab === tab
                       ? "border-slate-900 text-slate-900"
                       : "border-transparent text-slate-400 hover:text-slate-700"
@@ -724,8 +725,8 @@ export const RightPanel = ({
                   <Icon icon="mdi:cursor-default-click-outline" className="text-slate-400" width={22} />
                 </div>
                 <div>
-                  <p className="text-[12px] font-medium text-slate-600">{t("inspector.nothingSelected")}</p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">{t("inspector.nothingSelectedHint")}</p>
+                  <p className="text-[0.75rem] font-medium text-slate-600">{t("inspector.nothingSelected")}</p>
+                  <p className="mt-0.5 text-[0.6875rem] text-slate-400">{t("inspector.nothingSelectedHint")}</p>
                 </div>
               </div>
             )}
@@ -734,7 +735,7 @@ export const RightPanel = ({
               <div className="space-y-3 px-3">
                 {!diffMode && !cloudMode && selectedSchema.terraformType === "aws_subnet" && (
                   <div className="space-y-1.5">
-                    <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.subnetType")}</label>
+                    <label className="block text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.subnetType")}</label>
                     <button
                       type="button"
                       onClick={() => {
@@ -744,7 +745,7 @@ export const RightPanel = ({
                           ui: { ...resource.ui, icon: isPublic ? SUBNET_PRIVATE_ICON_PATH : SUBNET_PUBLIC_ICON_PATH },
                         }));
                       }}
-                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-[12px] font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-300/60 hover:bg-indigo-50/20"
+                      className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left text-[0.75rem] font-medium text-slate-700 shadow-sm transition-colors hover:border-indigo-300/60 hover:bg-indigo-50/20"
                     >
                       {selectedResource.ui.icon === SUBNET_PUBLIC_ICON_PATH ? t("inspector.publicSubnet") : t("inspector.privateSubnet")}
                     </button>
@@ -775,10 +776,10 @@ export const RightPanel = ({
                       <div className="space-y-2">
                         <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                           <div className="mb-2.5 flex items-center justify-between">
-                            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.cloudState")}</span>
-                            <span className="text-[9px] text-slate-400">{t("inspector.activeCount", { count: 0 })}</span>
+                            <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.cloudState")}</span>
+                            <span className="text-[0.5625rem] text-slate-400">{t("inspector.activeCount", { count: 0 })}</span>
                           </div>
-                          <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
+                          <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[0.6875rem] text-slate-400">
                             {emptyMessage}
                           </p>
                         </div>
@@ -793,11 +794,11 @@ export const RightPanel = ({
                         return (
                           <div key={sectionKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
                             <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 break-words">
+                              <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400 break-words">
                                 {sectionTitle}
                               </span>
                               <div className="h-px flex-1 bg-slate-100" />
-                              <span className="text-[9px] tabular-nums text-slate-400">{rows.length}</span>
+                              <span className="text-[0.5625rem] tabular-nums text-slate-400">{rows.length}</span>
                             </div>
 
                             <div className="space-y-1.5 p-2">
@@ -810,18 +811,18 @@ export const RightPanel = ({
                                   return (
                                     <div key={row.name} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
                                       <div className="mb-2 flex items-start justify-between gap-2">
-                                        <p className="text-[11.5px] font-semibold text-slate-800 break-all">{fieldName}</p>
+                                        <p className="text-[0.71875rem] font-semibold text-slate-800 break-all">{fieldName}</p>
                                       </div>
                                       <div className="space-y-1.5">
                                         {entries.map((entry, idx) => (
                                           <div key={idx} className="rounded-lg border border-slate-200 bg-white p-2">
-                                            <div className="mb-1 text-[10px] font-semibold text-slate-400">{t("inspector.entry", { number: idx + 1 })}</div>
+                                            <div className="mb-1 text-[0.625rem] font-semibold text-slate-400">{t("inspector.entry", { number: idx + 1 })}</div>
                                             <div className="space-y-0.5">
                                               {Object.entries(entry).map(([k, v]) => (
                                                 <div key={k} className="flex items-center gap-1.5">
-                                                  <span className="w-[42%] shrink-0 truncate text-[10px] text-slate-500" title={k}>{k}</span>
-                                                  <span className="shrink-0 font-mono text-[10px] text-slate-300">=</span>
-                                                  <span className="w-[58%] truncate font-mono text-[10px] text-slate-700" title={typeof v === "string" ? v : JSON.stringify(v)}>
+                                                  <span className="w-[42%] shrink-0 truncate text-[0.625rem] text-slate-500" title={k}>{k}</span>
+                                                  <span className="shrink-0 font-mono text-[0.625rem] text-slate-300">=</span>
+                                                  <span className="w-[58%] truncate font-mono text-[0.625rem] text-slate-700" title={typeof v === "string" ? v : JSON.stringify(v)}>
                                                     {toHclLiteral(v)}
                                                   </span>
                                                 </div>
@@ -837,9 +838,9 @@ export const RightPanel = ({
                                 return (
                                   <div key={row.name} className="rounded-lg border border-slate-200 bg-slate-50/80 p-2.5">
                                     <div className="mb-1.5 flex items-start justify-between gap-2">
-                                      <p className="text-[11.5px] font-semibold text-slate-800 break-all">{fieldName}</p>
+                                      <p className="text-[0.71875rem] font-semibold text-slate-800 break-all">{fieldName}</p>
                                     </div>
-                                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] text-slate-700 break-all">
+                                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[0.6875rem] text-slate-700 break-all">
                                       {toHclLiteral(row.value)}
                                     </div>
                                   </div>
@@ -860,7 +861,7 @@ export const RightPanel = ({
                       null;
                     if (!cls) return null;
                     return (
-                      <span className={`shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${cls}`}>
+                      <span className={`shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[0.5625rem] font-semibold ring-1 ${cls}`}>
                         {status}
                       </span>
                     );
@@ -883,10 +884,10 @@ export const RightPanel = ({
                     return (
                       <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                         <div className="mb-2.5 flex items-center justify-between">
-                          <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.diffAttributes")}</span>
-                          <span className="text-[9px] text-slate-400">{t("inspector.activeCount", { count: 0 })}</span>
+                          <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.diffAttributes")}</span>
+                          <span className="text-[0.5625rem] text-slate-400">{t("inspector.activeCount", { count: 0 })}</span>
                         </div>
-                        <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[11px] text-slate-400">
+                        <p className="rounded-lg border border-dashed border-slate-200 px-3 py-4 text-center text-[0.6875rem] text-slate-400">
                           {t("inspector.noActiveAttrs")}
                         </p>
                       </div>
@@ -900,11 +901,11 @@ export const RightPanel = ({
                         return (
                           <div key={sectionKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
                             <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
-                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 break-words">
+                              <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400 break-words">
                                 {sectionTitle}
                               </span>
                               <div className="h-px flex-1 bg-slate-100" />
-                              <span className="text-[9px] tabular-nums text-slate-400">{rows.length}</span>
+                              <span className="text-[0.5625rem] tabular-nums text-slate-400">{rows.length}</span>
                             </div>
 
                             <div className="space-y-1.5 p-2">
@@ -917,19 +918,19 @@ export const RightPanel = ({
                                   return (
                                     <div key={row.name} className={`rounded-lg border p-2.5 ${row.status === "unchanged" ? "border-slate-100 bg-white opacity-60" : "border-slate-200 bg-slate-50"}`}>
                                       <div className="mb-2 flex items-start justify-between gap-2">
-                                        <p className="text-[11.5px] font-semibold text-slate-800 break-all">{fieldName}</p>
+                                        <p className="text-[0.71875rem] font-semibold text-slate-800 break-all">{fieldName}</p>
                                         {statusBadge(row.status)}
                                       </div>
                                       <div className="space-y-1.5">
                                         {entries.map((entry, idx) => (
                                           <div key={idx} className="rounded-lg border border-slate-200 bg-white p-2">
-                                            <div className="mb-1 text-[10px] font-semibold text-slate-400">{t("inspector.entry", { number: idx + 1 })}</div>
+                                            <div className="mb-1 text-[0.625rem] font-semibold text-slate-400">{t("inspector.entry", { number: idx + 1 })}</div>
                                             <div className="space-y-0.5">
                                               {Object.entries(entry).map(([k, v]) => (
                                                 <div key={k} className="flex items-center gap-1.5">
-                                                  <span className="w-[42%] shrink-0 truncate text-[10px] text-slate-500" title={k}>{k}</span>
-                                                  <span className="shrink-0 font-mono text-[10px] text-slate-300">=</span>
-                                                  <span className="w-[58%] truncate font-mono text-[10px] text-slate-700" title={typeof v === "string" ? v : JSON.stringify(v)}>
+                                                  <span className="w-[42%] shrink-0 truncate text-[0.625rem] text-slate-500" title={k}>{k}</span>
+                                                  <span className="shrink-0 font-mono text-[0.625rem] text-slate-300">=</span>
+                                                  <span className="w-[58%] truncate font-mono text-[0.625rem] text-slate-700" title={typeof v === "string" ? v : JSON.stringify(v)}>
                                                     {toHclLiteral(v)}
                                                   </span>
                                                 </div>
@@ -945,10 +946,10 @@ export const RightPanel = ({
                                 return (
                                   <div key={row.name} className={`rounded-lg border p-2.5 ${row.status === "unchanged" ? "border-slate-100 bg-white opacity-50" : "border-slate-200 bg-slate-50/80"}`}>
                                     <div className="mb-1.5 flex items-start justify-between gap-2">
-                                      <p className="text-[11.5px] font-semibold text-slate-800 break-all">{fieldName}</p>
+                                      <p className="text-[0.71875rem] font-semibold text-slate-800 break-all">{fieldName}</p>
                                       {statusBadge(row.status)}
                                     </div>
-                                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[11px] text-slate-700 break-all">
+                                    <div className="rounded-md border border-slate-200 bg-white px-2 py-1.5 font-mono text-[0.6875rem] text-slate-700 break-all">
                                       {toHclLiteral(row.value)}
                                     </div>
                                   </div>
@@ -964,8 +965,8 @@ export const RightPanel = ({
                 <div className="space-y-2">
                   <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
                     <div className="mb-2.5 flex items-center justify-between">
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.attributes")}</span>
-                      <div className="flex items-center gap-1 text-[9.5px] text-slate-400">
+                      <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.attributes")}</span>
+                      <div className="flex items-center gap-1 text-[0.59375rem] text-slate-400">
                         <span className="font-semibold text-red-500">{attributeStats.required} {t("inspector.reqAbbrev")}</span>
                         <span>·</span>
                         <span>{attributeStats.optional} {t("inspector.optAbbrev")}</span>
@@ -980,7 +981,7 @@ export const RightPanel = ({
                         value={attributeSearch}
                         onChange={(event) => setAttributeSearch(event.target.value)}
                         placeholder={t("inspector.searchAttributes")}
-                        className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-[11px] text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
+                        className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-3 text-[0.6875rem] text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
                       />
                     </div>
 
@@ -1001,7 +1002,7 @@ export const RightPanel = ({
                                 current.includes(state) ? current.filter((v) => v !== state) : [...current, state],
                               )
                             }
-                            className={`rounded-lg border px-2.5 py-1 text-[10.5px] font-semibold capitalize transition-colors ${colors[state]}`}
+                            className={`rounded-lg border px-2.5 py-1 text-[0.65625rem] font-semibold capitalize transition-colors ${colors[state]}`}
                           >
                             {t(`inspector.filter.${state}`)}
                           </button>
@@ -1012,7 +1013,7 @@ export const RightPanel = ({
                         <button
                           type="button"
                           onClick={() => setShowTypeMenu((v) => !v)}
-                          className={`rounded-lg border px-2.5 py-1 text-[10.5px] font-semibold transition-colors ${
+                          className={`rounded-lg border px-2.5 py-1 text-[0.65625rem] font-semibold transition-colors ${
                             attributeTypeFilters.length > 0
                               ? "border-indigo-200 bg-indigo-50 text-indigo-600"
                               : "border-slate-200 bg-white text-slate-500 hover:border-slate-300"
@@ -1024,18 +1025,18 @@ export const RightPanel = ({
                         {showTypeMenu && (
                           <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-2.5 shadow-lg shadow-slate-200/60">
                             <div className="mb-2 flex items-center justify-between">
-                              <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">{t("inspector.types")}</span>
+                              <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-500">{t("inspector.types")}</span>
                               <button
                                 type="button"
                                 onClick={() => setAttributeTypeFilters([])}
-                                className="text-[10px] font-medium text-indigo-500 hover:text-indigo-700"
+                                className="text-[0.625rem] font-medium text-indigo-500 hover:text-indigo-700"
                               >
                                 {t("inspector.clear")}
                               </button>
                             </div>
                             <div className="max-h-44 space-y-1 overflow-auto">
                               {availableTypeOptions.map((typeOption) => (
-                                <label key={typeOption} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[11px] text-slate-600 hover:bg-slate-50">
+                                <label key={typeOption} className="flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-[0.6875rem] text-slate-600 hover:bg-slate-50">
                                     <input
                                     type="checkbox"
                                     checked={attributeTypeFilters.includes(typeOption)}
@@ -1059,11 +1060,11 @@ export const RightPanel = ({
                   {filteredInspectorSections.map((section) => (
                     <div key={section.sectionKey} className="rounded-xl border border-slate-200 bg-white shadow-sm">
                       <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 break-words">
+                        <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400 break-words">
                           {section.sectionTitle}
                         </span>
                         <div className="h-px flex-1 bg-slate-100" />
-                        <span className="text-[9px] tabular-nums text-slate-400">{section.properties.length}</span>
+                        <span className="text-[0.5625rem] tabular-nums text-slate-400">{section.properties.length}</span>
                       </div>
 
                       <div className="space-y-1.5 p-2">
@@ -1089,13 +1090,13 @@ export const RightPanel = ({
                               <div key={property.name} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
                                 <div className="mb-2 flex items-start justify-between gap-2">
                                   <div className="min-w-0">
-                                    <p className="text-[11.5px] font-semibold text-slate-800 break-all">{property.fieldName}</p>
-                                    <p className="font-mono text-[9.5px] text-slate-400 break-all">{formatTypeLabel(property.rawType)}</p>
+                                    <p className="text-[0.71875rem] font-semibold text-slate-800 break-all">{property.fieldName}</p>
+                                    <p className="font-mono text-[0.59375rem] text-slate-400 break-all">{formatTypeLabel(property.rawType)}</p>
                                   </div>
                                   <div className="flex shrink-0 gap-1">
-                                    <span className="rounded-[4px] bg-slate-100 px-1.5 py-[1.5px] text-[9px] font-semibold text-slate-500">{t("inspector.optional")}</span>
+                                    <span className="rounded-[4px] bg-slate-100 px-1.5 py-[1.5px] text-[0.5625rem] font-semibold text-slate-500">{t("inspector.optional")}</span>
                                     {property.computed && (
-                                      <span className="rounded-[4px] bg-amber-50 px-1.5 py-[1.5px] text-[9px] font-semibold text-amber-600">{t("inspector.computed")}</span>
+                                      <span className="rounded-[4px] bg-amber-50 px-1.5 py-[1.5px] text-[0.5625rem] font-semibold text-amber-600">{t("inspector.computed")}</span>
                                     )}
                                   </div>
                                 </div>
@@ -1104,11 +1105,11 @@ export const RightPanel = ({
                                   {entries.map((entry, entryIndex) => (
                                     <div key={entryIndex} className="rounded-lg border border-slate-200 bg-white p-2">
                                       <div className="mb-1.5 flex items-center justify-between">
-                                        <span className="text-[10px] font-semibold text-slate-400">{t("inspector.entry", { number: entryIndex + 1 })}</span>
+                                        <span className="text-[0.625rem] font-semibold text-slate-400">{t("inspector.entry", { number: entryIndex + 1 })}</span>
                                         <button
                                           type="button"
                                           onClick={() => updateEntries(entries.filter((_, i) => i !== entryIndex))}
-                                          className="text-[10px] font-medium text-red-400 transition-colors hover:text-red-600"
+                                          className="text-[0.625rem] font-medium text-red-400 transition-colors hover:text-red-600"
                                         >
                                           {t("inspector.remove")}
                                         </button>
@@ -1116,8 +1117,8 @@ export const RightPanel = ({
                                       <div className="space-y-1">
                                         {fieldNames.map((fieldName) => (
                                           <div key={fieldName} className="flex items-center gap-1.5">
-                                            <span className="w-[42%] shrink-0 truncate text-[10px] text-slate-500" title={fieldName}>{fieldName}</span>
-                                            <span className="shrink-0 font-mono text-[10px] text-slate-300">=</span>
+                                            <span className="w-[42%] shrink-0 truncate text-[0.625rem] text-slate-500" title={fieldName}>{fieldName}</span>
+                                            <span className="shrink-0 font-mono text-[0.625rem] text-slate-300">=</span>
                                             <input
                                               value={displaySubFieldValue(entry[fieldName])}
                                               placeholder={renderSubFieldType(objectFields[fieldName])}
@@ -1125,7 +1126,7 @@ export const RightPanel = ({
                                                 const parsed = parseInspectorInputValue(e.target.value);
                                                 updateEntries(entries.map((ent, i) => i === entryIndex ? { ...ent, [fieldName]: parsed } : ent));
                                               }}
-                                              className="w-[58%] rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[10px] text-slate-700 transition-all focus:outline-none focus:shadow-none focus:ring-0 focus:border-slate-200"
+                                              className="w-[58%] rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[0.625rem] text-slate-700 transition-all focus:outline-none focus:shadow-none focus:ring-0 focus:border-slate-200"
                                             />
                                           </div>
                                         ))}
@@ -1141,7 +1142,7 @@ export const RightPanel = ({
                                     fieldNames.forEach((k) => { newEntry[k] = null; });
                                     updateEntries([...entries, newEntry]);
                                   }}
-                                  className="mt-1.5 w-full rounded-lg border border-dashed border-slate-300 py-1.5 text-[10px] font-medium text-slate-400 transition-colors hover:border-indigo-300 hover:bg-indigo-50/30 hover:text-indigo-500"
+                                  className="mt-1.5 w-full rounded-lg border border-dashed border-slate-300 py-1.5 text-[0.625rem] font-medium text-slate-400 transition-colors hover:border-indigo-300 hover:bg-indigo-50/30 hover:text-indigo-500"
                                 >
                                   {t("inspector.addEntry")}
                                 </button>
@@ -1155,17 +1156,17 @@ export const RightPanel = ({
                             <div key={property.name} className={`rounded-lg border bg-slate-50/80 p-2.5 ${property.required ? "border-l-2 border-red-200 border-l-red-400" : "border-slate-200"}`}>
                               <div className="mb-1.5 flex items-start justify-between gap-2">
                                 <div className="min-w-0">
-                                  <p className="text-[11.5px] font-semibold text-slate-800 break-all">{property.fieldName}</p>
-                                  <p className="font-mono text-[9.5px] text-slate-400 break-all">{formatTypeLabel(property.rawType)}</p>
+                                  <p className="text-[0.71875rem] font-semibold text-slate-800 break-all">{property.fieldName}</p>
+                                  <p className="font-mono text-[0.59375rem] text-slate-400 break-all">{formatTypeLabel(property.rawType)}</p>
                                 </div>
                                 <div className="flex shrink-0 gap-1">
-                                  <span className={`rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ${
+                                  <span className={`rounded-[4px] px-1.5 py-[1.5px] text-[0.5625rem] font-semibold ${
                                     property.required ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500"
                                   }`}>
                                     {property.required ? t("inspector.required") : t("inspector.optional")}
                                   </span>
                                   {property.computed && (
-                                    <span className="rounded-[4px] bg-amber-50 px-1.5 py-[1.5px] text-[9px] font-semibold text-amber-600">
+                                    <span className="rounded-[4px] bg-amber-50 px-1.5 py-[1.5px] text-[0.5625rem] font-semibold text-amber-600">
                                       {t("inspector.computed")}
                                     </span>
                                   )}
@@ -1173,7 +1174,7 @@ export const RightPanel = ({
                               </div>
 
                               <div className="flex items-center gap-1.5">
-                                <span className="shrink-0 font-mono text-[11px] text-slate-300">=</span>
+                                <span className="shrink-0 font-mono text-[0.6875rem] text-slate-300">=</span>
                                 <input
                                   disabled={!isEditable}
                                   value={displayValue}
@@ -1216,7 +1217,7 @@ export const RightPanel = ({
                                       },
                                     }));
                                   }}
-                                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] text-slate-800 transition-all outline-none ring-0 focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 focus:border-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+                                  className="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[0.6875rem] text-slate-800 transition-all outline-none ring-0 focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 focus:border-slate-200 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
                                 />
                               </div>
                             </div>
@@ -1228,7 +1229,7 @@ export const RightPanel = ({
 
                   {filteredInspectorSections.length === 0 && (
                     <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center">
-                      <p className="text-[11px] text-slate-400">{t("inspector.noMatchingAttributes")}</p>
+                      <p className="text-[0.6875rem] text-slate-400">{t("inspector.noMatchingAttributes")}</p>
                     </div>
                   )}
                 </div>
@@ -1237,18 +1238,18 @@ export const RightPanel = ({
                 {!diffMode && !cloudMode && selectedNode.data.isContainer && (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="flex items-center gap-2 border-b border-slate-100 px-3 py-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                      <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400">
                         {(selectedNode.data.containerKind === "zone" || selectedNode.data.schemaId === "aws_availability_zone")
                           ? t("inspector.nodesInZone")
                           : t("inspector.children")}
                       </span>
                       <div className="h-px flex-1 bg-slate-100" />
-                      <span className="text-[9px] tabular-nums text-slate-400">{children.length}</span>
+                      <span className="text-[0.5625rem] tabular-nums text-slate-400">{children.length}</span>
                     </div>
 
                     <div className="space-y-1 p-2">
                       {children.length === 0 ? (
-                        <p className="px-1 py-2 text-center text-[11px] text-slate-400">
+                        <p className="px-1 py-2 text-center text-[0.6875rem] text-slate-400">
                           {(selectedNode.data.containerKind === "zone" || selectedNode.data.schemaId === "aws_availability_zone")
                             ? t("inspector.noNodesInZone")
                             : t("inspector.noChildren")}
@@ -1264,7 +1265,7 @@ export const RightPanel = ({
                             <div className="flex h-6 w-6 shrink-0 overflow-hidden rounded-md bg-slate-100">
                               <img src={child.data.icon} alt={child.data.label} className="h-full w-full object-cover" draggable={false} />
                             </div>
-                            <span className="text-[11px] font-medium text-slate-700">{child.data.label}</span>
+                            <span className="text-[0.6875rem] font-medium text-slate-700">{child.data.label}</span>
                             <Icon icon="mdi:chevron-right" className="ml-auto text-slate-400" width={14} />
                           </button>
                         ))
@@ -1282,14 +1283,14 @@ export const RightPanel = ({
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
                       <Icon icon="mdi:code-braces" className="text-slate-400" width={22} />
                     </div>
-                    <p className="text-[11px] text-slate-400">{t("inspector.selectNodeForHcl")}</p>
+                    <p className="text-[0.6875rem] text-slate-400">{t("inspector.selectNodeForHcl")}</p>
                   </div>
                 ) : cloudMode ? (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="border-b border-slate-100 px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.cloudHcl")}</p>
+                      <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.cloudHcl")}</p>
                     </div>
-                    <div className="space-y-1 p-3 font-mono text-[11px] text-slate-700">
+                    <div className="space-y-1 p-3 font-mono text-[0.6875rem] text-slate-700">
                       <div className="text-slate-600">
                         {`${selectedResource.kind ?? "resource"} \"${selectedResource.type}\" \"${selectedResource.name}\" {`}
                       </div>
@@ -1310,9 +1311,9 @@ export const RightPanel = ({
                 ) : diffMode ? (
                   <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
                     <div className="border-b border-slate-100 px-3 py-2">
-                      <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.diffHcl")}</p>
+                      <p className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400">{t("inspector.diffHcl")}</p>
                     </div>
-                    <div className="space-y-1 p-3 font-mono text-[11px] text-slate-700">
+                    <div className="space-y-1 p-3 font-mono text-[0.6875rem] text-slate-700">
                       <div className="text-slate-600">
                         {`${selectedResource.kind ?? "resource"} \"${selectedResource.type}\" \"${selectedResource.name}\" {`}
                       </div>
@@ -1326,11 +1327,11 @@ export const RightPanel = ({
                         return (
                           <div key={attribute.name} className={`flex items-start gap-2 ${attribute.status === "unchanged" ? "opacity-40" : ""}`}>
                             {statusClasses ? (
-                              <span className={`mt-[1px] shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[9px] font-semibold ring-1 ${statusClasses}`}>
+                              <span className={`mt-[1px] shrink-0 rounded-[4px] px-1.5 py-[1.5px] text-[0.5625rem] font-semibold ring-1 ${statusClasses}`}>
                                 {attribute.status}
                               </span>
                             ) : (
-                              <span className="mt-[1px] shrink-0 w-[38px]" />
+                              <span className="mt-[1px] shrink-0 w-[2.375rem]" />
                             )}
                             <span className="break-all">{`  ${attribute.name} = ${toHclLiteral(attribute.value)}`}</span>
                           </div>

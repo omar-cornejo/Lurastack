@@ -298,7 +298,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[640px] max-w-full max-h-full p-5 flex flex-col gap-2.5">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[40rem] max-w-full max-h-full overflow-y-auto p-5 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-lg font-semibold">{t(PROVIDER_TITLE_KEY.aws)}</h2>
           <button
@@ -316,7 +316,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 rounded px-2 py-1.5 text-[13px] font-medium transition-colors ${
+              className={`flex-1 rounded px-2 py-1.5 text-[0.8125rem] font-medium transition-colors ${
                 activeTab === tab.id
                   ? "bg-gray-700 text-white"
                   : "text-gray-400 hover:text-white"
@@ -329,7 +329,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
 
         {activeTab === "manual" && (
           <div className="flex flex-col gap-2.5">
-            <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-[13px] text-gray-300">
+            <div className="rounded border border-gray-700 bg-gray-800/60 p-3 text-[0.8125rem] text-gray-300">
               <p>{t("credentials.manual.storageNote")}</p>
               <ol className="mt-1.5 list-decimal pl-4 text-gray-400 space-y-0.5">
                 <li>{t("credentials.manual.step1")}</li>
@@ -340,7 +340,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
 
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1">
-                <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.accessKeyId")}</label>
+                <label className="text-gray-300 text-[0.8125rem] font-medium">{t("credentials.field.accessKeyId")}</label>
                 <input
                   type="text"
                   value={accessKeyId}
@@ -351,12 +351,12 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                   spellCheck={false}
                 />
                 {hasAccessKeyError && (
-                  <span className="text-[11px] text-amber-300">{t("credentials.field.accessKeyIdError")}</span>
+                  <span className="text-[0.6875rem] text-amber-300">{t("credentials.field.accessKeyIdError")}</span>
                 )}
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.region")}</label>
+                <label className="text-gray-300 text-[0.8125rem] font-medium">{t("credentials.field.region")}</label>
                 <select
                   value={region}
                   onChange={(e) => setRegion(e.target.value)}
@@ -370,7 +370,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.secretAccessKey")}</label>
+              <label className="text-gray-300 text-[0.8125rem] font-medium">{t("credentials.field.secretAccessKey")}</label>
               <div className="relative">
                 <input
                   type={showSecret ? "text" : "password"}
@@ -390,12 +390,12 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                 </button>
               </div>
               {hasSecretKeyError && (
-                <span className="text-[11px] text-amber-300">{t("credentials.field.secretAccessKeyError")}</span>
+                <span className="text-[0.6875rem] text-amber-300">{t("credentials.field.secretAccessKeyError")}</span>
               )}
             </div>
 
             <div className="flex flex-col gap-1">
-              <label className="text-gray-300 text-[13px] font-medium">{t("credentials.field.sessionToken")}</label>
+              <label className="text-gray-300 text-[0.8125rem] font-medium">{t("credentials.field.sessionToken")}</label>
               <div className="relative">
                 <input
                   type={showSessionToken ? "text" : "password"}
@@ -414,7 +414,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                   {showSessionToken ? t("credentials.toggle.hide") : t("credentials.toggle.show")}
                 </button>
               </div>
-              <span className="text-[11px] text-gray-500">{t("credentials.field.sessionTokenHelp")}</span>
+              <span className="text-[0.6875rem] text-gray-500">{t("credentials.field.sessionTokenHelp")}</span>
             </div>
           </div>
         )}
@@ -428,16 +428,16 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
 
             <div className="flex flex-col gap-2 rounded border border-gray-700 bg-gray-800/40 p-3">
               <div className="flex flex-col gap-1">
-                <label className="text-gray-300 text-[11px] font-medium">{t("credentials.profile.credentialsFile")}</label>
+                <label className="text-gray-300 text-[0.6875rem] font-medium">{t("credentials.profile.credentialsFile")}</label>
                 <input
                   type="text"
                   value={credentialsPath}
                   onChange={(e) => setCredentialsPath(e.target.value)}
                   placeholder={paths?.defaultCredentialsPath ?? "~/.aws/credentials"}
-                  className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-white text-[11px] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-white text-[0.6875rem] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
                   spellCheck={false}
                 />
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[0.625rem] text-gray-500">
                   {credentialsPath.trim()
                     ? (credentialsPathExists === false ? <span className="text-amber-300">⚠ {t("credentials.path.notExists")}</span> : credentialsPathExists ? <span className="text-emerald-400">✓ {t("credentials.path.exists")}</span> : "")
                     : <>{t("credentials.path.default")} <code>{paths?.credentialsPath ?? "~/.aws/credentials"}</code> {paths?.credentialsExists === false && <span className="text-amber-300">{t("credentials.path.notExistsInline")}</span>}</>
@@ -445,16 +445,16 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                 </span>
               </div>
               <div className="flex flex-col gap-1">
-                <label className="text-gray-300 text-[11px] font-medium">{t("credentials.profile.configFile")}</label>
+                <label className="text-gray-300 text-[0.6875rem] font-medium">{t("credentials.profile.configFile")}</label>
                 <input
                   type="text"
                   value={configPath}
                   onChange={(e) => setConfigPath(e.target.value)}
                   placeholder={paths?.defaultConfigPath ?? "~/.aws/config"}
-                  className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-white text-[11px] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-white text-[0.6875rem] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
                   spellCheck={false}
                 />
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[0.625rem] text-gray-500">
                   {configPath.trim()
                     ? (configPathExists === false ? <span className="text-amber-300">⚠ {t("credentials.path.notExists")}</span> : configPathExists ? <span className="text-emerald-400">✓ {t("credentials.path.exists")}</span> : "")
                     : <>{t("credentials.path.default")} <code>{paths?.configPath ?? "~/.aws/config"}</code> {paths?.configExists === false && <span className="text-amber-300">{t("credentials.path.notExistsInline")}</span>}</>
@@ -467,10 +467,10 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
               <div className="text-xs text-gray-400">{t("credentials.profile.loading")}</div>
             )}
             {profilesError && (
-              <div className="rounded border border-red-700 bg-red-900/30 p-2 text-[11px] text-red-300">{profilesError}</div>
+              <div className="rounded border border-red-700 bg-red-900/30 p-2 text-[0.6875rem] text-red-300">{profilesError}</div>
             )}
             {!profilesLoading && !profilesError && profiles.length === 0 && (
-              <div className="rounded border border-amber-700 bg-amber-900/20 p-2 text-[11px] text-amber-200">
+              <div className="rounded border border-amber-700 bg-amber-900/20 p-2 text-[0.6875rem] text-amber-200">
                 {t("credentials.profile.emptyBefore")} <code>aws configure</code> {t("credentials.profile.emptyAfter")}
               </div>
             )}
@@ -506,7 +506,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
                 ))}
               </select>
               {profileNeedsRegion && (
-                <span className="text-[11px] text-amber-300">
+                <span className="text-[0.6875rem] text-amber-300">
                   {t("credentials.profile.needsRegion")}
                 </span>
               )}
@@ -517,21 +517,21 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
         {activeTab === "env" && (
           <div className="flex flex-col gap-2.5">
             <div className="flex flex-col gap-2 rounded border border-gray-700 bg-gray-800/40 p-3">
-              <div className="flex flex-col gap-0.5 text-[11px]">
+              <div className="flex flex-col gap-0.5 text-[0.6875rem]">
                 <span className="text-gray-400">{t("credentials.env.cwdLabel")}</span>
                 <code className="text-gray-200 break-all">{envSource?.processCwd ?? t("credentials.env.loadingPlaceholder")}</code>
               </div>
               <div className="flex flex-col gap-1 mt-1">
-                <label className="text-gray-300 text-[11px] font-medium">{t("credentials.env.fileLabel")}</label>
+                <label className="text-gray-300 text-[0.6875rem] font-medium">{t("credentials.env.fileLabel")}</label>
                 <input
                   type="text"
                   value={envFilePath}
                   onChange={(e) => setEnvFilePath(e.target.value)}
                   placeholder={t("credentials.env.filePlaceholder")}
-                  className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-white text-[11px] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                  className="bg-gray-800 border border-gray-600 rounded px-2 py-1.5 text-white text-[0.6875rem] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
                   spellCheck={false}
                 />
-                <span className="text-[10px] text-gray-500">
+                <span className="text-[0.625rem] text-gray-500">
                   {envFilePath.trim()
                     ? (envFileExists === false ? <span className="text-amber-300">⚠ {t("credentials.path.notExists")}</span> : envFileExists ? <span className="text-emerald-400">✓ {t("credentials.env.fileExistsPriority")}</span> : "")
                     : t("credentials.env.fileEmptyHelp")
@@ -542,7 +542,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
 
             {envLoading && <div className="text-xs text-gray-400">{t("credentials.env.reading")}</div>}
             {envError && (
-              <div className="rounded border border-red-700 bg-red-900/30 p-2 text-[11px] text-red-300">{envError}</div>
+              <div className="rounded border border-red-700 bg-red-900/30 p-2 text-[0.6875rem] text-red-300">{envError}</div>
             )}
 
             {envCreds && (
@@ -555,7 +555,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
             )}
 
             {envCreds && !envCreds.isComplete && (
-              <div className="rounded border border-amber-700 bg-amber-900/20 p-2 text-[11px] text-amber-200">
+              <div className="rounded border border-amber-700 bg-amber-900/20 p-2 text-[0.6875rem] text-amber-200">
                 {t("credentials.env.incomplete")}
               </div>
             )}
@@ -580,7 +580,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded text-[15px] text-gray-300 hover:text-white hover:bg-gray-700"
+            className="px-5 py-2 rounded text-[0.9375rem] text-gray-300 hover:text-white hover:bg-gray-700"
           >
             {t("credentials.button.cancel")}
           </button>
@@ -588,7 +588,7 @@ function AwsCredentialsForm({ initial, onSave, onClose }: { initial: AwsStoredCr
             type="button"
             onClick={handleSave}
             disabled={!canSave}
-            className="px-5 py-2 rounded text-[15px] bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
+            className="px-5 py-2 rounded text-[0.9375rem] bg-orange-600 text-white hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed font-medium"
           >
             {t("credentials.button.save")}
           </button>
@@ -627,7 +627,7 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
-      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[640px] max-w-full max-h-full p-5 flex flex-col gap-2.5">
+      <div className="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[40rem] max-w-full max-h-full overflow-y-auto p-5 flex flex-col gap-2.5">
         <div className="flex items-center justify-between">
           <h2 className="text-white text-base font-semibold">{title}</h2>
           <button
@@ -643,7 +643,7 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
           <button
             type="button"
             onClick={onClose}
-            className="px-5 py-2 rounded text-[15px] text-gray-300 hover:text-white hover:bg-gray-700"
+            className="px-5 py-2 rounded text-[0.9375rem] text-gray-300 hover:text-white hover:bg-gray-700"
           >
             {t("credentials.button.cancel")}
           </button>
@@ -651,7 +651,7 @@ function ModalShell({ title, accent, onClose, children, canSave, onSave }: {
             type="button"
             onClick={onSave}
             disabled={!canSave}
-            className={`px-5 py-2 rounded text-[15px] text-white disabled:opacity-40 disabled:cursor-not-allowed font-medium ${saveBtnClass}`}
+            className={`px-5 py-2 rounded text-[0.9375rem] text-white disabled:opacity-40 disabled:cursor-not-allowed font-medium ${saveBtnClass}`}
           >
             {t("credentials.button.save")}
           </button>
@@ -733,7 +733,7 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
           className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-white text-xs font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
           spellCheck={false}
         />
-        <span className="text-[10px] text-gray-500">{t("credentials.gcp.serviceAccountPathHelp")}</span>
+        <span className="text-[0.625rem] text-gray-500">{t("credentials.gcp.serviceAccountPathHelp")}</span>
       </div>
 
       <div className="flex flex-col gap-1">
@@ -744,7 +744,7 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
             onChange={(e) => { if (showJson) setServiceAccountJson(e.target.value); }}
             placeholder='{"type":"service_account","project_id":"...","private_key":"-----BEGIN..."}'
             rows={5}
-            className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-12 text-white text-[11px] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full resize-none"
+            className="bg-gray-800 border border-gray-600 rounded px-3 py-2 pr-12 text-white text-[0.6875rem] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500 w-full resize-none"
             spellCheck={false}
             readOnly={!showJson}
           />
@@ -756,7 +756,7 @@ function GcpCredentialsForm({ initial, onSave, onClose }: { initial: GcpStoredCr
             {showJson ? t("credentials.toggle.hide") : t("credentials.toggle.showEdit")}
           </button>
         </div>
-        {jsonError && <span className="text-[11px] text-amber-300">{jsonError}</span>}
+        {jsonError && <span className="text-[0.6875rem] text-amber-300">{jsonError}</span>}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -829,7 +829,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
           className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
-        {subError && <span className="text-[11px] text-amber-300">{subError}</span>}
+        {subError && <span className="text-[0.6875rem] text-amber-300">{subError}</span>}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -842,7 +842,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
           className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
-        {tenantError && <span className="text-[11px] text-amber-300">{tenantError}</span>}
+        {tenantError && <span className="text-[0.6875rem] text-amber-300">{tenantError}</span>}
       </div>
 
       <div className="flex flex-col gap-1">
@@ -855,7 +855,7 @@ function AzureCredentialsForm({ initial, onSave, onClose }: { initial: AzureStor
           className="bg-gray-800 border border-gray-600 rounded px-3 py-1.5 text-white text-sm placeholder-gray-500 focus:outline-none focus:border-sky-500 font-mono"
           spellCheck={false}
         />
-        {clientError && <span className="text-[11px] text-amber-300">{clientError}</span>}
+        {clientError && <span className="text-[0.6875rem] text-amber-300">{clientError}</span>}
       </div>
 
       <div className="flex flex-col gap-1">

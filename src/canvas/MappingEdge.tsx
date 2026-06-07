@@ -194,7 +194,7 @@ export function MappingEdge({
             >
               <span className="shrink-0 w-1.5 h-1.5 rounded-full bg-sky-400" />
 
-              <div className="flex-1 min-w-0 flex items-center gap-1 text-[11px]">
+              <div className="flex-1 min-w-0 flex items-center gap-1 text-[0.6875rem]">
                 <span className="truncate font-medium text-slate-700" title={fromLabel}>
                   {fromLabel}
                 </span>
@@ -205,10 +205,10 @@ export function MappingEdge({
               </div>
 
               <div className="shrink-0 flex items-center gap-1">
-                <span className="rounded-full bg-sky-100 px-1.5 text-[9px] font-semibold text-sky-700">
+                <span className="rounded-full bg-sky-100 px-1.5 text-[0.5625rem] font-semibold text-sky-700">
                   {uniqueMappings.length}
                 </span>
-                <span className="text-slate-400 text-[9px]">{collapsed ? "▾" : "▴"}</span>
+                <span className="text-slate-400 text-[0.5625rem]">{collapsed ? "▾" : "▴"}</span>
               </div>
             </button>
 
@@ -223,34 +223,34 @@ export function MappingEdge({
                       className="group flex items-center gap-2 px-2.5 py-1 hover:bg-slate-50 transition-colors"
                     >
                       <span
-                        className="truncate text-[10px] font-semibold text-slate-700 flex-1 min-w-0"
+                        className="truncate text-[0.625rem] font-semibold text-slate-700 flex-1 min-w-0"
                         title={mappingFromLabel}
                       >
                         {mappingFromLabel}
                       </span>
 
-                      <span className="shrink-0 text-[9px] text-slate-400">:</span>
+                      <span className="shrink-0 text-[0.5625rem] text-slate-400">:</span>
 
                       <span
-                        className="truncate text-[11px] font-mono text-sky-700 flex-1 min-w-0"
+                        className="truncate text-[0.6875rem] font-mono text-sky-700 flex-1 min-w-0"
                         title={mapping.sourceExpression}
                       >
                         {parseOutAttr(mapping.sourceExpression)}
                       </span>
 
-                      <span className="shrink-0 text-[11px] text-slate-400">→</span>
+                      <span className="shrink-0 text-[0.6875rem] text-slate-400">→</span>
 
                       <span
-                        className="truncate text-[10px] font-semibold text-slate-700 flex-1 min-w-0"
+                        className="truncate text-[0.625rem] font-semibold text-slate-700 flex-1 min-w-0"
                         title={mappingToLabel}
                       >
                         {mappingToLabel}
                       </span>
 
-                      <span className="shrink-0 text-[9px] text-slate-400">:</span>
+                      <span className="shrink-0 text-[0.5625rem] text-slate-400">:</span>
 
                       <span
-                        className="truncate text-[11px] font-mono text-violet-700 flex-1 min-w-0"
+                        className="truncate text-[0.6875rem] font-mono text-violet-700 flex-1 min-w-0"
                         title={mapping.targetAttribute}
                       >
                         {mapping.targetAttribute}

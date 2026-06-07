@@ -11,9 +11,9 @@ type Props = {
 };
 
 const EDGE_CLASSES: Record<Props["edge"], string> = {
-  right: "absolute right-0 top-1/2 z-20 flex h-10 w-[18px] -translate-y-1/2 translate-x-full cursor-pointer items-center justify-center rounded-r-md border border-l-0",
-  left: "absolute left-0 top-1/2 z-20 flex h-10 w-[18px] -translate-y-1/2 -translate-x-full cursor-pointer items-center justify-center rounded-l-md border border-r-0",
-  top: "absolute left-4 top-0 z-20 flex h-[18px] w-10 -translate-y-full cursor-pointer items-center justify-center rounded-t-md border border-b-0",
+  right: "absolute right-0 top-1/2 z-20 flex h-10 w-[1.125rem] -translate-y-1/2 translate-x-full cursor-pointer items-center justify-center rounded-r-md border border-l-0",
+  left: "absolute left-0 top-1/2 z-20 flex h-10 w-[1.125rem] -translate-y-1/2 -translate-x-full cursor-pointer items-center justify-center rounded-l-md border border-r-0",
+  top: "absolute left-4 top-0 z-20 flex h-[1.125rem] w-10 -translate-y-full cursor-pointer items-center justify-center rounded-t-md border border-b-0",
 };
 
 const iconClass = (edge: Props["edge"], open: boolean) => {

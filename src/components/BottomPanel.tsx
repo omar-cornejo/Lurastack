@@ -13,6 +13,7 @@ import type { TerraformResource } from "../models/terraform";
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import { getInspectorPropertiesForSchema } from "../commands/schemaInspector";
 import type { BottomPanelLogEntry } from "../types/logs";
+import { scaledPx, subscribeUiScale } from "../utils/uiScale";
 
 type BottomPanelProps = {
   onHeightChange?: (height: number) => void;
@@ -68,7 +69,7 @@ export default function BottomPanel({
   const { t } = useTranslation();
   const showMapperTab = (mode === "canvas" || mode === "code") && !hideMapper;
   const [open, setOpen] = useState(true);
-  const [height, setHeight] = useState(288);
+  const [height, setHeight] = useState(() => scaledPx(288));
   const [isResizing, setIsResizing] = useState(false);
   const [activeTab, setActiveTab] = useState<BottomPanelTab>(mode === "code" ? "logs" : "terminal");
   const [selectedMapperResourceId, setSelectedMapperResourceId] = useState<string | undefined>(undefined);
@@ -418,7 +419,14 @@ export default function BottomPanel({
     terminalDisposedRef.current = false;
     terminalReadyRef.current = false;
     try {
-      term.current = new Terminal({ cursorBlink: true, theme: { background: "#111827" } });
+      term.current = new Terminal({
+        cursorBlink: true,
+        theme: { background: "#111827" },
+        // The terminal is a <canvas>, so it can't follow the root font-size
+        // like the rem-based chrome. Scale its font with the same UI factor so
+        // it reads at a comfortable size on a 4K display (xterm's default is 15).
+        fontSize: scaledPx(15),
+      });
       fitAddon.current = new FitAddon();
       term.current.loadAddon(fitAddon.current);
       term.current.open(terminalRef.current);
@@ -509,6 +517,16 @@ export default function BottomPanel({
     scheduleSafeFitTerminal();
   }, [height, open, activeTab, isResizing]);
 
+  // Keep the terminal's font in step with the UI scale when the window moves
+  // between displays of different density.
+  useEffect(() => {
+    return subscribeUiScale((scale) => {
+      if (!term.current) return;
+      term.current.options.fontSize = Math.round(15 * scale);
+      scheduleSafeFitTerminal();
+    });
+  }, []);
+
   useEffect(() => {
     if (!isTauriRuntime || suppressTerminal) return;
     const currentWindowLabel = getCurrentWindow().label;
@@ -584,7 +602,7 @@ export default function BottomPanel({
     >
       {label}
       {tab === "logs" && logs.length > 0 && (
-        <span className="ml-1.5 rounded-full bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-300">
+        <span className="ml-1.5 rounded-full bg-slate-700 px-1.5 py-0.5 text-[0.625rem] text-slate-300">
           {logs.length}
         </span>
       )}
@@ -637,7 +655,7 @@ export default function BottomPanel({
             <button
               type="button"
               onClick={() => void openDetachedTerminalWindow()}
-              className="rounded px-2 py-1 text-[11px] text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-colors"
+              className="rounded px-2 py-1 text-[0.6875rem] text-slate-400 hover:bg-slate-700 hover:text-slate-200 transition-colors"
               title={t("bottompanel.popoutTitle")}
             >
               {t("bottompanel.popout")} ↗
@@ -716,13 +734,13 @@ export default function BottomPanel({
                     <div className="shrink-0 border-b border-gray-200 bg-white">
                       <div className="flex items-center gap-3 px-3 py-1.5">
                         <div className="flex items-center gap-1.5 min-w-0">
-                          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 shrink-0">
+                          <span className="rounded bg-sky-100 px-1.5 py-0.5 text-[0.625rem] font-semibold text-sky-700 shrink-0">
                             {activeMapperItem.resource.kind ?? "resource"}
                           </span>
                           <span className="text-xs font-bold text-gray-900 truncate">
                             {activeMapperItem.resource.name}
                           </span>
-                          <span className="text-[10px] text-gray-400 truncate hidden sm:block">
+                          <span className="text-[0.625rem] text-gray-400 truncate hidden sm:block">
                             · {activeMapperItem.resource.type}
                           </span>
                         </div>
@@ -732,7 +750,7 @@ export default function BottomPanel({
                               key={src}
                               type="button"
                               onClick={() => setMapperSourceFilter(src)}
-                              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                              className={`rounded px-2 py-0.5 text-[0.6875rem] font-medium transition-colors ${
                                 mapperSourceFilter === src
                                   ? "bg-white text-gray-900 shadow-sm"
                                   : "text-gray-500 hover:text-gray-700"
@@ -750,7 +768,7 @@ export default function BottomPanel({
                             value={attributeSearch}
                             onChange={(e) => setAttributeSearch(e.target.value)}
                             placeholder={t("bottompanel.mapper.filter")}
-                            className="w-24 rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[11px] text-gray-700 placeholder:text-gray-400 outline-none focus:ring-1 focus:ring-sky-400/60"
+                            className="w-24 rounded border border-gray-200 bg-gray-50 px-2 py-0.5 text-[0.6875rem] text-gray-700 placeholder:text-gray-400 outline-none focus:ring-1 focus:ring-sky-400/60"
                           />
                           {(["required", "optional", "computed"] as const).map((state) => {
                             const active = attributeStateFilters.includes(state);
@@ -768,7 +786,7 @@ export default function BottomPanel({
                                     cur.includes(state) ? cur.filter((i) => i !== state) : [...cur, state],
                                   )
                                 }
-                                className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ring-1 ring-transparent ${colors}`}
+                                className={`rounded px-2 py-0.5 text-[0.6875rem] font-medium transition-colors ring-1 ring-transparent ${colors}`}
                               >
                                 {t(`bottompanel.mapper.state.${state}`)}
                               </button>
@@ -779,7 +797,7 @@ export default function BottomPanel({
                             <button
                               type="button"
                               onClick={() => setShowTypeMenu((c) => !c)}
-                              className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ring-1 ring-transparent ${
+                              className={`rounded px-2 py-0.5 text-[0.6875rem] font-medium transition-colors ring-1 ring-transparent ${
                                 attributeTypeFilters.length > 0
                                   ? "bg-sky-50 text-sky-700 ring-sky-200"
                                   : "text-gray-500 hover:text-gray-700"
@@ -790,11 +808,11 @@ export default function BottomPanel({
                             {showTypeMenu && (
                               <div className="absolute right-0 top-full z-30 mt-1 w-40 rounded border border-gray-200 bg-white p-2 shadow-lg">
                                 <div className="mb-1.5 flex items-center justify-between">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{t("bottompanel.mapper.types")}</span>
+                                  <span className="text-[0.625rem] font-semibold uppercase tracking-wide text-gray-400">{t("bottompanel.mapper.types")}</span>
                                   <button
                                     type="button"
                                     onClick={() => setAttributeTypeFilters([])}
-                                    className="text-[10px] text-sky-600 hover:text-sky-500"
+                                    className="text-[0.625rem] text-sky-600 hover:text-sky-500"
                                   >
                                     {t("bottompanel.mapper.clear")}
                                   </button>
@@ -803,7 +821,7 @@ export default function BottomPanel({
                                   {availableTypeOptions.map((typeOption) => (
                                     <label
                                       key={typeOption}
-                                      className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-[11px] text-gray-700 hover:bg-gray-50"
+                                      className="flex cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-[0.6875rem] text-gray-700 hover:bg-gray-50"
                                     >
                                       <input
                                         type="checkbox"
@@ -844,7 +862,7 @@ export default function BottomPanel({
                                     {group.title}
                                   </span>
                                   <div className="flex-1 border-t border-gray-200" />
-                                  <span className="text-[10px] text-gray-400 antialiased shrink-0">{group.properties.length}</span>
+                                  <span className="text-[0.625rem] text-gray-400 antialiased shrink-0">{group.properties.length}</span>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-1.5 md:grid-cols-2 xl:grid-cols-3">
@@ -863,26 +881,26 @@ export default function BottomPanel({
                                         className="group rounded border border-gray-200 bg-white p-2 shadow-sm hover:shadow transition-shadow"
                                       >
                                         <div className="mb-1 flex items-center gap-1 min-w-0">
-                                          <span className="flex-1 truncate text-[11px] font-semibold text-gray-900" title={property.name}>
+                                          <span className="flex-1 truncate text-[0.6875rem] font-semibold text-gray-900" title={property.name}>
                                             {fieldName}
                                           </span>
-                                          <span className={`shrink-0 rounded px-1 py-0.5 text-[9px] font-semibold uppercase ${property.required ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
+                                          <span className={`shrink-0 rounded px-1 py-0.5 text-[0.5625rem] font-semibold uppercase ${property.required ? "bg-red-50 text-red-600" : "bg-gray-100 text-gray-500"}`}>
                                             {property.required ? t("bottompanel.mapper.badge.required") : t("bottompanel.mapper.badge.optional")}
                                           </span>
                                           {property.computed && (
-                                            <span className="shrink-0 rounded bg-amber-50 px-1 py-0.5 text-[9px] font-semibold uppercase text-amber-600">
+                                            <span className="shrink-0 rounded bg-amber-50 px-1 py-0.5 text-[0.5625rem] font-semibold uppercase text-amber-600">
                                               {t("bottompanel.mapper.badge.computed")}
                                             </span>
                                           )}
                                         </div>
 
-                                        <div className="mb-1.5 truncate text-[10px] text-gray-400 font-mono" title={property.type}>
+                                        <div className="mb-1.5 truncate text-[0.625rem] text-gray-400 font-mono" title={property.type}>
                                           {property.type}
                                         </div>
 
                                         <div className="flex items-center gap-1">
                                           <div
-                                            className="flex-1 min-w-0 flex items-center gap-1 rounded border border-dashed border-sky-300 bg-sky-50 px-1.5 py-1 text-[10px] text-sky-700 cursor-grab hover:border-sky-400 hover:bg-sky-100 transition-colors"
+                                            className="flex-1 min-w-0 flex items-center gap-1 rounded border border-dashed border-sky-300 bg-sky-50 px-1.5 py-1 text-[0.625rem] text-sky-700 cursor-grab hover:border-sky-400 hover:bg-sky-100 transition-colors"
                                             draggable
                                             onDragStart={(event) => {
                                               persistMapperDragValue(mapperValue);
@@ -900,7 +918,7 @@ export default function BottomPanel({
                                             onClick={async () => {
                                               try { await navigator.clipboard.writeText(mapperValue); } catch {}
                                             }}
-                                            className="shrink-0 rounded border border-gray-200 px-1.5 py-1 text-[10px] text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                                            className="shrink-0 rounded border border-gray-200 px-1.5 py-1 text-[0.625rem] text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors"
                                             title={t("bottompanel.mapper.copyReference")}
                                           >
                                             ⎘
@@ -926,12 +944,12 @@ export default function BottomPanel({
                             <div className="space-y-2">
                               {mapperIncomingGrouped.map((group) => (
                                 <div key={group.fromNodeLabel} className="rounded border border-gray-200 bg-white p-2 shadow-sm">
-                                  <div className="mb-1.5 text-[11px] font-semibold text-gray-700">{group.fromNodeLabel}</div>
+                                  <div className="mb-1.5 text-[0.6875rem] font-semibold text-gray-700">{group.fromNodeLabel}</div>
                                   <div className="flex flex-wrap gap-1">
                                     {group.entries.map((entry, index) => (
                                       <div
                                         key={`${entry.edgeId}-${entry.targetAttribute}-${index}`}
-                                        className="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[10px] text-sky-700 font-mono cursor-grab hover:border-sky-300 hover:bg-sky-100 transition-colors"
+                                        className="rounded border border-sky-200 bg-sky-50 px-2 py-1 text-[0.625rem] text-sky-700 font-mono cursor-grab hover:border-sky-300 hover:bg-sky-100 transition-colors"
                                         draggable
                                         onDragStart={(event) => {
                                           persistMapperDragValue(entry.sourceExpression);
@@ -962,12 +980,12 @@ export default function BottomPanel({
                             <div className="space-y-2">
                               {mapperInheritedFromContainer.map((container) => (
                                 <div key={container.containerId} className="rounded border border-gray-200 bg-white p-2 shadow-sm">
-                                  <div className="mb-1.5 text-[11px] font-semibold text-gray-700">{container.containerLabel}</div>
+                                  <div className="mb-1.5 text-[0.6875rem] font-semibold text-gray-700">{container.containerLabel}</div>
                                   <div className="flex flex-wrap gap-1">
                                     {container.entries.map((item) => (
                                       <div
                                         key={item.sourceExpression}
-                                        className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] text-emerald-700 font-mono cursor-grab hover:border-emerald-300 hover:bg-emerald-100 transition-colors"
+                                        className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[0.625rem] text-emerald-700 font-mono cursor-grab hover:border-emerald-300 hover:bg-emerald-100 transition-colors"
                                         draggable
                                         onDragStart={(event) => {
                                           persistMapperDragValue(item.sourceExpression);
@@ -997,12 +1015,12 @@ export default function BottomPanel({
                             <div className="space-y-2">
                               {mapperInheritedFromZones.map((zone) => (
                                 <div key={zone.zoneId} className="rounded border border-gray-200 bg-white p-2 shadow-sm">
-                                  <div className="mb-1.5 text-[11px] font-semibold text-gray-700">{zone.zoneLabel}</div>
+                                  <div className="mb-1.5 text-[0.6875rem] font-semibold text-gray-700">{zone.zoneLabel}</div>
                                   <div className="flex flex-wrap gap-1">
                                     {zone.entries.map((item) => (
                                       <div
                                         key={item.sourceExpression}
-                                        className="rounded border border-violet-200 bg-violet-50 px-2 py-1 text-[10px] text-violet-700 font-mono cursor-grab hover:border-violet-300 hover:bg-violet-100 transition-colors"
+                                        className="rounded border border-violet-200 bg-violet-50 px-2 py-1 text-[0.625rem] text-violet-700 font-mono cursor-grab hover:border-violet-300 hover:bg-violet-100 transition-colors"
                                         draggable
                                         onDragStart={(event) => {
                                           persistMapperDragValue(item.sourceExpression);
@@ -1052,20 +1070,20 @@ export default function BottomPanel({
                       <div className={`w-1 shrink-0 ${levelStyles.bar}`} />
                       <div className="flex-1 min-w-0 px-2.5 py-1.5">
                         <div className="flex items-center justify-between gap-2 mb-0.5">
-                          <span className={`text-[10px] font-bold uppercase tracking-wide ${levelStyles.title}`}>
+                          <span className={`text-[0.625rem] font-bold uppercase tracking-wide ${levelStyles.title}`}>
                             {log.level}
                           </span>
-                          <span className="text-[10px] text-gray-400 shrink-0">
+                          <span className="text-[0.625rem] text-gray-400 shrink-0">
                             {new Date(log.timestamp).toLocaleTimeString()}
                           </span>
                         </div>
                         <div className="text-xs font-semibold text-gray-900">{log.title}</div>
                         {(log.fileName || typeof log.line === "number") && (
-                          <div className="mt-0.5 text-[10px] text-gray-400 font-mono">
+                          <div className="mt-0.5 text-[0.625rem] text-gray-400 font-mono">
                             {log.fileName ?? "terraform"}{typeof log.line === "number" ? `:${log.line}` : ""}
                           </div>
                         )}
-                        <div className="mt-0.5 whitespace-pre-wrap text-[11px] text-gray-600">{log.message}</div>
+                        <div className="mt-0.5 whitespace-pre-wrap text-[0.6875rem] text-gray-600">{log.message}</div>
                       </div>
                     </div>
                   );

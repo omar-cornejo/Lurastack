@@ -55,6 +55,7 @@ import {
 } from "../commands/createCanvasNode";
 import type { CodeFile, ViewSnapshot } from "../types/project";
 import type { BottomPanelLogEntry } from "../types/logs";
+import { scaledPx } from "../utils/uiScale";
 import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
 import { useProviderCredentials, buildEnvForProvider } from "../hooks/useAwsCredentials";
 import {
@@ -1183,8 +1184,8 @@ export default function WorkspaceView({
 
         if (importResult.newNodes.length > 0) {
           const newNodesWithPositions = importResult.newNodes.map((node, idx) => {
-            const baseX = 80 + (idx % 4) * 220;
-            const baseY = 80 + Math.floor(idx / 4) * 130;
+            const baseX = scaledPx(80) + (idx % 4) * scaledPx(220);
+            const baseY = scaledPx(80) + Math.floor(idx / 4) * scaledPx(130);
             return {
               ...node,
               position: { x: baseX, y: baseY },
@@ -1500,28 +1501,28 @@ export default function WorkspaceView({
           className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-6"
           onClick={(e) => { if (e.target === e.currentTarget) setShowClearConfirm(false); }}
         >
-          <div className="w-[420px] max-w-full rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+          <div className="w-[26.25rem] max-w-full rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl">
             <div className="flex items-center gap-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/15 ring-1 ring-red-500/30">
                 <Icon icon="mdi:trash-can-outline" className="text-lg text-red-400" />
               </div>
-              <h3 className="text-[15px] font-semibold text-white">{t("clearCanvas.title")}</h3>
+              <h3 className="text-[0.9375rem] font-semibold text-white">{t("clearCanvas.title")}</h3>
             </div>
-            <p className="mt-3 text-[13px] leading-relaxed text-slate-300">
+            <p className="mt-3 text-[0.8125rem] leading-relaxed text-slate-300">
               {t("clearCanvas.message")}
             </p>
             <div className="mt-5 flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => setShowClearConfirm(false)}
-                className="rounded-lg border border-slate-700 px-4 py-2 text-[13px] font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+                className="rounded-lg border border-slate-700 px-4 py-2 text-[0.8125rem] font-medium text-slate-300 hover:bg-slate-800 transition-colors"
               >
                 {t("common.cancel")}
               </button>
               <button
                 type="button"
                 onClick={() => void confirmClearCanvas()}
-                className="rounded-lg bg-red-600 px-4 py-2 text-[13px] font-medium text-white hover:bg-red-500 transition-colors"
+                className="rounded-lg bg-red-600 px-4 py-2 text-[0.8125rem] font-medium text-white hover:bg-red-500 transition-colors"
               >
                 {t("clearCanvas.confirm")}
               </button>
@@ -1578,7 +1579,7 @@ export default function WorkspaceView({
                               : "bg-slate-300"
                       }`}
                     />
-                    <span className="text-[11px] font-medium text-slate-600">
+                    <span className="text-[0.6875rem] font-medium text-slate-600">
                       {cloudStateLoading
                         ? t("cloud.loading")
                         : cloudStateStale
@@ -1591,7 +1592,7 @@ export default function WorkspaceView({
                       type="button"
                       onClick={() => { void refreshCloudState(); }}
                       disabled={cloudStateLoading}
-                      className={`ml-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-sm transition-colors disabled:opacity-50 ${
+                      className={`ml-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold shadow-sm transition-colors disabled:opacity-50 ${
                         cloudStateStale
                           ? "bg-amber-500 text-white hover:bg-amber-600"
                           : "border border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"

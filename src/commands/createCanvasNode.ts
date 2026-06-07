@@ -1,6 +1,7 @@
 import type { Node, XYPosition } from "reactflow";
 import type { TerraformNodeSchema } from "../models/nodeRegistry";
 import type { CanvasTerraformNodeData } from "../canvas/types";
+import { scaledPx } from "../utils/uiScale";
 
 export const HIERARCHICAL_CONTAINER_SCHEMA_IDS = new Set([
   "aws_subnet",
@@ -20,22 +21,29 @@ export const CONTAINER_SCHEMA_IDS = new Set([
   ...ZONE_CONTAINER_SCHEMA_IDS,
 ]);
 
+// Node sizes live in ReactFlow flow coordinates, so they can't follow the root
+// font-size like the rem-based node interior does. We scale them by the same UI
+// factor (resolved once at module load from the current display) so a node and
+// its rem content grow together and stay proportional on a 4K screen. On 1080p
+// the factor is 1, so these are exactly the original 340×230 / 176×84.
 export const DEFAULT_CONTAINER_SIZE = {
-  width: 340,
-  height: 230,
+  width: scaledPx(340),
+  height: scaledPx(230),
 };
 
 export const DEFAULT_RESOURCE_NODE_SIZE = {
-  width: 176,
-  height: 84,
+  width: scaledPx(176),
+  height: scaledPx(84),
 };
 
 const gridPositionFromIndex = (index: number): XYPosition => {
   const columns = 4;
-  const horizontalGap = 220;
-  const verticalGap = 130;
-  const startX = 80;
-  const startY = 80;
+  // Scale the grid spacing with the node size so auto-placed nodes keep their
+  // gaps (and don't overlap) on a 4K display.
+  const horizontalGap = scaledPx(220);
+  const verticalGap = scaledPx(130);
+  const startX = scaledPx(80);
+  const startY = scaledPx(80);
 
   const column = index % columns;
   const row = Math.floor(index / columns);

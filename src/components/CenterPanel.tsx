@@ -891,7 +891,7 @@ export default function CenterPanel({
 
         {edgeContextMenu ? (
           <div
-            className="absolute z-40 w-[190px] rounded-xl border border-slate-300 bg-white/95 p-1 shadow-xl backdrop-blur"
+            className="absolute z-40 w-[11.875rem] rounded-xl border border-slate-300 bg-white/95 p-1 shadow-xl backdrop-blur"
             style={{ left: edgeContextMenu.x, top: edgeContextMenu.y }}
             onClick={(event) => event.stopPropagation()}
           >
@@ -960,7 +960,7 @@ export default function CenterPanel({
           const targetAttrs = expandObjectAttributes(getNodeResourceContext(edgeMapper.toNodeId)?.attributes ?? []);
           return (
           <div
-            className="absolute z-30 w-[460px] max-w-[95vw] rounded-lg border border-slate-200 bg-white shadow-lg"
+            className="absolute z-30 w-[28.75rem] max-w-[95vw] rounded-lg border border-slate-200 bg-white shadow-lg"
             style={{
               left: edgeMapper.x,
               top: edgeMapper.y,

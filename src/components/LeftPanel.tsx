@@ -16,6 +16,7 @@ import {
   type ServiceCategory,
 } from "../models/categoryRegistry";
 import { NODE_DRAG_MIME, serializeDraggedNode } from "../commands/nodeDragPayload";
+import { scaledPx } from "../utils/uiScale";
 import {
   clearActiveLeftPanelDrag,
   setActiveLeftPanelDrag,
@@ -162,7 +163,7 @@ export const LeftPanel = ({
 }: LeftPanelProps) => {
   const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
-  const [width, setWidth] = useState(288);
+  const [width, setWidth] = useState(() => scaledPx(288));
   const [isResizing, setIsResizing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
@@ -336,7 +337,7 @@ export const LeftPanel = ({
           e.stopPropagation();
           setVisible(v => !v);
         }}
-        className="absolute right-0 top-1/2 z-20 flex h-10 w-[18px] -translate-y-1/2 translate-x-full cursor-pointer items-center justify-center rounded-r-md border border-l-0 border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50"
+        className="absolute right-0 top-1/2 z-20 flex h-10 w-[1.125rem] -translate-y-1/2 translate-x-full cursor-pointer items-center justify-center rounded-r-md border border-l-0 border-slate-200 bg-white shadow-sm transition-colors hover:bg-slate-50"
         aria-expanded={visible}
         aria-controls="left-panel-content"
         aria-label={visible ? t("leftpanel.aria.close") : t("leftpanel.aria.show")}
@@ -370,7 +371,7 @@ export const LeftPanel = ({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1">
-                    <p className="truncate text-[12.5px] font-semibold text-slate-900">
+                    <p className="truncate text-[0.78125rem] font-semibold text-slate-900">
                       {currentProvider.label}
                     </p>
                     <Icon
@@ -379,7 +380,7 @@ export const LeftPanel = ({
                       width={14}
                     />
                   </div>
-                  <p className="mt-0.5 text-[10px] text-slate-400">{t("leftpanel.resourceLibrary")}</p>
+                  <p className="mt-0.5 text-[0.625rem] text-slate-400">{t("leftpanel.resourceLibrary")}</p>
                 </div>
               </button>
 
@@ -400,7 +401,7 @@ export const LeftPanel = ({
                             onCloudProviderChange(option.id);
                             setProviderMenuOpen(false);
                           }}
-                          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[12px] transition-colors hover:bg-slate-50 ${
+                          className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-[0.75rem] transition-colors hover:bg-slate-50 ${
                             isActive ? "bg-slate-50 font-semibold text-slate-900" : "text-slate-700"
                           }`}
                         >
@@ -433,7 +434,7 @@ export const LeftPanel = ({
                 placeholder={t("leftpanel.search")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-7 text-[11px] text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
+                className="w-full rounded-lg border border-slate-200 bg-slate-50 py-1.5 pl-8 pr-7 text-[0.6875rem] text-slate-700 placeholder-slate-400 transition-all focus:bg-white focus:outline-none focus-visible:outline-none focus:shadow-none focus:ring-0 outline-none ring-0"
               />
               {search && (
                 <button
@@ -459,8 +460,8 @@ export const LeftPanel = ({
                   <Icon icon="mdi:magnify-remove-outline" className="text-slate-400" width={22} />
                 </div>
                 <div>
-                  <p className="text-[12px] font-medium text-slate-600">{t("leftpanel.noResults")}</p>
-                  <p className="mt-0.5 text-[11px] text-slate-400">
+                  <p className="text-[0.75rem] font-medium text-slate-600">{t("leftpanel.noResults")}</p>
+                  <p className="mt-0.5 text-[0.6875rem] text-slate-400">
                     {t("leftpanel.noResultsBody")} <span className="font-semibold">"{search}"</span>
                   </p>
                 </div>
@@ -473,19 +474,19 @@ export const LeftPanel = ({
                 .map((groupKey) => (
                   <section key={groupKey} className="px-3">
                     <div className="mb-2.5 flex items-center gap-2">
-                      <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                      <span className="text-[0.625rem] font-semibold uppercase tracking-widest text-slate-400">
                         {t(GROUP_LABELS[groupKey])}
                       </span>
                       <div className="h-px flex-1 bg-slate-200" />
                       {groupTotal(groupKey) > 0 && (
-                        <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-slate-500">
+                        <span className="rounded-full bg-slate-200/80 px-1.5 py-0.5 text-[0.5625rem] font-medium tabular-nums text-slate-500">
                           {groupTotal(groupKey)}
                         </span>
                       )}
                     </div>
 
                     {groupTotal(groupKey) === 0 ? (
-                      <p className="px-1 text-[11px] text-slate-400">{t("leftpanel.noneAvailable")}</p>
+                      <p className="px-1 text-[0.6875rem] text-slate-400">{t("leftpanel.noneAvailable")}</p>
                     ) : (
                       <div className="space-y-4">
                         {CATEGORY_ORDER
@@ -493,10 +494,10 @@ export const LeftPanel = ({
                           .map((cat) => (
                             <div key={cat}>
                               <div className="mb-1.5 flex items-center gap-2 pl-1">
-                                <span className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500">
+                                <span className="text-[0.59375rem] font-semibold uppercase tracking-wider text-slate-500">
                                   {t(CATEGORY_LABEL_KEYS[cat])}
                                 </span>
-                                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[8.5px] font-medium tabular-nums text-slate-400">
+                                <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[0.53125rem] font-medium tabular-nums text-slate-400">
                                   {groupedNodes[groupKey][cat].length}
                                 </span>
                               </div>
@@ -524,7 +525,7 @@ export const LeftPanel = ({
                                       draggable={false}
                                       className="pointer-events-none h-8 w-8 select-none object-cover transition-transform duration-150 group-hover:scale-110"
                                     />
-                                    <span className="pointer-events-none line-clamp-2 select-none text-[10.5px] font-medium leading-tight text-slate-600 transition-colors group-hover:text-slate-900">
+                                    <span className="pointer-events-none line-clamp-2 select-none text-[0.65625rem] font-medium leading-tight text-slate-600 transition-colors group-hover:text-slate-900">
                                       {node.label}
                                     </span>
                                   </button>

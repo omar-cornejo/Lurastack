@@ -2,6 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Resolution-aware root font-size. The whole UI is laid out in rem, so this is
+ * the master scale knob (see src/utils/uiScale.ts). useRootFontScale() sets an
+ * inline font-size on <html> at runtime; this CSS clamp is the pre-JS fallback
+ * so there is no flash of mis-sized UI, and it approximates the JS curve: 16px
+ * at a 1080p (1920px) viewport, shrinking toward ~13.6px (0.85×) on narrow
+ * laptops and growing toward ~25.6px (1.6×) on 4K. 100vw is the viewport width
+ * in CSS px, so high-DPI displays at 100% OS scaling scale up while the same
+ * display at 200% OS scaling (already enlarged) stays near 16px. The exact
+ * two-slope curve is applied by JS as soon as it mounts.
+ */
+html {
+	font-size: clamp(13.6px, calc(100vw / 120), 25.6px);
+}
+
 /* Disable text selection visually across the app to avoid highlights when dragging. */
 :root, body, #root, .app-root, .h-screen {
 	-webkit-user-select: none;

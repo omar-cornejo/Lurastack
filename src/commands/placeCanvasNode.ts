@@ -10,13 +10,19 @@ import {
   ZONE_CONTAINER_SCHEMA_IDS,
 } from "./createCanvasNode";
 import { warn } from "./warn";
+import { scaledPx } from "../utils/uiScale";
 
-const CONTAINER_PADDING_X = 20;
-const CONTAINER_PADDING_BOTTOM = 20;
-const CONTAINER_HEADER_SPACE = 58;
+// These spatial constants are paired with the (scaled) node dimensions and the
+// rem-based container header, so they scale by the same UI factor to keep child
+// placement and collision spacing consistent on a 4K display. On 1080p the
+// factor is 1, so they are exactly the original values. The non-spatial limits
+// (max dimension clamp, placement-attempt count) are intentionally not scaled.
+const CONTAINER_PADDING_X = scaledPx(20);
+const CONTAINER_PADDING_BOTTOM = scaledPx(20);
+const CONTAINER_HEADER_SPACE = scaledPx(58);
 const MAX_CONTAINER_DIMENSION = 6000;
-const EXPANSION_SIBLING_PADDING = 20;
-const CHILD_COLLISION_PADDING = 12;
+const EXPANSION_SIBLING_PADDING = scaledPx(20);
+const CHILD_COLLISION_PADDING = scaledPx(12);
 const MAX_PLACEMENT_ATTEMPTS = 300;
 
 type CanvasNode = Node<CanvasTerraformNodeData>;

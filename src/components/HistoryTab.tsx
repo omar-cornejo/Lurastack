@@ -77,7 +77,7 @@ function SummaryChip({ summary }: { summary: { created: number; changed: number;
   if (summary.destroyed > 0) parts.push(`-${summary.destroyed}`);
   if (parts.length === 0) return null;
   return (
-    <span className="inline-flex gap-1 text-[10px] font-mono">
+    <span className="inline-flex gap-1 text-[0.625rem] font-mono">
       {summary.created > 0 && <span className="text-emerald-700">+{summary.created}</span>}
       {summary.changed > 0 && <span className="text-amber-700">~{summary.changed}</span>}
       {summary.destroyed > 0 && <span className="text-red-700">-{summary.destroyed}</span>}
@@ -143,13 +143,13 @@ export default function HistoryTab({
   return (
     <div className="flex flex-col h-full w-full min-w-0 overflow-hidden pl-1.5">
       <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-        <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">
+        <span className="text-[0.6875rem] font-semibold text-slate-500 uppercase tracking-wide">
           {t("history.entries", { count: filtered.length })}
         </span>
         <button
           type="button"
           onClick={() => setShowAllViews((v) => !v)}
-          className={`text-[10px] font-medium rounded px-2 py-0.5 transition-colors ${
+          className={`text-[0.625rem] font-medium rounded px-2 py-0.5 transition-colors ${
             showAllViews
               ? "bg-indigo-100 text-indigo-700"
               : "text-slate-400 hover:text-slate-600"
@@ -165,7 +165,7 @@ export default function HistoryTab({
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100">
               <Icon icon="mdi:history" className="text-slate-400" width={20} />
             </div>
-            <p className="text-[12px] text-slate-500">
+            <p className="text-[0.75rem] text-slate-500">
               {entries.length === 0
                 ? t("history.empty")
                 : t("history.emptyView")}
@@ -183,7 +183,7 @@ export default function HistoryTab({
             <div key={entry.id}>
             {showDayDivider && (
               <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-4 py-1.5">
-                <span className="inline-block max-w-full truncate text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                <span className="inline-block max-w-full truncate text-[0.625rem] font-semibold uppercase tracking-wider text-slate-500">
                   {dayLabel(entry.timestamp, t)}
                 </span>
               </div>
@@ -199,28 +199,28 @@ export default function HistoryTab({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[12px] font-medium ${color.label}`}>
+                    <span className={`text-[0.75rem] font-medium ${color.label}`}>
                       {actionLabel(entry.action, t)}
                     </span>
                     {!entry.success && (
-                      <span className="rounded bg-red-100 px-1.5 py-px text-[9px] font-bold uppercase text-red-600">
+                      <span className="rounded bg-red-100 px-1.5 py-px text-[0.5625rem] font-bold uppercase text-red-600">
                         {t("history.error")}
                       </span>
                     )}
                     {isPlanOnly(entry.action) && (
-                      <span className="rounded bg-slate-100 px-1.5 py-px text-[9px] font-semibold uppercase text-slate-500">
+                      <span className="rounded bg-slate-100 px-1.5 py-px text-[0.5625rem] font-semibold uppercase text-slate-500">
                         {t("history.info")}
                       </span>
                     )}
                     <SummaryChip summary={entry.summary} />
                   </div>
                   <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="text-[10px] text-slate-400">{relativeTime(entry.timestamp, t)}</span>
+                    <span className="text-[0.625rem] text-slate-400">{relativeTime(entry.timestamp, t)}</span>
                     {!showAllViews ? null : (
-                      <span className="text-[10px] text-slate-300">· {entry.viewName}</span>
+                      <span className="text-[0.625rem] text-slate-300">· {entry.viewName}</span>
                     )}
                     {entry.message && (
-                      <span className="text-[10px] text-slate-400 truncate">· {entry.message}</span>
+                      <span className="text-[0.625rem] text-slate-400 truncate">· {entry.message}</span>
                     )}
                   </div>
                 </div>
@@ -234,25 +234,25 @@ export default function HistoryTab({
               {isExpanded && (
                 <div className="bg-slate-50/80 border-t border-slate-100 px-3 py-3 space-y-3">
                   {loadingDetail && !expandedEntry && (
-                    <p className="text-[11px] text-slate-400">{t("history.loadingDetails")}</p>
+                    <p className="text-[0.6875rem] text-slate-400">{t("history.loadingDetails")}</p>
                   )}
 
                   {expandedEntry && (
                     <>
-                      <p className="text-[10px] text-slate-400">
+                      <p className="text-[0.625rem] text-slate-400">
                         {new Date(expandedEntry.timestamp).toLocaleString()}
                       </p>
 
                       {expandedEntry.changes && expandedEntry.changes.length > 0 && (
                         <div className="space-y-1">
-                          <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                          <p className="text-[0.625rem] font-semibold uppercase tracking-wide text-slate-400">
                             {t("history.changes")}
                           </p>
                           <div className="space-y-0.5 max-h-40 overflow-y-auto" style={{ scrollbarWidth: "thin" }}>
                             {expandedEntry.changes.map((change) => (
                               <div
                                 key={change.address}
-                                className="flex min-w-0 items-center gap-2 text-[11px]"
+                                className="flex min-w-0 items-center gap-2 text-[0.6875rem]"
                               >
                                 <span
                                   className={`shrink-0 ${
@@ -273,25 +273,25 @@ export default function HistoryTab({
                       )}
 
                       {isPlanOnly(expandedEntry.action) ? (
-                        <p className="text-[11px] text-slate-400 italic">
+                        <p className="text-[0.6875rem] text-slate-400 italic">
                           {t("history.planNotRestorable")}
                         </p>
                       ) : (
                         <div>
                           {restoreConfirmId === expandedEntry.id ? (
                             <div className="flex items-center gap-2">
-                              <span className="text-[11px] text-slate-600">{t("history.restoreConfirm")}</span>
+                              <span className="text-[0.6875rem] text-slate-600">{t("history.restoreConfirm")}</span>
                               <button
                                 type="button"
                                 onClick={() => handleRestore(expandedEntry)}
-                                className="rounded bg-indigo-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-indigo-700 transition-colors"
+                                className="rounded bg-indigo-600 px-2.5 py-1 text-[0.6875rem] font-semibold text-white hover:bg-indigo-700 transition-colors"
                               >
                                 {t("history.confirm")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setRestoreConfirmId(null)}
-                                className="rounded border border-slate-200 px-2.5 py-1 text-[11px] text-slate-600 hover:bg-slate-100 transition-colors"
+                                className="rounded border border-slate-200 px-2.5 py-1 text-[0.6875rem] text-slate-600 hover:bg-slate-100 transition-colors"
                               >
                                 {t("history.cancel")}
                               </button>
@@ -300,7 +300,7 @@ export default function HistoryTab({
                             <button
                               type="button"
                               onClick={() => setRestoreConfirmId(expandedEntry.id)}
-                              className="rounded border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
+                              className="rounded border border-slate-200 bg-white px-3 py-1.5 text-[0.6875rem] font-medium text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 transition-colors"
                             >
                               {t("history.restore")}
                             </button>

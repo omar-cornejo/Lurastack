@@ -139,15 +139,14 @@ export default function GlobalBar({
   return (
     <div
       ref={barRef}
-      className="flex items-stretch bg-slate-950 text-slate-300 text-xs select-none z-50 shrink-0 border-b border-slate-800"
-      style={{ height: 30 }}
+      className="flex h-[1.875rem] items-stretch bg-slate-950 text-slate-300 text-xs select-none z-50 shrink-0 border-b border-slate-800"
     >
       <div className="flex items-center px-3.5 text-white font-bold tracking-widest border-r border-slate-800 text-xs shrink-0">
         LuraStack
       </div>
 
       {projectName && (
-        <div className="flex items-center px-3 text-[11px] text-slate-400 border-r border-slate-800 shrink-0 max-w-[200px] truncate gap-1.5">
+        <div className="flex items-center px-3 text-[0.6875rem] text-slate-400 border-r border-slate-800 shrink-0 max-w-[12.5rem] truncate gap-1.5">
           <Icon icon="mdi:layers-outline" className="text-blue-400 shrink-0" />
           <span className="truncate">{projectName}</span>
         </div>
@@ -158,7 +157,7 @@ export default function GlobalBar({
           <div key={menu.id} className="relative">
             <button
               onClick={() => toggleMenu(menu.id)}
-              className={`h-full px-3.5 text-[12px] hover:bg-slate-800 transition-colors ${
+              className={`h-full px-3.5 text-[0.75rem] hover:bg-slate-800 transition-colors ${
                 openMenu === menu.id ? "bg-slate-800 text-white" : ""
               }`}
             >
@@ -166,7 +165,7 @@ export default function GlobalBar({
             </button>
 
             {openMenu === menu.id && (
-              <div className="absolute left-0 top-full mt-0 bg-slate-900 border border-slate-700 rounded-b-lg shadow-xl z-50 min-w-[200px] py-1.5 text-[13px]">
+              <div className="absolute left-0 top-full mt-0 bg-slate-900 border border-slate-700 rounded-b-lg shadow-xl z-50 min-w-[12.5rem] py-1.5 text-[0.8125rem]">
                 {menu.entries.map((entry, i) => {
                   if (entry.kind === "separator") {
                     return <div key={`sep-${i}`} className="my-1 border-t border-slate-800" />;
@@ -188,7 +187,7 @@ export default function GlobalBar({
                       {entry.check !== undefined && (
                         <Icon
                           icon="mdi:check"
-                          className={`text-[13px] ml-4 ${entry.check ? "text-blue-400" : "opacity-0"}`}
+                          className={`text-[0.8125rem] ml-4 ${entry.check ? "text-blue-400" : "opacity-0"}`}
                         />
                       )}
                     </button>
@@ -213,13 +212,13 @@ export default function GlobalBar({
                 className={`
                   group flex items-center gap-1.5 px-3.5 cursor-pointer border-r border-slate-800
                   transition-colors whitespace-nowrap shrink-0
+                  min-w-[6rem] max-w-[11.875rem]
                   ${isActive
                     ? "bg-slate-800 text-white border-b-2 border-b-blue-400"
                     : "hover:bg-slate-800/60 text-slate-400 hover:text-slate-200"}
                 `}
-                style={{ minWidth: 96, maxWidth: 190 }}
               >
-                <Icon icon="mdi:layers-outline" className="text-[14px] shrink-0 opacity-60" />
+                <Icon icon="mdi:layers-outline" className="text-[0.875rem] shrink-0 opacity-60" />
                 {editingViewId === view.id ? (
                   <input
                     autoFocus
@@ -237,11 +236,11 @@ export default function GlobalBar({
                         cancelViewRename();
                       }
                     }}
-                    className="min-w-0 flex-1 rounded border border-blue-500 bg-slate-900 px-1.5 py-0.5 text-[12px] text-white outline-none"
+                    className="min-w-0 flex-1 rounded border border-blue-500 bg-slate-900 px-1.5 py-0.5 text-[0.75rem] text-white outline-none"
                   />
                 ) : (
                   <span
-                    className="truncate text-[12px] flex-1"
+                    className="truncate text-[0.75rem] flex-1"
                     onClick={(event) => {
                       event.stopPropagation();
                       startEditingView(view);
@@ -256,7 +255,7 @@ export default function GlobalBar({
                     onClick={(e) => { e.stopPropagation(); onCloseView(view.id); }}
                     className="opacity-0 group-hover:opacity-100 hover:text-red-400 transition-opacity ml-1 shrink-0"
                   >
-                    <Icon icon="mdi:close" className="text-[13px]" />
+                    <Icon icon="mdi:close" className="text-[0.8125rem]" />
                   </button>
                 )}
               </div>
@@ -268,14 +267,14 @@ export default function GlobalBar({
             title={t("globalbar.newView")}
             className="flex items-center px-3 hover:bg-slate-800 hover:text-white transition-colors text-slate-500 shrink-0"
           >
-            <Icon icon="mdi:plus" className="text-[15px]" />
+            <Icon icon="mdi:plus" className="text-[0.9375rem]" />
           </button>
         </div>
       )}
 
       {hasProject && autosave && (
-        <div className="flex items-center px-3 text-[11px] text-slate-500 gap-1.5 shrink-0">
-          <Icon icon="mdi:content-save-outline" className="text-[13px] text-emerald-500" />
+        <div className="flex items-center px-3 text-[0.6875rem] text-slate-500 gap-1.5 shrink-0">
+          <Icon icon="mdi:content-save-outline" className="text-[0.8125rem] text-emerald-500" />
           {t("globalbar.autosave")}
         </div>
       )}

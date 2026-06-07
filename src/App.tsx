@@ -23,6 +23,7 @@ import {
 } from "./commands/projectManager";
 import { Toaster, sileo } from "sileo";
 import { useTranslation, Trans } from "react-i18next";
+import { useRootFontScale } from "./hooks/useRootFontScale";
 
 let viewCounter = 1;
 
@@ -43,6 +44,7 @@ export default function App() {
   }
 
   const { t } = useTranslation();
+  useRootFontScale();
   const [project, setProject] = useState<LuraProject | null>(null);
   const [projectFilePath, setProjectFilePath] = useState<string | null>(null);
   const [autosave, setAutosave] = useState(false);
@@ -459,7 +461,7 @@ export default function App() {
 
       {pendingCloseView ? (
         <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/45">
-          <div className="w-[420px] max-w-[92vw] rounded-lg border border-gray-700 bg-gray-900 p-4 text-sm text-gray-200 shadow-2xl">
+          <div className="w-[26.25rem] max-w-[92vw] rounded-lg border border-gray-700 bg-gray-900 p-4 text-sm text-gray-200 shadow-2xl">
             <h3 className="text-base font-semibold text-white">{t("closeView.title")}</h3>
             <p className="mt-2 text-xs text-gray-300">
               <Trans

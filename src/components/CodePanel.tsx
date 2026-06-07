@@ -914,13 +914,13 @@ export default function CodePanel({
                 toggleDirectory(node.relativePath);
                 setFocusedNodePath(node.relativePath);
               }}
-              className="text-[11px] text-slate-400 hover:text-slate-100"
+              className="text-[0.6875rem] text-slate-400 hover:text-slate-100"
               title={isExpanded ? t("code.explorer.collapseFolder") : t("code.explorer.expandFolder")}
             >
               {isExpanded ? "▾" : "▸"}
             </button>
           ) : (
-            <span className="w-3 text-center text-[11px] text-slate-500">•</span>
+            <span className="w-3 text-center text-[0.6875rem] text-slate-500">•</span>
           )}
 
           {isRenaming ? (
@@ -963,7 +963,7 @@ export default function CodePanel({
             <button
               type="button"
               onClick={() => beginRename(node.relativePath)}
-              className="rounded px-1 text-[10px] text-slate-400 hover:bg-slate-600 hover:text-slate-100"
+              className="rounded px-1 text-[0.625rem] text-slate-400 hover:bg-slate-600 hover:text-slate-100"
               title={t("code.explorer.rename")}
             >
               ✎
@@ -972,7 +972,7 @@ export default function CodePanel({
               <button
                 type="button"
                 onClick={() => confirmDeleteNode(node.relativePath)}
-                className="rounded px-1 text-[10px] text-slate-400 hover:bg-slate-600 hover:text-slate-100"
+                className="rounded px-1 text-[0.625rem] text-slate-400 hover:bg-slate-600 hover:text-slate-100"
                 title={t("code.explorer.delete")}
               >
                 ✕
@@ -993,12 +993,12 @@ export default function CodePanel({
       <div className="flex h-full min-h-0 w-full">
         <aside className="w-72 shrink-0 border-r border-slate-700 bg-[#252526] p-2">
           <div className="mb-2 flex items-center justify-between px-2">
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("code.explorer.title")}</div>
+            <div className="text-[0.6875rem] font-semibold uppercase tracking-wide text-slate-400">{t("code.explorer.title")}</div>
             <div className="flex items-center gap-1">
               <button
                 type="button"
                 onClick={() => openCreatePrompt("file")}
-                className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
+                className="rounded px-1.5 py-0.5 text-[0.625rem] text-slate-300 hover:bg-slate-700/60"
                 title={t("code.explorer.newFile")}
               >
                 +F
@@ -1006,7 +1006,7 @@ export default function CodePanel({
               <button
                 type="button"
                 onClick={() => openCreatePrompt("folder")}
-                className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
+                className="rounded px-1.5 py-0.5 text-[0.625rem] text-slate-300 hover:bg-slate-700/60"
                 title={t("code.explorer.newFolder")}
               >
                 +D
@@ -1014,7 +1014,7 @@ export default function CodePanel({
               <button
                 type="button"
                 onClick={() => void refreshExplorerTree()}
-                className="rounded px-1.5 py-0.5 text-[10px] text-slate-300 hover:bg-slate-700/60"
+                className="rounded px-1.5 py-0.5 text-[0.625rem] text-slate-300 hover:bg-slate-700/60"
                 title={t("code.explorer.refresh")}
               >
                 ↻
@@ -1043,14 +1043,14 @@ export default function CodePanel({
                     setCreateMode(null);
                     setCreateName("");
                   }}
-                  className="rounded border border-slate-600 px-2 py-1 text-[11px] text-slate-300 hover:bg-slate-700/40"
+                  className="rounded border border-slate-600 px-2 py-1 text-[0.6875rem] text-slate-300 hover:bg-slate-700/40"
                 >
                   {t("code.common.cancel")}
                 </button>
                 <button
                   type="button"
                   onClick={() => void submitCreate()}
-                  className="rounded border border-slate-500 px-2 py-1 text-[11px] text-slate-100 hover:bg-slate-700/60"
+                  className="rounded border border-slate-500 px-2 py-1 text-[0.6875rem] text-slate-100 hover:bg-slate-700/60"
                 >
                   {t("code.common.create")}
                 </button>
@@ -1128,7 +1128,7 @@ export default function CodePanel({
                 <div className="grid h-full min-h-0 grid-cols-[48px_1fr] overflow-hidden rounded bg-[#1e1e1e]">
                   <div
                     ref={lineGutterRef}
-                    className="overflow-hidden border-r border-slate-800 bg-[#252526] px-2 py-2 text-right text-[11px] leading-5 text-slate-500"
+                    className="overflow-hidden border-r border-slate-800 bg-[#252526] px-2 py-2 text-right text-[0.6875rem] leading-5 text-slate-500"
                   >
                     {Array.from({ length: mainTfLineCount }, (_, index) => (
                       <div key={index}>{index + 1}</div>
@@ -1154,7 +1154,7 @@ export default function CodePanel({
               <div className="grid h-full min-h-0 grid-cols-[48px_1fr] overflow-hidden rounded bg-[#1e1e1e]">
                 <div
                   ref={lineGutterRef}
-                  className="overflow-hidden border-r border-slate-800 bg-[#252526] px-2 py-2 text-right text-[11px] leading-5 text-slate-500"
+                  className="overflow-hidden border-r border-slate-800 bg-[#252526] px-2 py-2 text-right text-[0.6875rem] leading-5 text-slate-500"
                 >
                   {Array.from({ length: lineCount }, (_, index) => (
                     <div key={index}>{index + 1}</div>
@@ -1180,7 +1180,7 @@ export default function CodePanel({
       </div>
       {pendingDelete ? (
         <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/45">
-          <div className="w-[420px] max-w-[92vw] rounded-lg border border-gray-700 bg-gray-900 p-4 text-sm text-gray-200 shadow-2xl">
+          <div className="w-[26.25rem] max-w-[92vw] rounded-lg border border-gray-700 bg-gray-900 p-4 text-sm text-gray-200 shadow-2xl">
             <h3 className="text-base font-semibold text-white">
               {pendingDelete.isDirectory ? t("code.delete.titleFolder") : t("code.delete.titleFile")}
             </h3>
