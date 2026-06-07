@@ -86,12 +86,21 @@ npm run test:coverage  # same suite + a coverage report
 
 # Backend (Rust) — built-in test harness
 cd src-tauri && cargo test
+
+# End-to-end (real browser, mocked backend) — Playwright
+npm run test:e2e       # headless run
+npm run test:e2e:ui    # interactive UI for debugging a flow
 ```
 
-If your PR passes `npm test` and `cargo test` locally, it will pass the test
-stage in CI. The full CI gate is: `tsc --noEmit`, `npm test` (with coverage),
-`npm run build`, `cargo fmt --check`, `cargo clippy -- -D warnings`,
-`cargo test`, dependency audit, and secret scanning.
+> The first `npm run test:e2e` downloads a Chromium build — run
+> `npx playwright install --with-deps chromium` once if it isn't already cached.
+
+If your PR passes `npm test` and `cargo test` locally, it will pass the blocking
+test stages in CI. The full CI gate is: `tsc --noEmit`, `npm test` (with
+coverage), `npm run build`, `cargo fmt --check`, `cargo clippy -- -D warnings`,
+`cargo test`, dependency audit, and secret scanning. The Playwright E2E job also
+runs but is **non-blocking for now** (browser tests are flakier than unit tests);
+it will be promoted to a required check once it has proven stable.
 
 **Where tests live**
 
@@ -101,12 +110,21 @@ stage in CI. The full CI gate is: `tsc --noEmit`, `npm test` (with coverage),
 - Rust tests live in an in-file `#[cfg(test)] mod tests` at the bottom of each
   `.rs` file, so they can exercise private helpers directly.
 - Cross-cutting fixture checks live under `src/__fixtures__/`.
+- End-to-end specs live under `e2e/` (`*.spec.ts`). They run the app in a real
+  Chromium against the Vite dev server with the Tauri backend **mocked** — see
+  `e2e/fixtures/tauriMock.ts` (the IPC shim) and `e2e/fixtures/app.ts` (the
+  create-project-and-open-canvas helper). No native build or real credentials
+  are required.
 
 **When you add or change behaviour, add or update the test next to it.** Pure
-logic (parsing, emission, validation, geometry) is the priority; the big
-canvas/terminal components are intentionally not unit-tested (they need a real
-DOM/WebGL). Coverage is reported but **not gated** — don't let a coverage number
-block a sensible change; the gate is simply "the tests pass".
+logic (parsing, emission, validation, geometry) is the priority and belongs in a
+colocated unit test; if a useful piece of logic is trapped inside a big
+component, prefer **extracting it to a module and testing it there** (verbatim,
+no behaviour change) over reaching for the DOM. The whole-flow canvas/terminal
+behaviours that genuinely need a browser (ReactFlow layout, the model→HCL round
+trip on real nodes, undo/redo, the detached terminal window) are covered by the
+Playwright E2E specs instead. Coverage is reported but **not gated** — don't let
+a coverage number block a sensible change; the gate is simply "the tests pass".
 
 ## Commit messages
 
@@ -128,6 +146,7 @@ Before requesting review:
 - [ ] `npx tsc --noEmit` passes
 - [ ] `npm test` passes (add or update tests for the behaviour you changed)
 - [ ] `cd src-tauri && cargo check` passes — and if you touched Rust, also `cargo test`, `cargo clippy -- -D warnings`, and `cargo fmt`
+- [ ] If you changed a canvas / terminal flow, `npm run test:e2e` still passes
 - [ ] App boots: `npm run tauri dev` doesn't error on start
 - [ ] You manually exercised the change (describe how in the PR body)
 - [ ] No secrets, credentials, or absolute paths in the diff

@@ -15,6 +15,7 @@
 - [ ] `npx tsc --noEmit` passes
 - [ ] `npm test` passes (tests added/updated for the changed behaviour)
 - [ ] `cd src-tauri && cargo check` passes — and if Rust was touched, also `cargo test`, `cargo clippy -- -D warnings`, and `cargo fmt`
+- [ ] If a canvas / terminal flow changed, `npm run test:e2e` still passes
 - [ ] App boots: `npm run tauri dev` starts without errors
 - [ ] I manually exercised the change (describe how in the summary above)
 - [ ] No secrets, credentials, or absolute paths in the diff

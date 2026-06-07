@@ -89,13 +89,17 @@ Pick a template from the welcome screen, drop nodes on the canvas, and hit
 ### Run the tests
 
 ```bash
-npm test                      # frontend (Vitest)
-cd src-tauri && cargo test    # backend (Rust)
+npm test                      # frontend unit tests (Vitest)
+cd src-tauri && cargo test    # backend tests (Rust)
+npm run test:e2e              # end-to-end flows in a real browser (Playwright)
 ```
 
-CI runs the same suite — plus type-check, lint, build, and dependency/secret
-scans — on every pull request. See [CONTRIBUTING.md](CONTRIBUTING.md#testing)
-for the full workflow.
+The frontend and backend suites are deterministic and fast; the Playwright E2E
+specs drive the real canvas and terminal flows in Chromium with the native
+backend mocked, so they need no credentials or native build. CI runs all of
+these — plus type-check, lint, build, and dependency/secret scans — on every
+pull request (E2E is currently non-blocking). See
+[CONTRIBUTING.md](CONTRIBUTING.md#testing) for the full workflow.
 
 ### Build a release binary
 
@@ -118,6 +122,7 @@ lurastack/
 │   ├── schemas/            # Terraform resource schemas (JSON) + HCL templates (.tf.tpl)
 │   └── types/              # Shared TypeScript types
 ├── src-tauri/              # Rust desktop runtime (Tauri commands, PTY, credentials)
+├── e2e/                    # Playwright end-to-end specs + Tauri IPC mock fixtures
 ├── public/
 │   ├── icons/              # AWS / GCP / Azure service icons
 │   └── templates/          # Gallery templates (8 instantiable architectures)
