@@ -2,22 +2,24 @@
 
 Let's make LuraStack better, together!
 
-This document covers the day-to-day mechanics of contributing. The high-level
-architecture lives in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+This document covers the day-to-day mechanics of contributing. For the
+high-level architecture and tech stack, see the
+[Project structure](README.md#project-structure) and
+[Tech stack](README.md#tech-stack) sections of the README.
 
 By participating you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Where to start
 
 Not sure what to work on? Look for issues labelled
-[`good first issue`](https://github.com/omar-cornejo/lurastack/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
+[`good first issue`](https://github.com/omar-cornejo/Lurastack/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 — these are scoped to be approachable without deep knowledge of the codebase.
 Adding a new Terraform resource or a new gallery template (described below) is
 also a great entry point: it requires no code changes, just data files.
 
 ## Reporting bugs
 
-Use the [Bug report template](https://github.com/omar-cornejo/lurastack/issues/new?template=bug_report.yml).
+Use the [Bug report template](https://github.com/omar-cornejo/Lurastack/issues/new?template=bug_report.yml).
 The template asks for steps to reproduce, expected vs. actual behaviour, OS and
 version info, and any relevant logs from the embedded terminal or
 `npm run tauri dev` console. For UI bugs, a screenshot or screen recording
@@ -28,7 +30,7 @@ instead of opening a public issue.
 
 ## Proposing a feature
 
-Use the [Feature request template](https://github.com/omar-cornejo/lurastack/issues/new?template=feature_request.yml).
+Use the [Feature request template](https://github.com/omar-cornejo/Lurastack/issues/new?template=feature_request.yml).
 For anything non-trivial, open a discussion or draft issue first so we can
 align on scope before either of us invests real time. Tiny ergonomic fixes can
 go straight to a PR.
@@ -186,4 +188,4 @@ template to catch these before CI does.
 
 ## Questions
 
-Open a discussion at https://github.com/omar-cornejo/lurastack/discussions or email omarcornejovargas@gmail.com.
+Open a discussion at https://github.com/omar-cornejo/Lurastack/discussions or email omarcornejovargas@gmail.com.

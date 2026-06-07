@@ -3,13 +3,11 @@
 > Drag-and-drop AWS / GCP architectures, get real Terraform you can `plan` and `apply` from the same window.
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![CI](https://github.com/omar-cornejo/lurastack/actions/workflows/ci.yml/badge.svg)](https://github.com/omar-cornejo/lurastack/actions/workflows/ci.yml)
+[![CI](https://github.com/omar-cornejo/Lurastack/actions/workflows/ci.yml/badge.svg)](https://github.com/omar-cornejo/Lurastack/actions/workflows/ci.yml)
 [![Tauri](https://img.shields.io/badge/Tauri-2-24C8DB.svg)](https://tauri.app/)
 [![React](https://img.shields.io/badge/React-19-61DAFB.svg)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6.svg)](https://www.typescriptlang.org/)
 [![Rust](https://img.shields.io/badge/Rust-stable-CE412B.svg)](https://www.rust-lang.org/)
-
-![LuraStack main UI](docs/screenshots/main-ui.png)
 
 ## What is LuraStack?
 
@@ -77,8 +75,8 @@ your laptop unless you choose to `apply`**.
 ### Run from source
 
 ```bash
-git clone https://github.com/omar-cornejo/lurastack.git
-cd lurastack
+git clone https://github.com/omar-cornejo/Lurastack.git
+cd Lurastack
 npm install
 npm run tauri dev
 ```
@@ -126,8 +124,7 @@ lurastack/
 ├── public/
 │   ├── icons/              # AWS / GCP / Azure service icons
 │   └── templates/          # Gallery templates (8 instantiable architectures)
-├── scripts/                # Build-time helpers (icon import, template index)
-└── docs/                   # Architecture overview, screenshots
+└── scripts/                # Build-time helpers (icon import, template index)
 ```
 
 ## Tech stack

@@ -25,7 +25,7 @@ discussions, or pull requests.**
 Instead, use one of these private channels:
 
 1. **GitHub Security Advisories** (preferred) — open a private report at
-   <https://github.com/omar-cornejo/lurastack/security/advisories/new>.
+   <https://github.com/omar-cornejo/Lurastack/security/advisories/new>.
 2. **Email** — send the details to **omarcornejovargas@gmail.com** with the
    subject line `[LuraStack Security]`.
 
@@ -79,7 +79,8 @@ tests (`src-tauri/src/*.rs` `#[cfg(test)]` modules), and `cargo test`,
 all run in CI on every pull request.
 
 For a deeper description of the threat model and mitigations, see the
-architecture and security documentation in `docs/`.
+`src-tauri/src/project_access.rs`, `aws_credentials.rs`, and
+`terraform_actions.rs` modules and their accompanying tests.
 
 ## Out of scope
 
