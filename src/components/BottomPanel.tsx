@@ -42,9 +42,6 @@ const OBJECT_MAPPER_REF_MIME = "application/x-lurastack-object-mapper-ref";
 const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
 const BOTTOM_PANEL_MIN_HEIGHT = 100;
 const BOTTOM_PANEL_MAX_HEIGHT = 300;
-const BOTTOM_PANEL_HEADER_HEIGHT = 40;
-const BOTTOM_PANEL_TERMINAL_VIEWPORT_HEIGHT =
-  BOTTOM_PANEL_MAX_HEIGHT - BOTTOM_PANEL_HEADER_HEIGHT;
 
 export default function BottomPanel({
   onHeightChange,
@@ -530,8 +527,14 @@ export default function BottomPanel({
   useEffect(() => {
     if (!isTauriRuntime || suppressTerminal) return;
     const currentWindowLabel = getCurrentWindow().label;
+    // terraform runs as a single global process, but it's invoked from the main
+    // window, so its output carries the main window's label. A detached terminal
+    // window lives under a different label; when it hosts the terminal it must
+    // still render that output, so it accepts the global stream regardless of
+    // the originating label. The main window keeps the strict label match.
+    const isDetachedWindow = currentWindowLabel.startsWith("terminal-detached-");
     const unlisten = listen<{ window_label: string; output: string }>("terraform-output", (event) => {
-      if (event.payload.window_label !== currentWindowLabel) return;
+      if (!isDetachedWindow && event.payload.window_label !== currentWindowLabel) return;
       setOpen(true);
       setActiveTab("terminal");
       if (!terminalReadyRef.current || terminalDisposedRef.current || !term.current) return;
@@ -666,21 +669,16 @@ export default function BottomPanel({
         <div id="bottom-panel-content" className="relative flex-1 min-h-0 overflow-hidden">
 
           <div
-            className="absolute inset-0 overflow-hidden"
+            className="absolute inset-0 overflow-hidden bg-[#111827]"
             style={{ display: activeTab === "terminal" ? "block" : "none" }}
           >
-            <div
-              className="absolute top-0 left-0 right-0"
-              style={{ height: `${BOTTOM_PANEL_TERMINAL_VIEWPORT_HEIGHT}px` }}
-            >
-              {suppressTerminal ? (
-                <div className="h-full w-full bg-[#111827] text-slate-400 flex items-center justify-center text-xs">
-                  {t("bottompanel.terminalDetachedMessage")}
-                </div>
-              ) : (
-                <div ref={terminalRef} className="h-full w-full" />
-              )}
-            </div>
+            {suppressTerminal ? (
+              <div className="h-full w-full bg-[#111827] text-slate-400 flex items-center justify-center text-xs">
+                {t("bottompanel.terminalDetachedMessage")}
+              </div>
+            ) : (
+              <div ref={terminalRef} className="h-full w-full" />
+            )}
           </div>
 
           <div

@@ -56,10 +56,6 @@ type TerraformValidationResult = {
   initRan: boolean;
 };
 
-type TerraformLspDiagnosticsResult = {
-  diagnostics: TerraformValidationDiagnostic[];
-};
-
 type TerraformSourceFile = {
   name: string;
   content: string;
@@ -639,16 +635,6 @@ export default function CodePanel({
       },
     ]);
 
-    onValidationLogs([
-      {
-        id: `lsp-${Date.now()}-start`,
-        timestamp: new Date().toISOString(),
-        level: "info",
-        title: t("code.validate.runningLs"),
-        message: t("code.validate.requestingLsp"),
-      },
-    ]);
-
     setIsValidatingTerraform(true);
 
     try {
@@ -673,66 +659,6 @@ export default function CodePanel({
         },
         ...additionalFiles,
       ];
-
-      try {
-        const lspResult = await invoke<TerraformLspDiagnosticsResult>("terraform_lsp_diagnostics", {
-          projectDir,
-          files,
-        });
-
-        const lspLogs = (lspResult.diagnostics ?? []).map((diagnostic, index) => {
-          const severity = diagnostic.severity?.toLowerCase() ?? "error";
-          const level: BottomPanelLogLevel =
-            severity === "warning"
-              ? "warning"
-              : severity === "error"
-                ? "error"
-                : "info";
-
-          return {
-            id: `lsp-${Date.now()}-${index}`,
-            timestamp: new Date().toISOString(),
-            level,
-            title: `[terraform-ls] ${diagnostic.summary || t("code.validate.diagnostic")}`,
-            message: diagnostic.detail || diagnostic.summary || t("code.validate.noDetail"),
-            fileName: basename(diagnostic.filename),
-            line: diagnostic.startLine,
-          } satisfies BottomPanelLogEntry;
-        });
-
-        if (lspLogs.length) {
-          onValidationLogs(lspLogs);
-          onValidationLogs([
-            {
-              id: `lsp-${Date.now()}-summary`,
-              timestamp: new Date().toISOString(),
-              level: "info",
-              title: t("code.validate.lsFinished"),
-              message: t("code.validate.lspDiagnosticsCount", { count: lspLogs.length }),
-            },
-          ]);
-        } else {
-          onValidationLogs([
-            {
-              id: `lsp-${Date.now()}-empty`,
-              timestamp: new Date().toISOString(),
-              level: "info",
-              title: t("code.validate.lsFinished"),
-              message: t("code.validate.noLspDiagnostics"),
-            },
-          ]);
-        }
-      } catch (lspError) {
-        onValidationLogs([
-          {
-            id: `lsp-${Date.now()}-error`,
-            timestamp: new Date().toISOString(),
-            level: "warning",
-            title: t("code.validate.lsUnavailable"),
-            message: String(lspError),
-          },
-        ]);
-      }
 
       const result = await invoke<TerraformValidationResult>("terraform_validate", {
         projectDir,

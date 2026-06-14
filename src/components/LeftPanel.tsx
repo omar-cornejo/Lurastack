@@ -361,11 +361,11 @@ export const LeftPanel = ({
                 aria-expanded={providerMenuOpen}
                 className="flex min-w-0 flex-1 items-center gap-3 rounded-lg p-1 -m-1 text-left transition-colors hover:bg-slate-50"
               >
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200 p-1.5">
                   <img
                     src={currentProvider.icon}
                     alt={currentProvider.label}
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-contain"
                     draggable={false}
                   />
                 </div>
@@ -409,7 +409,7 @@ export const LeftPanel = ({
                             src={option.icon}
                             alt=""
                             draggable={false}
-                            className="h-5 w-5 object-cover"
+                            className="h-5 w-5 object-contain"
                           />
                           <span className="flex-1 truncate">{option.label}</span>
                           {isActive && (
@@ -523,7 +523,7 @@ export const LeftPanel = ({
                                       src={node.icon}
                                       alt={node.label}
                                       draggable={false}
-                                      className="pointer-events-none h-8 w-8 select-none object-cover transition-transform duration-150 group-hover:scale-110"
+                                      className="pointer-events-none h-8 w-8 select-none object-contain transition-transform duration-150 group-hover:scale-110"
                                     />
                                     <span className="pointer-events-none line-clamp-2 select-none text-[0.65625rem] font-medium leading-tight text-slate-600 transition-colors group-hover:text-slate-900">
                                       {node.label}

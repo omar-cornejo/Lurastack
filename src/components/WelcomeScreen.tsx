@@ -548,11 +548,11 @@ export default function WelcomeScreen({ onProjectReady }: WelcomeScreenProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50">
           <div className="w-full max-w-md mx-4 rounded-xl border border-slate-200 bg-white p-6 shadow-xl shadow-slate-200/60">
             <div className="flex items-start gap-3 mb-5">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200 p-2">
                 <img
                   src={providerLogo(selectedTemplate.provider)}
                   alt={providerLabel(selectedTemplate.provider)}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                   draggable={false}
                 />
               </div>
@@ -814,11 +814,11 @@ function TemplateCard({
       className={`text-left flex flex-col gap-3.5 p-5 rounded-xl bg-white border border-slate-200 ${accent.hoverBorder} hover:shadow-sm transition-all`}
     >
       <div className="flex items-start gap-3.5">
-        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200">
+        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 ring-1 ring-slate-200 p-2">
           <img
             src={providerLogo(template.provider)}
             alt={providerLabel(template.provider)}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             draggable={false}
           />
         </div>

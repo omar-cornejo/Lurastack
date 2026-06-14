@@ -28,6 +28,24 @@ The provider brand logos are used solely to identify each platform in the UI.
 Use of these logos does not imply affiliation with or endorsement by Amazon Web
 Services, Google LLC, or Microsoft Corporation.
 
+## UI glyphs bundled offline (`src/lib/*Subset.json`)
+
+To keep the packaged desktop app fully offline, the inline UI glyphs rendered
+through `@iconify/react` are bundled as local subset collections in
+[`src/lib/`](../../src/lib/) and registered at startup
+([`registerIcons.ts`](../../src/lib/registerIcons.ts)) instead of being fetched
+from the Iconify CDN at runtime. Each subset was copied verbatim from the
+Iconify API (`https://api.iconify.design/<prefix>.json?icons=<name>`).
+
+- **Material Design Icons** (`mdi`) — `src/lib/mdiSubset.json`.
+  [Apache License 2.0](https://github.com/Templarian/MaterialDesign/blob/master/LICENSE).
+- **WeUI** (`weui:arrow-filled`) — `src/lib/weuiSubset.json`.
+  [Source](https://icon-sets.iconify.design/weui/),
+  [Apache License 2.0](https://github.com/Tencent/weui/blob/master/LICENSE).
+- **Lucide** (`lucide:refresh-cw`) — `src/lib/lucideSubset.json`.
+  [Source](https://icon-sets.iconify.design/lucide/),
+  [ISC License](https://github.com/lucide-icons/lucide/blob/main/LICENSE).
+
 ---
 
 All other assets in this repository (application code, custom icons, and

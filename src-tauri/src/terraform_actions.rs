@@ -5,12 +5,12 @@ use std::{
     path::{Path, PathBuf},
     process::{ChildStdin, Command, Stdio},
     sync::{mpsc, Arc, Mutex},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use tauri::Emitter;
+use serde_json::Value;
+use tauri::{Emitter, Manager};
 
 pub struct TerraformInteractiveState {
     pub stdin: Arc<Mutex<Option<ChildStdin>>>,
@@ -144,7 +144,13 @@ struct TerraformOutputEvent {
 }
 
 fn emit_output(window: &tauri::Window, output: &str) {
-    let _ = window.emit(
+    // Broadcast to every window (main + any detached terminal) rather than only
+    // the window that invoked the command. The terraform process is global, so
+    // its live output must reach whichever window currently hosts the terminal
+    // — including a popped-out terminal living in a separate window. The
+    // payload still carries the originating window's label so each listener can
+    // decide whether to render it.
+    let _ = window.app_handle().emit(
         "terraform-output",
         TerraformOutputEvent {
             window_label: window.label().to_string(),
@@ -902,12 +908,6 @@ pub struct TerraformValidateResult {
     init_ran: bool,
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TerraformLspDiagnosticsResult {
-    diagnostics: Vec<TerraformValidateDiagnostic>,
-}
-
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TerraformSourceFile {
@@ -999,312 +999,6 @@ fn sync_project_tf_files(
     }
 
     Ok(normalized_files)
-}
-
-fn to_file_uri(path: &Path) -> String {
-    let normalized = path.to_string_lossy().replace(' ', "%20");
-    format!("file://{normalized}")
-}
-
-fn send_lsp_message(writer: &mut dyn Write, payload: &Value) -> Result<(), String> {
-    let body = payload.to_string();
-    let header = format!("Content-Length: {}\r\n\r\n", body.len());
-    writer
-        .write_all(header.as_bytes())
-        .map_err(|error| format!("No se pudo escribir header LSP: {error}"))?;
-    writer
-        .write_all(body.as_bytes())
-        .map_err(|error| format!("No se pudo escribir body LSP: {error}"))?;
-    writer
-        .flush()
-        .map_err(|error| format!("No se pudo flush LSP: {error}"))?;
-    Ok(())
-}
-
-fn severity_from_lsp(severity: Option<u64>) -> String {
-    match severity {
-        Some(1) => "error".to_string(),
-        Some(2) => "warning".to_string(),
-        Some(3) => "info".to_string(),
-        Some(4) => "info".to_string(),
-        _ => "error".to_string(),
-    }
-}
-
-fn basename_from_uri(uri: &str) -> Option<String> {
-    let without_scheme = uri.strip_prefix("file://").unwrap_or(uri);
-    let normalized = without_scheme.replace('\\', "/");
-    normalized
-        .split('/')
-        .next_back()
-        .map(|value| value.replace("%20", " "))
-}
-
-fn diagnostics_from_lsp_notification(message: &Value) -> Vec<TerraformValidateDiagnostic> {
-    let method = message.get("method").and_then(Value::as_str);
-    if method != Some("textDocument/publishDiagnostics") {
-        return vec![];
-    }
-
-    let params = match message.get("params") {
-        Some(value) => value,
-        None => return vec![],
-    };
-
-    let file_name = params
-        .get("uri")
-        .and_then(Value::as_str)
-        .and_then(basename_from_uri);
-
-    let diagnostics = params
-        .get("diagnostics")
-        .and_then(Value::as_array)
-        .cloned()
-        .unwrap_or_default();
-
-    diagnostics
-        .into_iter()
-        .map(|diagnostic| {
-            let message_text = diagnostic
-                .get("message")
-                .and_then(Value::as_str)
-                .unwrap_or("Diagnóstico terraform-ls")
-                .to_string();
-
-            let summary = message_text
-                .lines()
-                .next()
-                .unwrap_or("Diagnóstico terraform-ls")
-                .to_string();
-
-            let start_line = diagnostic
-                .get("range")
-                .and_then(|range| range.get("start"))
-                .and_then(|start| start.get("line"))
-                .and_then(Value::as_u64)
-                .map(|line| line as usize + 1);
-
-            let start_column = diagnostic
-                .get("range")
-                .and_then(|range| range.get("start"))
-                .and_then(|start| start.get("character"))
-                .and_then(Value::as_u64)
-                .map(|column| column as usize + 1);
-
-            let end_line = diagnostic
-                .get("range")
-                .and_then(|range| range.get("end"))
-                .and_then(|end| end.get("line"))
-                .and_then(Value::as_u64)
-                .map(|line| line as usize + 1);
-
-            let end_column = diagnostic
-                .get("range")
-                .and_then(|range| range.get("end"))
-                .and_then(|end| end.get("character"))
-                .and_then(Value::as_u64)
-                .map(|column| column as usize + 1);
-
-            TerraformValidateDiagnostic {
-                severity: severity_from_lsp(diagnostic.get("severity").and_then(Value::as_u64)),
-                summary,
-                detail: message_text,
-                filename: file_name.clone(),
-                start_line,
-                start_column,
-                end_line,
-                end_column,
-            }
-        })
-        .collect()
-}
-
-fn terraform_lsp_diagnostics_sync(
-    project_dir: String,
-    files: Vec<TerraformSourceFile>,
-) -> Result<TerraformLspDiagnosticsResult, String> {
-    if project_dir.trim().is_empty() {
-        return Err("No se recibió directorio de proyecto para terraform-ls.".to_string());
-    }
-
-    let project_dir_path = PathBuf::from(project_dir.trim());
-    if !project_dir_path.exists() {
-        return Err("El directorio del proyecto no existe para terraform-ls.".to_string());
-    }
-
-    let normalized_files = sync_project_tf_files(&project_dir_path, &files)?;
-
-    let mut child = match Command::new("terraform-ls")
-        .arg("serve")
-        .current_dir(&project_dir_path)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-    {
-        Ok(child) => child,
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-            return Err(
-                "terraform-ls no está instalado o no está en PATH. Instálalo (HashiCorp Terraform Language Server) y reinicia la app."
-                    .to_string(),
-            )
-        }
-        Err(error) => return Err(format!("No se pudo iniciar terraform-ls: {error}")),
-    };
-
-    let mut stdin = child
-        .stdin
-        .take()
-        .ok_or_else(|| "terraform-ls no expuso stdin".to_string())?;
-    let stdout = child
-        .stdout
-        .take()
-        .ok_or_else(|| "terraform-ls no expuso stdout".to_string())?;
-
-    let (tx, rx) = mpsc::channel::<Value>();
-    std::thread::spawn(move || {
-        let mut reader = BufReader::new(stdout);
-        loop {
-            let mut content_length: usize = 0;
-            loop {
-                let mut line = String::new();
-                match reader.read_line(&mut line) {
-                    Ok(0) => return,
-                    Ok(_) => {
-                        let trimmed = line.trim_end_matches(['\r', '\n']);
-                        if trimmed.is_empty() {
-                            break;
-                        }
-                        let lower = trimmed.to_ascii_lowercase();
-                        if let Some(value) = lower.strip_prefix("content-length:") {
-                            content_length = value.trim().parse::<usize>().unwrap_or(0);
-                        }
-                    }
-                    Err(_) => return,
-                }
-            }
-
-            if content_length == 0 {
-                continue;
-            }
-
-            let mut body = vec![0u8; content_length];
-            if reader.read_exact(&mut body).is_err() {
-                return;
-            }
-
-            if let Ok(text) = String::from_utf8(body) {
-                if let Ok(json_value) = serde_json::from_str::<Value>(&text) {
-                    let _ = tx.send(json_value);
-                }
-            }
-        }
-    });
-
-    let root_uri = to_file_uri(&project_dir_path);
-
-    send_lsp_message(
-        &mut stdin,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "processId": std::process::id(),
-                "clientInfo": { "name": "lurastack", "version": "0.1.0" },
-                "rootUri": root_uri,
-                "workspaceFolders": [
-                    { "uri": to_file_uri(&project_dir_path), "name": "lurastack" }
-                ],
-                "capabilities": {}
-            }
-        }),
-    )?;
-
-    let wait_init_until = Instant::now() + Duration::from_millis(1200);
-    while Instant::now() < wait_init_until {
-        match rx.recv_timeout(Duration::from_millis(150)) {
-            Ok(msg) => {
-                if msg.get("id").and_then(Value::as_u64) == Some(1) {
-                    break;
-                }
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => continue,
-            Err(_) => break,
-        }
-    }
-
-    send_lsp_message(
-        &mut stdin,
-        &json!({
-            "jsonrpc": "2.0",
-            "method": "initialized",
-            "params": {}
-        }),
-    )?;
-
-    for file in &normalized_files {
-        let file_uri = to_file_uri(&project_dir_path.join(&file.name));
-        send_lsp_message(
-            &mut stdin,
-            &json!({
-                "jsonrpc": "2.0",
-                "method": "textDocument/didOpen",
-                "params": {
-                    "textDocument": {
-                        "uri": file_uri,
-                        "languageId": "terraform",
-                        "version": 1,
-                        "text": file.content,
-                    }
-                }
-            }),
-        )?;
-    }
-
-    let mut diagnostics = Vec::<TerraformValidateDiagnostic>::new();
-    let collect_until = Instant::now() + Duration::from_millis(1500);
-    while Instant::now() < collect_until {
-        match rx.recv_timeout(Duration::from_millis(180)) {
-            Ok(msg) => {
-                diagnostics.extend(diagnostics_from_lsp_notification(&msg));
-            }
-            Err(mpsc::RecvTimeoutError::Timeout) => continue,
-            Err(_) => break,
-        }
-    }
-
-    let _ = send_lsp_message(
-        &mut stdin,
-        &json!({
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "shutdown",
-            "params": Value::Null
-        }),
-    );
-    let _ = send_lsp_message(
-        &mut stdin,
-        &json!({
-            "jsonrpc": "2.0",
-            "method": "exit",
-            "params": Value::Null
-        }),
-    );
-    let _ = child.kill();
-    let _ = child.wait();
-
-    Ok(TerraformLspDiagnosticsResult { diagnostics })
-}
-
-#[tauri::command]
-pub async fn terraform_lsp_diagnostics(
-    project_dir: String,
-    files: Vec<TerraformSourceFile>,
-) -> Result<TerraformLspDiagnosticsResult, String> {
-    tauri::async_runtime::spawn_blocking(move || terraform_lsp_diagnostics_sync(project_dir, files))
-        .await
-        .map_err(|error| format!("Error interno ejecutando terraform-ls: {error}"))?
 }
 
 #[tauri::command]
@@ -1514,46 +1208,6 @@ mod tests {
     }
 
     #[test]
-    fn severity_from_lsp_maps_known_codes() {
-        assert_eq!(severity_from_lsp(Some(1)), "error");
-        assert_eq!(severity_from_lsp(Some(2)), "warning");
-        assert_eq!(severity_from_lsp(Some(3)), "info");
-        assert_eq!(severity_from_lsp(Some(4)), "info");
-    }
-
-    #[test]
-    fn severity_from_lsp_defaults_to_error() {
-        assert_eq!(severity_from_lsp(None), "error");
-        assert_eq!(severity_from_lsp(Some(99)), "error");
-    }
-
-    #[test]
-    fn basename_from_uri_extracts_filename() {
-        assert_eq!(
-            basename_from_uri("file:///home/user/project/main.tf").as_deref(),
-            Some("main.tf"),
-        );
-    }
-
-    #[test]
-    fn basename_from_uri_decodes_spaces() {
-        assert_eq!(
-            basename_from_uri("file:///home/user/my%20project/main.tf").as_deref(),
-            Some("main.tf"),
-        );
-        assert_eq!(
-            basename_from_uri("file:///path/with%20space.tf").as_deref(),
-            Some("with space.tf"),
-        );
-    }
-
-    #[test]
-    fn to_file_uri_encodes_spaces() {
-        let uri = to_file_uri(Path::new("/home/user/my project/main.tf"));
-        assert_eq!(uri, "file:///home/user/my%20project/main.tf");
-    }
-
-    #[test]
     fn collect_state_resources_extracts_top_level_resources() {
         let module = json!({
             "resources": [
@@ -1636,59 +1290,6 @@ mod tests {
     fn resolve_manual_rejects_empty_region() {
         assert!(manual_creds("AKIA", "secret", "").resolve().is_err());
         assert!(manual_creds("AKIA", "secret", "  ").resolve().is_err());
-    }
-
-    // ── diagnostics_from_lsp_notification ──────────────────────────────────
-
-    #[test]
-    fn lsp_diagnostics_ignores_non_publish_notifications() {
-        let msg = json!({ "method": "window/logMessage", "params": {} });
-        assert!(diagnostics_from_lsp_notification(&msg).is_empty());
-    }
-
-    #[test]
-    fn lsp_diagnostics_handles_missing_params() {
-        let msg = json!({ "method": "textDocument/publishDiagnostics" });
-        assert!(diagnostics_from_lsp_notification(&msg).is_empty());
-    }
-
-    #[test]
-    fn lsp_diagnostics_converts_zero_index_to_one_index() {
-        let msg = json!({
-            "method": "textDocument/publishDiagnostics",
-            "params": {
-                "uri": "file:///project/main.tf",
-                "diagnostics": [{
-                    "message": "first line\nmore detail",
-                    "severity": 1,
-                    "range": {
-                        "start": { "line": 0, "character": 4 },
-                        "end": { "line": 0, "character": 10 }
-                    }
-                }]
-            }
-        });
-        let diags = diagnostics_from_lsp_notification(&msg);
-        assert_eq!(diags.len(), 1);
-        let d = &diags[0];
-        // LSP is 0-indexed; output is 1-indexed.
-        assert_eq!(d.start_line, Some(1));
-        assert_eq!(d.start_column, Some(5));
-        assert_eq!(d.end_column, Some(11));
-        assert_eq!(d.severity, "error");
-        assert_eq!(d.summary, "first line");
-        assert_eq!(d.filename.as_deref(), Some("main.tf"));
-    }
-
-    #[test]
-    fn lsp_diagnostics_tolerates_a_missing_range() {
-        let msg = json!({
-            "method": "textDocument/publishDiagnostics",
-            "params": { "diagnostics": [{ "message": "no range" }] }
-        });
-        let diags = diagnostics_from_lsp_notification(&msg);
-        assert_eq!(diags.len(), 1);
-        assert_eq!(diags[0].start_line, None);
     }
 
     // ── read_state_signature ───────────────────────────────────────────────

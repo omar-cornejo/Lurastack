@@ -18,7 +18,6 @@ fn main() {
             terminal_commands::close_terminal_session,
             terminal_commands::open_detached_terminal_window,
             terminal_commands::close_detached_terminal_window,
-            terraform_actions::terraform_lsp_diagnostics,
             terraform_actions::terraform_validate,
             terraform_actions::terraform_plan,
             terraform_actions::terraform_plan_destroy,
