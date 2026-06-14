@@ -45,12 +45,26 @@ All icons shipped with LuraStack come from open-licensed sets and are freely
 redistributable:
 
   - Material Design Icons (Apache-2.0) — https://pictogrammers.com/library/mdi/
-    Generic category and service glyphs (open/category-*.svg, open/service-*.svg).
+    Generic category and service glyphs (open/category-*.svg, open/service-*.svg),
+    and inline UI glyphs bundled offline in src/lib/mdiSubset.json.
   - Logos icon set (MIT) — https://github.com/gilbarbara/logos
     Cloud provider brand logos (open/brand-aws.svg, open/brand-gcp.svg,
     open/brand-azure.svg), used only to identify each platform in the UI.
+  - WeUI (Apache-2.0) — https://github.com/Tencent/weui
+    Inline UI glyph bundled offline in src/lib/weuiSubset.json (arrow-filled).
+  - Lucide (ISC) — https://github.com/lucide-icons/lucide
+    Inline UI glyph bundled offline in src/lib/lucideSubset.json (refresh-cw).
 
 Provider brand logos do not imply affiliation with or endorsement by Amazon Web
 Services, Google LLC, or Microsoft Corporation.
 
 See public/icons/ATTRIBUTIONS.md for details about specific icons.
+
+==============================================================================
+Fonts
+==============================================================================
+
+  - Inter (SIL Open Font License 1.1) — https://github.com/rsms/inter
+    Self-hosted under public/fonts/ (inter-latin.woff2, inter-latin-ext.woff2)
+    so the packaged desktop app renders correctly offline. The variable font
+    files were copied from fonts.gstatic.com.
