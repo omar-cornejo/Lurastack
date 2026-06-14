@@ -1,0 +1,20 @@
+{
+  "version": "1",
+  "meta": {
+    "name": "Azure Empty",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "settings": { "autosave": false },
+  "activeViewId": "view-azure-empty-1",
+  "views": [
+    {
+      "id": "view-azure-empty-1",
+      "name": "View 1",
+      "resources": [],
+      "nodes": [],
+      "edges": [],
+      "codeFiles": []
+    }
+  ]
+}

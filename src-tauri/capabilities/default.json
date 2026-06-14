@@ -1,0 +1,39 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main", "terminal-detached-*"],
+  "permissions": [
+    "core:default",
+    "core:webview:allow-create-webview-window",
+    "opener:default",
+    "fs:allow-write-text-file",
+    "fs:allow-read-text-file",
+    "fs:allow-appdata-write",
+    "fs:allow-appdata-write-recursive",
+    "fs:allow-appdata-read",
+    "fs:allow-appdata-read-recursive",
+    "fs:allow-mkdir",
+    "fs:allow-exists",
+    "fs:allow-read-dir",
+    "fs:allow-rename",
+    "fs:allow-remove",
+    "dialog:default",
+    "dialog:allow-open",
+    "dialog:allow-save",
+    {
+      "identifier": "fs:scope",
+      "comment": "Project folders are NOT listed here. Access to a project folder is granted dynamically at runtime (see project_access.rs) only when the user opens or creates it via the native dialog, and re-granted on launch. This deny list still wins over those dynamic grants, so sensitive paths stay blocked even if a parent folder is granted.",
+      "allow": [{ "path": "$APPDATA/**" }],
+      "deny": [
+        { "path": "$HOME/.ssh/**" },
+        { "path": "$HOME/.aws/credentials" },
+        { "path": "$HOME/.aws/config" },
+        { "path": "$HOME/.gnupg/**" },
+        { "path": "$HOME/.kube/**" },
+        { "path": "$HOME/.docker/**" },
+        { "path": "$HOME/.config/**" }
+      ]
+    }
+  ]
+}

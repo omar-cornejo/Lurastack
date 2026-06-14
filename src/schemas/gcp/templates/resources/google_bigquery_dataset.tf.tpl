@@ -1,0 +1,83 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_bigquery_dataset                             │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_bigquery_dataset" "this" {
+
+  dataset_id                      = ""     # string | required | A unique ID for this dataset, without the project name. The …
+  default_collation               = ""     # string | optional+computed | Defines the default collation specification of future tables…
+  default_partition_expiration_ms = 0      # number | optional | The default partition expiration for all partitioned tables …
+  default_table_expiration_ms     = 0      # number | optional | The default lifetime of all tables in the dataset, in millis…
+  delete_contents_on_destroy      = false  # bool | optional | If set to 'true', delete all the tables in the dataset when …
+  description                     = ""     # string | optional | A user-friendly description of the dataset
+  friendly_name                   = ""     # string | optional | A descriptive name for the dataset
+  id                              = ""     # string | optional+computed
+  is_case_insensitive             = false  # bool | optional+computed | TRUE if the dataset and its table names are case-insensitive…
+  labels                          = {}     # map(string) | optional | The labels associated with this dataset. You can use these t…
+  location                        = ""     # string | optional | The geographic location where the dataset should reside. See…
+  max_time_travel_hours           = ""     # string | optional+computed | Defines the time travel window in hours. The value can be fr…
+  project                         = ""     # string | optional+computed
+  resource_tags                   = {}     # map(string) | optional | The tags attached to this table. Tag keys are globally uniqu…
+  storage_billing_model           = ""     # string | optional+computed | Specifies the storage billing model for the dataset. Set thi…
+
+  # creation_time                   = 0      # number | computed | The time when this dataset was created, in milliseconds sinc…
+  # effective_labels                = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…
+  # etag                            = ""     # string | computed | A hash of the resource.
+  # last_modified_time              = 0      # number | computed | The date when this dataset or any of its tables was last mod…
+  # self_link                       = ""     # string | computed
+  # terraform_labels                = {}     # map(string) | computed | The combination of labels configured directly on the resourc…
+
+  access { # set
+    domain         = ""     # string | optional | A domain to grant access to. Any users signed in with the do…
+    group_by_email = ""     # string | optional | An email address of a Google Group to grant access to.
+    iam_member     = ""     # string | optional | Some other type of member that appears in the IAM Policy but…
+    role           = ""     # string | optional | Describes the rights granted to the user specified by the ot…
+    special_group  = ""     # string | optional | A special group to grant access to. Possible values include:…
+    user_by_email  = ""     # string | optional | An email address of a user to grant access to. For example: …
+
+    dataset { # list [0..1]
+      target_types = []     # list(string) | required | Which resources in the dataset this entry applies to. Curren…
+
+      dataset { # list [1..1]
+        dataset_id = ""     # string | required | The ID of the dataset containing this table.
+        project_id = ""     # string | required | The ID of the project containing this table.
+
+      }
+
+    }
+
+    routine { # list [0..1]
+      dataset_id = ""     # string | required | The ID of the dataset containing this table.
+      project_id = ""     # string | required | The ID of the project containing this table.
+      routine_id = ""     # string | required | The ID of the routine. The ID must contain only letters (a-z…
+
+    }
+
+    view { # list [0..1]
+      dataset_id = ""     # string | required | The ID of the dataset containing this table.
+      project_id = ""     # string | required | The ID of the project containing this table.
+      table_id   = ""     # string | required | The ID of the table. The ID must contain only letters (a-z, …
+
+    }
+
+  }
+
+  default_encryption_configuration { # list [0..1]
+    kms_key_name = ""     # string | required | Describes the Cloud KMS encryption key that will be used to …
+
+  }
+
+  external_dataset_reference { # list [0..1]
+    connection      = ""     # string | required | The connection id that is used to access the externalSource.…
+    external_source = ""     # string | required | External source that backs this dataset.
+
+  }
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

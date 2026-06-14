@@ -1,0 +1,81 @@
+{
+  "name": "lurastack",
+  "private": true,
+  "version": "0.1.0",
+  "description": "LuraStack — a visual platform for designing, generating, and deploying infrastructure stacks through Infrastructure as Code (IaC).",
+  "author": "Omar Antonio Cornejo Vargas <omarcornejovargas@gmail.com>",
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/omar-cornejo/Lurastack#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/omar-cornejo/Lurastack"
+  },
+  "bugs": {
+    "url": "https://github.com/omar-cornejo/Lurastack/issues"
+  },
+  "type": "module",
+  "scripts": {
+    "templates:index": "node scripts/build-templates-index.js",
+    "predev": "npm run templates:index",
+    "prebuild": "npm run templates:index",
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "tauri": "tauri",
+    "import-icons": "node scripts/import-icons.js",
+    "audit": "npm audit --audit-level=high --omit=dev",
+    "audit:all": "npm audit --audit-level=moderate",
+    "audit:rust": "cd src-tauri && cargo audit"
+  },
+  "dependencies": {
+    "@coreui/coreui": "5.7.0",
+    "@coreui/react": "5.10.0",
+    "@iconify/react": "6.0.2",
+    "@tauri-apps/api": "2.11.0",
+    "@tauri-apps/plugin-dialog": "2.7.1",
+    "@tauri-apps/plugin-fs": "2.5.1",
+    "@tauri-apps/plugin-opener": "2.5.4",
+    "@xterm/xterm": "6.0.0",
+    "i18next": "26.3.0",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-i18next": "17.0.8",
+    "reactflow": "11.11.4",
+    "sileo": "0.1.5",
+    "xterm": "5.3.0",
+    "xterm-addon-fit": "0.8.0"
+  },
+  "devDependencies": {
+    "@iconify-json/mdi": "1.2.3",
+    "@iconify/tailwind": "1.2.0",
+    "@playwright/test": "1.60.0",
+    "@tauri-apps/cli": "2.11.2",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "@types/node": "22.12.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@types/xterm": "2.0.3",
+    "@vitejs/plugin-react": "4.7.0",
+    "@vitest/coverage-v8": "4.1.8",
+    "autoprefixer": "10.5.0",
+    "jsdom": "26.1.0",
+    "postcss": "8.5.14",
+    "tailwindcss": "3.4.19",
+    "tailwindcss-iconify": "0.0.3",
+    "typescript": "5.8.3",
+    "vite": "7.3.3",
+    "vitest": "4.1.8"
+  },
+  "engines": {
+    "node": ">=20.19.0",
+    "npm": ">=10.0.0"
+  }
+}

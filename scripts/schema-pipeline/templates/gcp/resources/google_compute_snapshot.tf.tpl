@@ -1,0 +1,49 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_compute_snapshot                             │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_compute_snapshot" "this" {
+
+  name               = ""     # string | required | Name of the resource; provided by the client when the resour…
+  source_disk        = ""     # string | required | A reference to the disk used to create this snapshot.
+  chain_name         = ""     # string | optional | Creates the new snapshot in the snapshot chain labeled with …
+  description        = ""     # string | optional | An optional description of this resource.
+  id                 = ""     # string | optional+computed
+  labels             = {}     # map(string) | optional | Labels to apply to this Snapshot.  **Note**: This field is n…
+  project            = ""     # string | optional+computed
+  storage_locations  = []     # list(string) | optional+computed | Cloud Storage bucket storage location of the snapshot (regio…
+  zone               = ""     # string | optional+computed | A reference to the zone where the disk is hosted.
+
+  # creation_timestamp = ""     # string | computed | Creation timestamp in RFC3339 text format.
+  # disk_size_gb       = 0      # number | computed | Size of the snapshot, specified in GB.
+  # effective_labels   = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…
+  # label_fingerprint  = ""     # string | computed | The fingerprint used for optimistic locking of this resource…
+  # licenses           = []     # list(string) | computed | A list of public visible licenses that apply to this snapsho…
+  # self_link          = ""     # string | computed
+  # snapshot_id        = 0      # number | computed | The unique identifier for the resource.
+  # storage_bytes      = 0      # number | computed | A size of the storage used by the snapshot. As snapshots sha…
+  # terraform_labels   = {}     # map(string) | computed | The combination of labels configured directly on the resourc…
+
+  snapshot_encryption_key { # list [0..1]
+    kms_key_self_link       = ""     # string | optional | The name of the encryption key that is stored in Google Clou…
+    kms_key_service_account = ""     # string | optional | The service account used for the encryption request for the …
+    raw_key                 = ""     # string | optional+sensitive | Specifies a 256-bit customer-supplied encryption key, encode…
+
+    # sha256                  = ""     # string | computed | The RFC 4648 base64 encoded SHA-256 hash of the customer-sup…
+
+  }
+
+  source_disk_encryption_key { # list [0..1]
+    kms_key_service_account = ""     # string | optional | The service account used for the encryption request for the …
+    raw_key                 = ""     # string | optional+sensitive | Specifies a 256-bit customer-supplied encryption key, encode…
+
+  }
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

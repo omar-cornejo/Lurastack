@@ -1,0 +1,30 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_logging_billing_account_sink                 │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_logging_billing_account_sink" "this" {
+
+  billing_account = ""     # string | required | The billing account exported to the sink.
+  destination     = ""     # string | required | The destination of the sink (or, in other words, where logs …
+  name            = ""     # string | required | The name of the logging sink.
+  description     = ""     # string | optional | A description of this sink. The maximum length of the descri…
+  disabled        = false  # bool | optional | If set to True, then this sink is disabled and it does not e…
+  filter          = ""     # string | optional | The filter to apply when exporting logs. Only log entries th…
+  id              = ""     # string | optional+computed
+
+  # writer_identity = ""     # string | computed | The identity associated with this sink. This identity must b…
+
+  bigquery_options { # list [0..1]
+    use_partitioned_tables = false  # bool | required | Whether to use BigQuery's partition tables. By default, Logg…
+
+  }
+
+  exclusions { # list
+    filter      = ""     # string | required | An advanced logs filter that matches the log entries to be e…
+    name        = ""     # string | required | A client-assigned identifier, such as "load-balancer-exclusi…
+    description = ""     # string | optional | A description of this exclusion.
+    disabled    = false  # bool | optional | If set to True, then this exclusion is disabled and it does …
+
+  }
+
+}
+

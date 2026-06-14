@@ -1,0 +1,29 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_compute_http_health_check                    │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_compute_http_health_check" "this" {
+
+  name                = ""     # string | required | Name of the resource. Provided by the client when the resour…
+  check_interval_sec  = 0      # number | optional | How often (in seconds) to send a health check. The default v…
+  description         = ""     # string | optional | An optional description of this resource. Provide this prope…
+  healthy_threshold   = 0      # number | optional | A so-far unhealthy instance will be marked healthy after thi…
+  host                = ""     # string | optional | The value of the host header in the HTTP health check reques…
+  id                  = ""     # string | optional+computed
+  port                = 0      # number | optional | The TCP port number for the HTTP health check request. The d…
+  project             = ""     # string | optional+computed
+  request_path        = ""     # string | optional | The request path of the HTTP health check request. The defau…
+  timeout_sec         = 0      # number | optional | How long (in seconds) to wait before claiming failure. The d…
+  unhealthy_threshold = 0      # number | optional | A so-far healthy instance will be marked unhealthy after thi…
+
+  # creation_timestamp  = ""     # string | computed | Creation timestamp in RFC3339 text format.
+  # self_link           = ""     # string | computed
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

@@ -1,0 +1,65 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+dist-ssr/
+build/
+.out/
+.next/
+.svelte-kit/
+coverage/
+
+# Playwright E2E artifacts
+playwright-report/
+test-results/
+/blob-report/
+.playwright/
+
+# Rust / Tauri build artifacts
+src-tauri/target/
+src-tauri/**/*.rs.bk
+
+# Logs
+logs/
+*.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Editor / IDE
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Misc
+*.local
+*.tmp
+*.bak
+
+# Non-app material (academic deliverable docs, separate build tree)
+ddf/
+
+# Release binaries are distributed as GitHub Release assets, not committed
+# (they bloat the repo and exceed GitHub's recommended file-size limit). The
+# notes/checksums under releases/ are kept; only the built artifacts are ignored.
+releases/**/*.AppImage
+releases/**/*.deb
+releases/**/*.rpm
+releases/**/*.dmg
+releases/**/*.msi
+releases/**/*.exe
+releases/**/*.app.tar.gz

@@ -1,0 +1,46 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_network_services_lb_route_extension          │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_network_services_lb_route_extension" "this" {
+
+  forwarding_rules      = []     # list(string) | required | A list of references to the forwarding rules to which this s…
+  load_balancing_scheme = ""     # string | required | All backend services and forwarding rules referenced by this…
+  location              = ""     # string | required | The location of the route extension
+  name                  = ""     # string | required | Name of the LbRouteExtension resource in the following forma…
+  description           = ""     # string | optional | A human-readable description of the resource.
+  id                    = ""     # string | optional+computed
+  labels                = {}     # map(string) | optional | Set of labels associated with the LbRouteExtension resource.…
+  project               = ""     # string | optional+computed
+
+  # effective_labels      = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…
+  # terraform_labels      = {}     # map(string) | computed | The combination of labels configured directly on the resourc…
+
+  extension_chains { # list [1..*]
+    name = ""     # string | required | The name for this extension chain. The name is logged as par…
+
+    extensions { # list [1..*]
+      name            = ""     # string | required | The name for this extension. The name is logged as part of t…
+      service         = ""     # string | required | The reference to the service that runs the extension. Must b…
+      authority       = ""     # string | optional | The :authority header in the gRPC request sent from Envoy to…
+      fail_open       = false  # bool | optional | Determines how the proxy behaves if the call to the extensio…
+      forward_headers = []     # list(string) | optional | List of the HTTP headers to forward to the extension (from t…
+      timeout         = ""     # string | optional | Specifies the timeout for each individual message on the str…
+
+    }
+
+    match_condition { # list [1..1]
+      cel_expression = ""     # string | required | A Common Expression Language (CEL) expression that is used t…
+
+    }
+
+  }
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

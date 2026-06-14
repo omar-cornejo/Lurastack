@@ -1,0 +1,13 @@
+{
+  "id": "aws/serverless-cat-gallery",
+  "name": "AWS — Cat gallery (S3 + Lambda)",
+  "description": "Galería de fotos de gatitos: web estática en S3 que lista las fotos y un botón para subir más vía Lambda (Function URL). Incluye 3 gatitos de inicio.",
+  "provider": "aws",
+  "resourceCount": 18,
+  "tags": [
+    "serverless",
+    "s3",
+    "lambda"
+  ],
+  "icon": "mdi:aws"
+}

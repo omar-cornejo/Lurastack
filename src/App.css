@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Inter, self-hosted so the packaged desktop app renders correctly offline.
+ * Previously loaded from the Google Fonts CDN, which is blocked in the release
+ * (no network / strict CSP); without the real font the WebView synthesised the
+ * 500/600/700 weights, producing the faux-bold "double-printed" text. These two
+ * variable woff2 subsets (latin + latin-ext) cover es/en/ca. Files live in
+ * public/fonts/ and were copied from fonts.gstatic.com (Inter, SIL OFL 1.1).
+ */
+@font-face {
+	font-family: "Inter";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 300 800;
+	src: url("/fonts/inter-latin.woff2") format("woff2");
+	unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: "Inter";
+	font-style: normal;
+	font-display: swap;
+	font-weight: 300 800;
+	src: url("/fonts/inter-latin-ext.woff2") format("woff2");
+	unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/*
+ * Resolution-aware root font-size. The whole UI is laid out in rem, so this is
+ * the master scale knob (see src/utils/uiScale.ts). useRootFontScale() sets an
+ * inline font-size on <html> at runtime; this CSS clamp is the pre-JS fallback
+ * so there is no flash of mis-sized UI, and it approximates the JS curve: 16px
+ * at a 1080p (1920px) viewport, shrinking toward ~13.6px (0.85×) on narrow
+ * laptops and growing toward ~25.6px (1.6×) on 4K. 100vw is the viewport width
+ * in CSS px, so high-DPI displays at 100% OS scaling scale up while the same
+ * display at 200% OS scaling (already enlarged) stays near 16px. The exact
+ * two-slope curve is applied by JS as soon as it mounts.
+ */
+html {
+	font-size: clamp(13.6px, calc(100vw / 120), 25.6px);
+}
+
+/* Disable text selection visually across the app to avoid highlights when dragging. */
+:root, body, #root, .app-root, .h-screen {
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+}
+
+/* Allow selection inside interactive text controls and the terminal */
+input, textarea, select, option, button, a, label, .allow-select,
+.xterm, .xterm * {
+	-webkit-user-select: text !important;
+	-moz-user-select: text !important;
+	-ms-user-select: text !important;
+	user-select: text !important;
+}
+
+/* If you need to enable selection for a specific area, add the `allow-select` class. */
+
+.react-flow__edge-label-renderer,
+.react-flow__edgelabel-renderer {
+	z-index: 12000 !important;
+	pointer-events: none;
+}
+
+.react-flow__edge-label-renderer .connection-overlay,
+.react-flow__edgelabel-renderer .connection-overlay {
+	pointer-events: auto;
+}

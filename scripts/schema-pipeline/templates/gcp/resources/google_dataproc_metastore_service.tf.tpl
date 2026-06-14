@@ -1,0 +1,109 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_dataproc_metastore_service                   │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_dataproc_metastore_service" "this" {
+
+  service_id       = ""     # string | required | The ID of the metastore service. The id must contain only le…
+  database_type    = ""     # string | optional | The database type that the Metastore service stores its data…
+  id               = ""     # string | optional+computed
+  labels           = {}     # map(string) | optional | User-defined labels for the metastore service.  **Note**: Th…
+  location         = ""     # string | optional | The location where the metastore service should reside. The …
+  network          = ""     # string | optional+computed | The relative resource name of the VPC network on which the i…
+  port             = 0      # number | optional+computed | The TCP port at which the metastore service is reached. Defa…
+  project          = ""     # string | optional+computed
+  release_channel  = ""     # string | optional | The release channel of the service. If unspecified, defaults…
+  tier             = ""     # string | optional+computed | The tier of the service. Possible values: ["DEVELOPER", "ENT…
+
+  # artifact_gcs_uri = ""     # string | computed | A Cloud Storage URI (starting with gs://) that specifies whe…
+  # effective_labels = {}     # map(string) | computed | All of labels (key/value pairs) present on the resource in G…
+  # endpoint_uri     = ""     # string | computed | The URI of the endpoint used to access the metastore service…
+  # name             = ""     # string | computed | The relative resource name of the metastore service.
+  # state            = ""     # string | computed | The current state of the metastore service.
+  # state_message    = ""     # string | computed | Additional information about the current state of the metast…
+  # terraform_labels = {}     # map(string) | computed | The combination of labels configured directly on the resourc…
+  # uid              = ""     # string | computed | The globally unique resource identifier of the metastore ser…
+
+  encryption_config { # list [0..1]
+    kms_key = ""     # string | required | The fully qualified customer provided Cloud KMS key name to …
+
+  }
+
+  hive_metastore_config { # list [0..1]
+    version           = ""     # string | required | The Hive metastore schema version.
+    config_overrides  = {}     # map(string) | optional+computed | A mapping of Hive metastore configuration key-value pairs to…
+    endpoint_protocol = ""     # string | optional | The protocol to use for the metastore service endpoint. If u…
+
+    auxiliary_versions { # set
+      key              = ""     # string | required
+      version          = ""     # string | required | The Hive metastore version of the auxiliary service. It must…
+      config_overrides = {}     # map(string) | optional | A mapping of Hive metastore configuration key-value pairs to…
+
+    }
+
+    kerberos_config { # list [0..1]
+      krb5_config_gcs_uri = ""     # string | required | A Cloud Storage URI that specifies the path to a krb5.conf f…
+      principal           = ""     # string | required | A Kerberos principal that exists in the both the keytab the …
+
+      keytab { # list [1..1]
+        cloud_secret = ""     # string | required | The relative resource name of a Secret Manager secret versio…
+
+      }
+
+    }
+
+  }
+
+  maintenance_window { # list [0..1]
+    day_of_week = ""     # string | required | The day of week, when the window starts. Possible values: ["…
+    hour_of_day = 0      # number | required | The hour of day (0-23) when the window starts.
+
+  }
+
+  metadata_integration { # list [0..1]
+
+    data_catalog_config { # list [1..1]
+      enabled = false  # bool | required | Defines whether the metastore metadata should be synced to D…
+
+    }
+
+  }
+
+  network_config { # list [0..1]
+
+    consumers { # list [1..*]
+      subnetwork   = ""     # string | required | The subnetwork of the customer project from which an IP addr…
+
+      # endpoint_uri = ""     # string | computed | The URI of the endpoint used to access the metastore service…
+
+    }
+
+  }
+
+  scaling_config { # list [0..1]
+    instance_size  = ""     # string | optional | Metastore instance sizes. Possible values: ["EXTRA_SMALL", "…
+    scaling_factor = 0      # number | optional | Scaling factor, in increments of 0.1 for values less than 1.…
+
+  }
+
+  scheduled_backup { # list [0..1]
+    backup_location = ""     # string | required | A Cloud Storage URI of a folder, in the format gs://<bucket_…
+    cron_schedule   = ""     # string | optional | The scheduled interval in Cron format, see https://en.wikipe…
+    enabled         = false  # bool | optional+computed | Defines whether the scheduled backup is enabled. The default…
+    time_zone       = ""     # string | optional+computed | Specifies the time zone to be used when interpreting cronSch…
+
+  }
+
+  telemetry_config { # list [0..1]
+    log_format = ""     # string | optional | The output format of the Dataproc Metastore service's logs. …
+
+  }
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

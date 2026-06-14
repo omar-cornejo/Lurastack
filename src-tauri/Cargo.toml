@@ -1,0 +1,50 @@
+[package]
+name = "lurastack"
+version = "0.1.0"
+description = "LuraStack — a visual platform for designing, generating, and deploying infrastructure stacks through Infrastructure as Code (IaC)"
+authors = ["Omar Cornejo <omarcornejovargas@gmail.com>"]
+license = "Apache-2.0"
+repository = "https://github.com/omar-cornejo/Lurastack"
+homepage = "https://github.com/omar-cornejo/Lurastack"
+keywords = ["terraform", "iac", "visual-editor", "tauri"]
+categories = ["development-tools"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "lurastack_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.6.2", features = [] }
+
+[dependencies]
+tauri = { version = "=2.11.2", features = [] }
+tauri-plugin-opener = "=2.5.4"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.150"
+tokio = { version = "=1.52.3", features = ["full"] }
+portable-pty = "=0.8.1"
+anyhow = "=1.0.102"
+hcl-rs = "=0.19.7"
+tauri-plugin-fs = "=2.5.1"
+tauri-plugin-dialog = "=2.7.1"
+dirs = "=6.0.0"
+percent-encoding = "=2.3.2"
+keyring-core = "=1.0.0"
+cocoon = "=0.4.3"
+zeroize = { version = "=1.8.2", features = ["zeroize_derive"] }
+tempfile = "=3.27.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+apple-native-keyring-store = { version = "=1.0.0", features = ["keychain"] }
+
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-native-keyring-store = "=1.1.0"
+
+[target.'cfg(any(target_os = "linux", target_os = "freebsd"))'.dependencies]
+dbus-secret-service-keyring-store = { version = "=1.0.0", features = ["crypto-rust", "vendored"] }

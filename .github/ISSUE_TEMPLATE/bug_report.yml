@@ -1,0 +1,85 @@
+name: Bug report
+description: Something isn't working as expected
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill in as much detail as you can.
+        For security vulnerabilities, please follow the [Security Policy](https://github.com/omar-cornejo/Lurastack/blob/main/SECURITY.md) instead.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: "When I drag an EC2 node onto the canvas and connect it to a VPC, the generated HCL is missing the subnet_id attribute."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal steps to reliably reproduce the issue.
+      placeholder: |
+        1. Open the app and create a new project
+        2. Drag an EC2 instance from the sidebar
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: The generated main.tf should include subnet_id = ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      placeholder: The subnet_id attribute is absent.
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: LuraStack version / commit
+      placeholder: "0.1.0 or git SHA"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Linux
+        - macOS
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: node
+    attributes:
+      label: Node.js version
+      placeholder: "20.19.0"
+
+  - type: input
+    id: terraform
+    attributes:
+      label: Terraform version (if relevant)
+      placeholder: "1.8.0"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or screenshots
+      description: Paste output from the embedded terminal or `npm run tauri dev` console, if applicable.
+      render: shell

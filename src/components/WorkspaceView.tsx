@@ -1,0 +1,1710 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Icon } from "@iconify/react";
+import { useUndoRedo } from "../hooks/useUndoRedo";
+import Header from "./Header";
+import { LeftPanel } from "./LeftPanel";
+import CenterPanel from "./CenterPanel";
+import { RightPanel } from "./RightPanel";
+import BottomPanel from "./BottomPanel";
+import CodePanel from "./CodePanel";
+import AwsCredentialsModal from "./AwsCredentialsModal";
+import { TerraformProject, TerraformResource } from "../models/terraform";
+import type { TerraformNodeSchema } from "../models/nodeRegistry";
+import { writeTextFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
+import {
+  addEdge,
+  applyNodeChanges,
+  useEdgesState,
+  useNodesState,
+  type NodeChange,
+  type Node,
+  type NodeDragHandler,
+  type XYPosition,
+  type Connection,
+  type Edge,
+} from "reactflow";
+import type {
+  CanvasEdgeData,
+  CanvasEdgeMapping,
+  CanvasTerraformNodeData,
+  PlanAction,
+  ResourcePlanChange,
+} from "../canvas/types";
+import {
+  applyZoneContainerMemberships,
+  applyManualContainerResizeEffects,
+  placeCanvasNodeFromUserAction,
+  reparentCanvasNodeAfterDrag,
+  expandAncestorContainers,
+} from "../commands/placeCanvasNode";
+import { createTerraformResourceFromSchema } from "../models/terraform/createTerraformResource";
+import { warn } from "../commands/warn";
+import { NODE_SCHEMAS, getSchemasForProvider } from "../models/nodeRegistry";
+import {
+  isSubnetIconPath,
+  resolveTerraformIcon,
+  SUBNET_PRIVATE_ICON_PATH,
+} from "../models/iconRegistry";
+import {
+  CONTAINER_SCHEMA_IDS,
+  DEFAULT_CONTAINER_SIZE,
+  DEFAULT_RESOURCE_NODE_SIZE,
+} from "../commands/createCanvasNode";
+import type { CodeFile, ViewSnapshot } from "../types/project";
+import type { BottomPanelLogEntry } from "../types/logs";
+import { scaledPx } from "../utils/uiScale";
+import { snapshotNodes, snapshotEdges, restoreNodes, restoreEdges } from "../commands/projectManager";
+import { useProviderCredentials, buildEnvForProvider } from "../hooks/useAwsCredentials";
+import {
+  detectProvidersInUse,
+  mergeProviderSettings,
+  type CloudProvider,
+  type ProviderSettings,
+} from "../models/providerConfig";
+import { buildMultiProviderHcl } from "../models/hclEmitter";
+import { sileo } from "sileo";
+import { useTranslation } from "react-i18next";
+import { importHclBlocksToResources } from "../commands/hclImporter";
+import { computeLocalEditDiff } from "../utils/snapshotDiff";
+import { appendHistoryEntry, summarizePlanChanges } from "../commands/historyManager";
+import type { HistoryEntry } from "../types/history";
+
+const BOTTOM_PANEL_CHANNEL = "lurastack-bottompanel-sync";
+const POPOUT_HEARTBEAT_TTL_MS = 900;
+const POPOUT_HEARTBEAT_CHECK_MS = 250;
+
+// E2E (Playwright) runs in a headless browser where xterm can't initialize its
+// renderer; the harness sets this flag so the terminal is suppressed there.
+const IS_E2E =
+  typeof window !== "undefined" &&
+  !!(window as unknown as { __LURASTACK_E2E__?: boolean }).__LURASTACK_E2E__;
+
+type WorkspaceViewProps = {
+  viewId: string;
+  viewName?: string;
+  projectDir?: string;
+  isVisible?: boolean;
+  initialState?: ViewSnapshot;
+  onStateChange?: (viewId: string, snapshot: ViewSnapshot) => void;
+};
+
+type CanvasViewportBounds = {
+  minX: number;
+  maxX: number;
+  minY: number;
+  maxY: number;
+};
+
+export default function WorkspaceView({
+  viewId,
+  viewName = "View",
+  projectDir,
+  isVisible = true,
+  initialState,
+  onStateChange,
+}: WorkspaceViewProps) {
+  const { t } = useTranslation();
+  const [activeSection, setActiveSection] = useState<"canvas" | "code" | "diff" | "cloud">("canvas");
+  const [cloudProvider, setCloudProvider] = useState<CloudProvider>(
+    () => initialState?.activeProvider ?? "aws",
+  );
+  const [providerSettings, _setProviderSettings] = useState<ProviderSettings>(() =>
+    mergeProviderSettings(initialState?.providerSettings),
+  );
+  const [nodeSchemas, setNodeSchemas] = useState<TerraformNodeSchema[]>(
+    () => getSchemasForProvider(initialState?.activeProvider ?? "aws"),
+  );
+
+  useEffect(() => {
+    setNodeSchemas(getSchemasForProvider(cloudProvider));
+  }, [cloudProvider]);
+
+  const providerRegion = providerSettings[cloudProvider].region;
+
+
+  const [nodes, setNodes] = useNodesState<CanvasTerraformNodeData>(
+    initialState ? restoreNodes(initialState.nodes) : [],
+  );
+  const [edges, setEdges, onEdgesChange] = useEdgesState<CanvasEdgeData>(
+    initialState ? restoreEdges(initialState.edges) : [],
+  );
+  const nodesRef = useRef(nodes);
+  const edgesRef = useRef(edges);
+  const projectRef = useRef<TerraformProject>({ provider: "registry.terraform.io/hashicorp/aws", resources: [] });
+  const activeSectionRef = useRef(activeSection);
+  const activeDragNodeIdRef = useRef<string | null>(null);
+  const dragSubtreeSnapshotRef = useRef<
+    Map<string, { parentNode?: string; position: { x: number; y: number } }> | null
+  >(null);
+  const [project, setProject] = useState<TerraformProject>({
+    provider: "registry.terraform.io/hashicorp/aws",
+    resources: initialState?.resources ?? [],
+  });
+  const [codeFiles, setCodeFiles] = useState<CodeFile[]>(initialState?.codeFiles ?? []);
+  const [codePanelMainTfDraft, setCodePanelMainTfDraft] = useState<string | undefined>(undefined);
+  const [codePanelFreeEditMode, setCodePanelFreeEditMode] = useState(false);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
+  const [codeLogs, setCodeLogs] = useState<BottomPanelLogEntry[]>([]);
+  const [bottomOpenSignal, setBottomOpenSignal] = useState(0);
+  const [bottomPreferredTab, setBottomPreferredTab] = useState<"terminal" | "logs">("terminal");
+  const [terminalPoppedOut, setTerminalPoppedOut] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [pendingDeployConfirmation, setPendingDeployConfirmation] = useState<
+    "terraform_apply" | "terraform_destroy" | null
+  >(null);
+  const [historyRefreshSignal, setHistoryRefreshSignal] = useState(0);
+  const planChangesRef = useRef<Map<string, ResourcePlanChange>>(new Map());
+  const [showAwsConfig, setShowAwsConfig] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [rightPanelOverlayOffset, setRightPanelOverlayOffset] = useState(0);
+  const [isRightPanelOverlayResizing, setIsRightPanelOverlayResizing] = useState(false);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(0);
+  const [canvasViewportBounds, setCanvasViewportBounds] = useState<CanvasViewportBounds | null>(null);
+  const hclPersistenceDisabledRef = useRef(false);
+  const bottomPanelChannelRef = useRef<BroadcastChannel | null>(null);
+  const lastPopoutHeartbeatRef = useRef<number>(0);
+  const {
+    stored: providerCredentials,
+    save: saveProviderCredentials,
+    isConfigured: providerConfigured,
+    aws: awsCredentials,
+    gcp: gcpCredentials,
+    azure: azureCredentials,
+    loading: credentialsLoading,
+  } = useProviderCredentials(cloudProvider);
+
+  const providersInUse = useMemo(
+    () => detectProvidersInUse(project.resources, cloudProvider),
+    [project.resources, cloudProvider],
+  );
+
+  const terminalEnvVars = useMemo<Record<string, string>>(() => {
+    const env: Record<string, string> = {};
+    for (const p of providersInUse) {
+      Object.assign(env, buildEnvForProvider(p, { awsCredentials, gcpCredentials, azureCredentials }));
+    }
+    return env;
+  }, [providersInUse, awsCredentials, gcpCredentials, azureCredentials]);
+
+  // Same env vars but excluding AWS_* keys: those go separately via the
+  // awsCredentials param of terraform_* commands. Avoids redundant payload.
+  const extraEnvForTerraform = useMemo<Record<string, string>>(() => {
+    const env: Record<string, string> = {};
+    for (const [k, v] of Object.entries(terminalEnvVars)) {
+      if (!k.startsWith("AWS_")) env[k] = v;
+    }
+    return env;
+  }, [terminalEnvVars]);
+  const [planChanges, setPlanChanges] = useState<Map<string, ResourcePlanChange>>(new Map());
+  const planBufferRef = useRef("");
+  const planCurrentAddressRef = useRef<string | null>(null);
+  const [cloudState, setCloudState] = useState<Map<string, Record<string, unknown>>>(new Map());
+  const [cloudStateAvailable, setCloudStateAvailable] = useState(false);
+  const [cloudStateLoading, setCloudStateLoading] = useState(false);
+  const [cloudStateSignature, setCloudStateSignature] = useState<string | null>(null);
+  const [cloudStateStale, setCloudStateStale] = useState(false);
+  const cloudStaleNoticeShownRef = useRef(false);
+
+  const { pushSnapshot, undo, redo } = useUndoRedo();
+
+  // Keep refs in sync with current state so keyboard handler always reads latest
+  nodesRef.current = nodes;
+  edgesRef.current = edges;
+  projectRef.current = project;
+  activeSectionRef.current = activeSection;
+  planChangesRef.current = planChanges;
+
+  const getCurrentSnapshot = useCallback(
+    () => ({ nodes: nodesRef.current, edges: edgesRef.current, project: projectRef.current }),
+    [],
+  );
+
+  const captureViewSnapshot = useCallback((): import("../types/project").ViewSnapshot => ({
+    id: viewId,
+    name: viewName,
+    resources: projectRef.current.resources,
+    nodes: snapshotNodes(nodesRef.current),
+    edges: snapshotEdges(edgesRef.current),
+    codeFiles,
+    activeProvider: cloudProvider,
+    providerSettings,
+  }), [viewId, viewName, codeFiles, cloudProvider, providerSettings]);
+
+  const restoreSnapshot = useCallback(
+    (snapshot: { nodes: typeof nodes; edges: typeof edges; project: TerraformProject }) => {
+      setNodes(snapshot.nodes);
+      setEdges(snapshot.edges);
+      setProject(snapshot.project);
+      void saveProjectToHCL(snapshot.project);
+    },
+    [setNodes, setEdges],
+  );
+
+  // Keyboard undo/redo — skip when focus is inside a text input to avoid fighting native browser undo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (activeSectionRef.current === "diff") return;
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (!ctrl) return;
+      const target = e.target as HTMLElement;
+      const isEditing =
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable;
+      if (isEditing) return;
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo(getCurrentSnapshot(), restoreSnapshot);
+      } else if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        redo(getCurrentSnapshot(), restoreSnapshot);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [undo, redo, getCurrentSnapshot, restoreSnapshot]);
+
+  const broadcastBottomPanelState = useCallback(() => {
+    if (!bottomPanelChannelRef.current) return;
+    bottomPanelChannelRef.current.postMessage({
+      type: "state-sync",
+      viewId,
+      payload: {
+        nodes,
+        edges,
+        resources: project.resources,
+        logs: codeLogs,
+        projectDir,
+        terminalEnvVars,
+        isTerraformRunning: isDeploying,
+        updatedAt: Date.now(),
+      },
+    });
+  }, [codeLogs, edges, nodes, project.resources, projectDir, viewId, terminalEnvVars, isDeploying]);
+
+  useEffect(() => {
+    broadcastBottomPanelState();
+  }, [broadcastBottomPanelState]);
+
+  // Parse terraform plan output to extract per-resource and per-attribute actions
+  useEffect(() => {
+    const hasTauri = typeof window !== "undefined" &&
+      !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+    if (!hasTauri) return;
+    const headerRe = /^\s{2}#\s+(\S+)\s+(?:will be (created|destroyed|updated in-place)|must be replaced)/;
+    const attrRe   = /^      ([+~-])\s+(\w+)/;
+    const blockEndRe = /^\s{0,4}\}/;
+    const currentWindowLabel = getCurrentWindow().label;
+
+    const unlisten = listen<{ window_label: string; output: string }>(
+      "terraform-output",
+      (event) => {
+        if (event.payload.window_label !== currentWindowLabel) return;
+        planBufferRef.current += event.payload.output;
+        const lines = planBufferRef.current.split("\n");
+        planBufferRef.current = lines.pop() ?? "";
+
+        const resourceUpdates: Array<[string, PlanAction]> = [];
+        const attrUpdates: Array<[string, string, PlanAction]> = [];
+
+        for (const line of lines) {
+          const headerMatch = headerRe.exec(line);
+          if (headerMatch) {
+            planCurrentAddressRef.current = headerMatch[1];
+            const verb = headerMatch[2];
+            const action: PlanAction = verb === "created" ? "create" : verb === "destroyed" ? "destroy" : "change";
+            resourceUpdates.push([headerMatch[1], action]);
+            continue;
+          }
+          if (blockEndRe.test(line)) {
+            planCurrentAddressRef.current = null;
+            continue;
+          }
+          if (planCurrentAddressRef.current) {
+            const attrMatch = attrRe.exec(line);
+            if (attrMatch) {
+              const symbol = attrMatch[1];
+              const attrName = attrMatch[2];
+              const action: PlanAction = symbol === "+" ? "create" : symbol === "-" ? "destroy" : "change";
+              attrUpdates.push([planCurrentAddressRef.current, attrName, action]);
+            }
+          }
+        }
+
+        if (resourceUpdates.length > 0 || attrUpdates.length > 0) {
+          setPlanChanges((prev) => {
+            const next = new Map(prev);
+            for (const [addr, action] of resourceUpdates) {
+              next.set(addr, { action, attrActions: new Map() });
+            }
+            for (const [addr, attrName, action] of attrUpdates) {
+              const existing = next.get(addr);
+              if (existing) {
+                const attrActions = new Map(existing.attrActions ?? []);
+                attrActions.set(attrName, action);
+                next.set(addr, { ...existing, attrActions });
+              }
+            }
+            return next;
+          });
+        }
+      },
+    );
+    return () => { void unlisten.then((fn) => fn()); };
+  }, []);
+
+  // Sync planAction into node data when planChanges or activeSection changes
+  useEffect(() => {
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        const resource = project.resources.find((r) => r.id === node.data.resourceId);
+        const action = resource && activeSection === "diff"
+          ? planChanges.get(`${resource.type}.${resource.name}`)?.action
+          : undefined;
+        if (node.data.planAction === action) return node;
+        return { ...node, data: { ...node.data, planAction: action } };
+      }),
+    );
+  }, [planChanges, activeSection, project.resources, setNodes]);
+
+  // Sync cloudPresence into node data when cloudState or activeSection changes
+  useEffect(() => {
+    setNodes((currentNodes) =>
+      currentNodes.map((node) => {
+        const resource = project.resources.find((r) => r.id === node.data.resourceId);
+        const presence: "present" | "missing" | undefined = (resource && activeSection === "cloud")
+          ? (cloudState.has(`${resource.type}.${resource.name}`) ? "present" : "missing")
+          : undefined;
+        if (node.data.cloudPresence === presence) return node;
+        return { ...node, data: { ...node.data, cloudPresence: presence } };
+      }),
+    );
+  }, [cloudState, activeSection, project.resources, setNodes]);
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return;
+
+    const channel = new BroadcastChannel(BOTTOM_PANEL_CHANNEL);
+    bottomPanelChannelRef.current = channel;
+
+    const evaluatePopoutState = () => {
+      const isHeartbeatFresh =
+        lastPopoutHeartbeatRef.current > 0 &&
+        Date.now() - lastPopoutHeartbeatRef.current <= POPOUT_HEARTBEAT_TTL_MS;
+      setTerminalPoppedOut(isHeartbeatFresh);
+    };
+
+    channel.onmessage = (event: MessageEvent) => {
+      const message = event.data as
+        | {
+            type?: string;
+            viewId?: string;
+            timestamp?: number;
+          }
+        | undefined;
+
+      if (!message || message.viewId !== viewId) return;
+
+      if (message.type === "popout-open" || message.type === "heartbeat") {
+        lastPopoutHeartbeatRef.current = message.timestamp ?? Date.now();
+        evaluatePopoutState();
+        return;
+      }
+
+      if (message.type === "popout-close") {
+        lastPopoutHeartbeatRef.current = 0;
+        setTerminalPoppedOut(false);
+        return;
+      }
+
+      if (message.type === "state-request") {
+        broadcastBottomPanelState();
+      }
+    };
+
+    const interval = window.setInterval(evaluatePopoutState, POPOUT_HEARTBEAT_CHECK_MS);
+
+    broadcastBottomPanelState();
+
+    return () => {
+      window.clearInterval(interval);
+      channel.close();
+      bottomPanelChannelRef.current = null;
+    };
+  }, [broadcastBottomPanelState, viewId]);
+
+  // ── Local-edit history: atomic per-change tracking ───────────────────────────
+  // Tracks the last snapshot committed to history. Any meaningful change
+  // (resource add/remove, attribute change, edge add/remove) produces ONE entry.
+  // Pure node-position drags are ignored to avoid spam during canvas dragging.
+  const lastCommittedSnapshotRef = useRef<import("../types/project").ViewSnapshot | null>(null);
+
+  const handleRestoreFromHistory = useCallback(
+    (snapshot: import("../types/project").ViewSnapshot) => {
+      setNodes(restoreNodes(snapshot.nodes));
+      setEdges(restoreEdges(snapshot.edges));
+      setProject((prev) => ({ ...prev, resources: snapshot.resources }));
+      setCodeFiles(snapshot.codeFiles ?? []);
+      // Treat restored state as the new baseline so we don't emit a giant
+      // local-edit entry that "reverts" everything from the previous state.
+      lastCommittedSnapshotRef.current = snapshot;
+    },
+    [setNodes, setEdges],
+  );
+
+  // Report state changes for project save / autosave + atomic local-edit history
+  useEffect(() => {
+    if (!onStateChange) return;
+    const timeout = setTimeout(() => {
+      const snap: import("../types/project").ViewSnapshot = {
+        id: viewId,
+        name: viewName,
+        resources: project.resources,
+        nodes: snapshotNodes(nodes),
+        edges: snapshotEdges(edges),
+        codeFiles,
+      };
+      onStateChange(viewId, snap);
+
+      // First snapshot in this session: just establish the baseline, no entry.
+      if (!lastCommittedSnapshotRef.current) {
+        lastCommittedSnapshotRef.current = snap;
+        return;
+      }
+
+      if (!projectDir) return;
+
+      const previous = lastCommittedSnapshotRef.current;
+      const { changes, summary } = computeLocalEditDiff(previous, snap);
+
+      // No meaningful change (e.g. pure node drag) → don't write history.
+      if (changes.length === 0) return;
+
+      // Compose human-readable message
+      const parts: string[] = [];
+      if (summary.created !== 0) parts.push(`+${summary.created}`);
+      if (summary.changed !== 0) parts.push(`~${summary.changed}`);
+      if (summary.destroyed !== 0) parts.push(`-${summary.destroyed}`);
+      const message = parts.join(" ") || t("history.localChange");
+
+      const entry: HistoryEntry = {
+        id: crypto.randomUUID(),
+        timestamp: new Date().toISOString(),
+        action: "local-edit",
+        success: true,
+        viewId,
+        viewName,
+        summary,
+        changes,
+        message,
+        snapshotBefore: previous,
+        snapshotAfter: snap,
+      };
+
+      lastCommittedSnapshotRef.current = snap;
+      void appendHistoryEntry(projectDir, entry)
+        .then(() => {
+          setHistoryRefreshSignal((s) => s + 1);
+        })
+        .catch((err) => {
+          console.error("Failed to append local-edit history entry:", err);
+        });
+    }, 800);
+    return () => clearTimeout(timeout);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nodes, edges, project.resources, codeFiles]);
+
+  const buildSubtreeSnapshot = useCallback(
+    (rootId: string) => {
+      const nodeById = new Map(nodes.map((node) => [node.id, node]));
+      const snapshot = new Map<
+        string,
+        { parentNode?: string; position: { x: number; y: number } }
+      >();
+
+      const stack = [rootId];
+      while (stack.length > 0) {
+        const currentId = stack.pop();
+        if (!currentId) continue;
+
+        const node = nodeById.get(currentId);
+        if (!node) continue;
+
+        snapshot.set(currentId, {
+          parentNode: node.parentNode,
+          position: { ...node.position },
+        });
+
+        nodes.forEach((candidate) => {
+          if (candidate.parentNode === currentId) {
+            stack.push(candidate.id);
+          }
+        });
+      }
+
+      return snapshot;
+    },
+    [nodes],
+  );
+
+  const restoreSubtreeFromSnapshot = useCallback(
+    (
+      currentNodes: Node<CanvasTerraformNodeData>[],
+      snapshot: Map<string, { parentNode?: string; position: { x: number; y: number } }>,
+      draggedRootId: string,
+    ) =>
+      currentNodes.map((node) => {
+        if (node.id === draggedRootId) return node;
+
+        const saved = snapshot.get(node.id);
+        if (!saved) return node;
+
+        if (
+          node.parentNode === saved.parentNode &&
+          node.position.x === saved.position.x &&
+          node.position.y === saved.position.y
+        ) {
+          return node;
+        }
+
+        return {
+          ...node,
+          parentNode: saved.parentNode,
+          position: { ...saved.position },
+        };
+      }),
+    [],
+  );
+
+  const onConnect = useCallback(
+    (connection: Connection) => {
+      pushSnapshot(getCurrentSnapshot());
+      setEdges((currentEdges) =>
+        addEdge(
+          {
+            ...connection,
+            type: "mappingEdge",
+            data: { mappings: [] },
+          },
+          currentEdges,
+        ),
+      );
+    },
+    [setEdges, pushSnapshot, getCurrentSnapshot],
+  );
+
+  const applyEdgeMapping = useCallback(
+    (payload: {
+      edgeId: string;
+      fromNodeId: string;
+      toNodeId: string;
+      sourceExpression: string;
+      targetAttribute: string;
+    }) => {
+      const targetNode = nodes.find((node) => node.id === payload.toNodeId);
+      if (!targetNode) return;
+      const targetResourceId = targetNode.data.resourceId;
+
+      setProject((currentProject) => {
+        const updatedProject = {
+          ...currentProject,
+          resources: currentProject.resources.map((resource) => {
+            if (resource.id !== targetResourceId) return resource;
+
+            const currentAttrs = { ...resource.config.attributes };
+            const parts = payload.targetAttribute.split(".");
+
+            if (parts.length >= 2) {
+              const blockKey = parts[0];
+              const childPath = parts.slice(1).join(".");
+              const existing = currentAttrs[blockKey];
+
+              if (Array.isArray(existing) && existing.length > 0 && existing.every((it) => it && typeof it === "object" && !Array.isArray(it))) {
+                const items = existing.map((item, idx) =>
+                  idx === 0
+                    ? { ...(item as Record<string, unknown>), [childPath]: payload.sourceExpression }
+                    : item,
+                );
+                currentAttrs[blockKey] = items;
+                delete currentAttrs[payload.targetAttribute];
+              } else if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+                currentAttrs[blockKey] = {
+                  ...(existing as Record<string, unknown>),
+                  [childPath]: payload.sourceExpression,
+                };
+                delete currentAttrs[payload.targetAttribute];
+              } else {
+                currentAttrs[blockKey] = [{ [childPath]: payload.sourceExpression }];
+                delete currentAttrs[payload.targetAttribute];
+              }
+            } else {
+              currentAttrs[payload.targetAttribute] = payload.sourceExpression;
+            }
+
+            return {
+              ...resource,
+              config: { ...resource.config, attributes: currentAttrs },
+            };
+          }),
+        };
+        void saveProjectToHCL(updatedProject);
+        return updatedProject;
+      });
+
+      setEdges((currentEdges) =>
+        currentEdges.map((edge) => {
+          if (edge.id !== payload.edgeId) return edge;
+          const previousMappings = Array.isArray(edge.data?.mappings)
+            ? (edge.data.mappings as CanvasEdgeMapping[])
+            : [];
+
+          const nextMappings = [
+            ...previousMappings.filter(
+              (mapping) =>
+                !(mapping.toNodeId === payload.toNodeId &&
+                  mapping.targetAttribute === payload.targetAttribute),
+            ),
+            {
+              fromNodeId: payload.fromNodeId,
+              toNodeId: payload.toNodeId,
+              fromNodeLabel:
+                nodes.find((node) => node.id === payload.fromNodeId)?.data.label ??
+                payload.fromNodeId,
+              toNodeLabel:
+                nodes.find((node) => node.id === payload.toNodeId)?.data.label ??
+                payload.toNodeId,
+              sourceExpression: payload.sourceExpression,
+              targetAttribute: payload.targetAttribute,
+            },
+          ];
+
+          return {
+            ...edge,
+            type: "mappingEdge",
+            data: {
+              ...(edge.data ?? {}),
+              mappings: nextMappings,
+            },
+          } as Edge<CanvasEdgeData>;
+        }),
+      );
+    },
+    [nodes, setEdges],
+  );
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const { edgeId, toNodeId, targetAttribute, sourceExpression } =
+        (event as CustomEvent<{
+          edgeId: string;
+          fromNodeId: string;
+          toNodeId: string;
+          targetAttribute: string;
+          sourceExpression: string;
+        }>).detail;
+      // fromNodeId not needed for removal — kept in event detail for future use
+
+      setEdges((currentEdges) =>
+        currentEdges.map((edge) => {
+          if (edge.id !== edgeId) return edge;
+          const prev = Array.isArray(edge.data?.mappings) ? edge.data.mappings : [];
+          const next = prev.filter(
+            (m) => !(m.toNodeId === toNodeId && m.targetAttribute === targetAttribute),
+          );
+          return { ...edge, data: { ...(edge.data ?? {}), mappings: next } } as typeof edge;
+        }),
+      );
+
+      const targetNode = nodes.find((n) => n.id === toNodeId);
+      if (!targetNode) return;
+      const targetResourceId = targetNode.data.resourceId;
+
+      setProject((currentProject) => {
+        const updatedProject = {
+          ...currentProject,
+          resources: currentProject.resources.map((resource) => {
+            if (resource.id !== targetResourceId) return resource;
+            const attrs = { ...resource.config.attributes };
+
+            if (attrs[targetAttribute] === sourceExpression) {
+              delete attrs[targetAttribute];
+            }
+
+            const parts = targetAttribute.split(".");
+            if (parts.length >= 2) {
+              const blockKey = parts[0];
+              const childPath = parts.slice(1).join(".");
+              const existing = attrs[blockKey];
+
+              const isMeaningful = (v: unknown): boolean => {
+                if (v === null || v === undefined) return false;
+                if (typeof v === "string") return v.trim() !== "";
+                if (Array.isArray(v)) return v.some(isMeaningful);
+                if (typeof v === "object") return Object.values(v).some(isMeaningful);
+                return true;
+              };
+
+              if (Array.isArray(existing)) {
+                const cleaned = existing
+                  .map((item) => {
+                    if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+                    const obj = { ...(item as Record<string, unknown>) };
+                    if (obj[childPath] === sourceExpression) delete obj[childPath];
+                    return obj;
+                  })
+                  .filter((item) => {
+                    if (!item || typeof item !== "object" || Array.isArray(item)) return true;
+                    return Object.values(item).some(isMeaningful);
+                  });
+
+                if (cleaned.length === 0) {
+                  delete attrs[blockKey];
+                } else {
+                  attrs[blockKey] = cleaned;
+                }
+              } else if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+                const obj = { ...(existing as Record<string, unknown>) };
+                if (obj[childPath] === sourceExpression) delete obj[childPath];
+                if (!Object.values(obj).some(isMeaningful)) {
+                  delete attrs[blockKey];
+                } else {
+                  attrs[blockKey] = obj;
+                }
+              }
+            }
+
+            return { ...resource, config: { ...resource.config, attributes: attrs } };
+          }),
+        };
+        void saveProjectToHCL(updatedProject);
+        return updatedProject;
+      });
+
+    };
+
+    window.addEventListener("lurastack-remove-edge-mapping", handler);
+    return () => window.removeEventListener("lurastack-remove-edge-mapping", handler);
+  }, [nodes, setEdges]);
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      const hasRemove = changes.some((c) => c.type === "remove");
+      if (hasRemove) pushSnapshot(getCurrentSnapshot());
+
+      setNodes((currentNodes) => {
+        const nextNodes = applyNodeChanges(changes, currentNodes);
+        const resizedNodeIds = changes
+          .filter((change) => change.type === "dimensions")
+          .map((change) => change.id);
+
+        if (!resizedNodeIds.length) {
+          return applyZoneContainerMemberships(nextNodes);
+        }
+
+        return applyZoneContainerMemberships(applyManualContainerResizeEffects(
+          currentNodes,
+          nextNodes,
+          resizedNodeIds,
+        ));
+      });
+    },
+    [setNodes, pushSnapshot, getCurrentSnapshot],
+  );
+
+  const buildGlobalHcl = useCallback(
+    (proj: TerraformProject) =>
+      buildMultiProviderHcl(proj, providerSettings, cloudProvider),
+    [cloudProvider, providerSettings],
+  );
+
+  const saveProjectToHCL = async (proj: TerraformProject) => {
+    if (hclPersistenceDisabledRef.current) return;
+
+    const isTauriRuntime =
+      typeof window !== "undefined" &&
+      !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+
+    if (!isTauriRuntime) return;
+
+    const hcl = buildGlobalHcl(proj);
+    try {
+      if (projectDir) {
+        await writeTextFile(`${projectDir}/main.tf`, hcl);
+      } else {
+        await writeTextFile("main.tf", hcl, { baseDir: BaseDirectory.AppData });
+      }
+    } catch (error) {
+      const errorMessage = String(error);
+      if (errorMessage.includes("not allowed")) {
+        hclPersistenceDisabledRef.current = true;
+      }
+      warn(
+        t("toast.hclSaveFailed"),
+        "TAURI_FS_PERSIST",
+      );
+      console.warn("Failed to persist HCL file via Tauri fs plugin:", error);
+    }
+  };
+
+  useEffect(() => {
+    const nodeResourceIds = new Set(nodes.map((node) => node.data.resourceId));
+    setProject((currentProject) => {
+      const nextResources = currentProject.resources.filter((resource) =>
+        nodeResourceIds.has(resource.id),
+      );
+
+      if (nextResources.length === currentProject.resources.length) {
+        return currentProject;
+      }
+
+      const nextProject = { ...currentProject, resources: nextResources };
+      void saveProjectToHCL(nextProject);
+      return nextProject;
+    });
+  }, [nodes]);
+
+  const onNodeDragStart: NodeDragHandler = useCallback(
+    (_event, draggedNode) => {
+      activeDragNodeIdRef.current = draggedNode.id;
+      dragSubtreeSnapshotRef.current = buildSubtreeSnapshot(draggedNode.id);
+      pushSnapshot(getCurrentSnapshot());
+    },
+    [buildSubtreeSnapshot, pushSnapshot, getCurrentSnapshot],
+  );
+
+  const onNodeDragFinalize = useCallback(
+    (draggedNodeId: string, targetContainerId?: string) => {
+      if (activeDragNodeIdRef.current !== draggedNodeId) {
+        return;
+      }
+
+      const subtreeSnapshot = dragSubtreeSnapshotRef.current;
+      activeDragNodeIdRef.current = null;
+      dragSubtreeSnapshotRef.current = null;
+
+      setNodes((currentNodes) => {
+        const stabilizedNodes = subtreeSnapshot
+          ? restoreSubtreeFromSnapshot(currentNodes, subtreeSnapshot, draggedNodeId)
+          : currentNodes;
+
+        return reparentCanvasNodeAfterDrag(
+          stabilizedNodes,
+          draggedNodeId,
+          targetContainerId,
+        );
+      });
+    },
+    [restoreSubtreeFromSnapshot, setNodes],
+  );
+
+  const onNodeDragStop: NodeDragHandler = useCallback(
+    () => {},
+    [],
+  );
+
+  const generateNextResourceName = useCallback(
+    (schema: TerraformNodeSchema) => {
+      const base = schema.id.replace(/[^a-zA-Z0-9_]/g, "_").toLowerCase();
+      const prefix = `${base}_`;
+      const used = project.resources
+        .map((resource) => resource.name)
+        .filter((name) => name.startsWith(prefix))
+        .map((name) => Number(name.slice(prefix.length)))
+        .filter((value) => Number.isInteger(value) && value > 0);
+
+      const next = used.length ? Math.max(...used) + 1 : 1;
+      return `${base}_${next}`;
+    },
+    [project.resources],
+  );
+
+  const addResource = async (
+    node: TerraformNodeSchema,
+    dropPosition?: XYPosition,
+    options?: { targetContainerId?: string },
+  ) => {
+    const resolveRandomPositionInViewport = () => {
+      if (!canvasViewportBounds) return undefined;
+
+      const isContainer = CONTAINER_SCHEMA_IDS.has(node.id);
+      const nodeSize = isContainer ? DEFAULT_CONTAINER_SIZE : DEFAULT_RESOURCE_NODE_SIZE;
+      const basePadding = 48;
+      const viewportWidth = Math.max(1, canvasViewportBounds.maxX - canvasViewportBounds.minX);
+      const viewportHeight = Math.max(1, canvasViewportBounds.maxY - canvasViewportBounds.minY);
+      const dynamicXPadding = Math.max(basePadding, viewportWidth * 0.2);
+      const dynamicYPadding = Math.max(basePadding, viewportHeight * 0.2);
+
+      const minX = canvasViewportBounds.minX + dynamicXPadding;
+      const maxX = canvasViewportBounds.maxX - nodeSize.width - dynamicXPadding;
+      const minY = canvasViewportBounds.minY + dynamicYPadding;
+      const maxY = canvasViewportBounds.maxY - nodeSize.height - dynamicYPadding;
+
+      const centerX = (canvasViewportBounds.minX + canvasViewportBounds.maxX - nodeSize.width) / 2;
+      const centerY = (canvasViewportBounds.minY + canvasViewportBounds.maxY - nodeSize.height) / 2;
+
+      const x = maxX > minX
+        ? minX + Math.random() * (maxX - minX)
+        : centerX;
+      const y = maxY > minY
+        ? minY + Math.random() * (maxY - minY)
+        : centerY;
+
+      return { x, y };
+    };
+
+    const resolvedDropPosition = dropPosition ?? resolveRandomPositionInViewport();
+
+    pushSnapshot(getCurrentSnapshot());
+
+    const resourceName = generateNextResourceName(node);
+    const newResource: TerraformResource = createTerraformResourceFromSchema(
+      node,
+      resourceName,
+    );
+
+    const updatedProject = {
+      ...project,
+      resources: [...project.resources, newResource],
+    };
+
+    setNodes((currentNodes) =>
+      placeCanvasNodeFromUserAction(
+        currentNodes,
+        node,
+        currentNodes.length,
+        resolvedDropPosition,
+        options?.targetContainerId,
+        newResource.id,
+        newResource.name,
+      ),
+    );
+
+    setProject(updatedProject);
+    await saveProjectToHCL(updatedProject);
+  };
+
+  const clearCanvas = async () => {
+    setNodes([]);
+    setEdges([]);
+    setSelectedNodeId(undefined);
+
+    const updatedProject: TerraformProject = {
+      ...project,
+      resources: [],
+    };
+
+    setProject(updatedProject);
+    await saveProjectToHCL(updatedProject);
+  };
+
+  const confirmClearCanvas = async () => {
+    setShowClearConfirm(false);
+    await clearCanvas();
+  };
+
+  const selectedNode = selectedNodeId
+    ? nodes.find((node) => node.id === selectedNodeId)
+    : undefined;
+
+  const selectedSchema = selectedNode
+    ? NODE_SCHEMAS.find((schema) => schema.id === selectedNode.data.schemaId)
+    : undefined;
+
+  const selectedResource = selectedNode
+    ? project.resources.find((resource) => resource.id === selectedNode.data.resourceId)
+    : undefined;
+
+  const getResourceIcon = useCallback(
+    (resource: TerraformResource) => {
+      if (resource.type === "aws_subnet") {
+        if (isSubnetIconPath(resource.ui.icon)) {
+          return resource.ui.icon;
+        }
+        return SUBNET_PRIVATE_ICON_PATH;
+      }
+
+      return resolveTerraformIcon(resource.type, resource.config.attributes);
+    },
+    [],
+  );
+
+  const selectNode = useCallback((nodeId?: string) => {
+    setSelectedNodeId((current) => (current === nodeId ? current : nodeId));
+    setNodes((currentNodes) => {
+      let changed = false;
+
+      const nextNodes = currentNodes.map((node) => {
+        const shouldBeSelected = !!nodeId && node.id === nodeId;
+        const isSelected = node.selected === true;
+
+        if (isSelected === shouldBeSelected) {
+          return node;
+        }
+
+        changed = true;
+        return {
+          ...node,
+          selected: shouldBeSelected,
+        };
+      });
+
+      return changed ? nextNodes : currentNodes;
+    });
+  }, [setNodes]);
+
+  const updateSelectedResource = useCallback(
+    (updater: (resource: TerraformResource) => TerraformResource) => {
+      if (!selectedResource || activeSection === "diff" || activeSection === "cloud") return;
+
+      const nextResource = updater(selectedResource);
+      const updatedSelectedResource: TerraformResource = {
+        ...nextResource,
+        ui: {
+          ...nextResource.ui,
+          icon: getResourceIcon(nextResource),
+        },
+      };
+
+      setProject((currentProject) => {
+        const updatedResources = currentProject.resources.map((resource) =>
+          resource.id === selectedResource.id ? updatedSelectedResource : resource,
+        );
+        const updatedProject = {
+          ...currentProject,
+          resources: updatedResources,
+        };
+        void saveProjectToHCL(updatedProject);
+        return updatedProject;
+      });
+
+      setNodes((currentNodes) =>
+        currentNodes.map((node) => {
+          if (node.data.resourceId !== updatedSelectedResource.id) {
+            return node;
+          }
+
+          const nextLabel = updatedSelectedResource.name;
+          const nextIcon = getResourceIcon(updatedSelectedResource);
+
+          if (node.data.label === nextLabel && node.data.icon === nextIcon) {
+            return node;
+          }
+
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              label: nextLabel,
+              icon: nextIcon,
+            },
+          };
+        }),
+      );
+    },
+    [activeSection, getResourceIcon, selectedResource, setNodes],
+  );
+
+  const createLogEntry = (
+    level: "info" | "success" | "warning" | "error",
+    title: string,
+    message: string,
+  ): BottomPanelLogEntry => ({
+    id: crypto.randomUUID(),
+    timestamp: new Date().toISOString(),
+    level,
+    title,
+    message,
+  });
+
+  const syncResourcesFromMainTfBlocks = useCallback(
+    (blocks: Array<{
+      kind: "resource" | "data";
+      type: string;
+      name: string;
+      attributes: Record<string, unknown>;
+    }>, overrideCanvas = false) => {
+      if (!blocks.length) return;
+
+      // Usar el importador para procesar los bloques
+      const importResult = importHclBlocksToResources({
+        parsedBlocks: blocks,
+        existingResources: project.resources,
+        existingNodes: nodes,
+        schemas: NODE_SCHEMAS,
+        ignoreOrigins: overrideCanvas ? [] : ["canvas"],
+        overrideCanvas,
+        currentNodeIndex: nodes.length,
+      });
+
+      const warningLogs = importResult.warnings.map((w) =>
+        createLogEntry("warning", "HCL Import", `${w.resourceKey} — ${w.reason}`),
+      );
+      const conflictLogs = importResult.conflicts.map((c) =>
+        createLogEntry(
+          "warning",
+          "HCL Conflict",
+          `${c.resourceKey} — Conflicto entre importado (${c.importedOrigin}) y existente (${c.existingOrigin}). Se mantiene el existente.`,
+        ),
+      );
+      const allLogs = [...warningLogs, ...conflictLogs];
+      if (allLogs.length > 0) {
+        setCodeLogs((current) => [...allLogs, ...current].slice(0, 200));
+      }
+
+      setProject((currentProject) => {
+        const filteredResources = currentProject.resources.filter(
+          (r) => !importResult.deletedResourceIds.includes(r.id),
+        );
+
+        const nextResources = [...filteredResources, ...importResult.newResources];
+
+        for (const resource of nextResources) {
+          if (importResult.updatedResourceIds.has(resource.id)) {
+            // El importador ya actualizó los atributos en el recurso in-place,
+            // no hay que hacer nada más aquí.
+          }
+        }
+
+        const nextProject = {
+          ...currentProject,
+          resources: nextResources,
+        };
+
+        void saveProjectToHCL(nextProject);
+        return nextProject;
+      });
+
+      setNodes((currentNodes) => {
+        let workingNodes = currentNodes.filter(
+          (n) => !importResult.deletedResourceIds.includes(n.data.resourceId),
+        );
+
+        if (importResult.newNodes.length > 0) {
+          const newNodesWithPositions = importResult.newNodes.map((node, idx) => {
+            const baseX = scaledPx(80) + (idx % 4) * scaledPx(220);
+            const baseY = scaledPx(80) + Math.floor(idx / 4) * scaledPx(130);
+            return {
+              ...node,
+              position: { x: baseX, y: baseY },
+            };
+          });
+
+          workingNodes = [...workingNodes, ...newNodesWithPositions];
+
+          for (const newNode of newNodesWithPositions) {
+            workingNodes = expandAncestorContainers(workingNodes, newNode.id);
+          }
+        }
+
+        workingNodes = applyZoneContainerMemberships(workingNodes);
+
+        return workingNodes;
+      });
+
+      const visualUpdates: Array<{ resourceId: string; label: string; icon: string }> = [];
+
+      for (const resource of project.resources) {
+        if (importResult.updatedResourceIds.has(resource.id)) {
+          const nextIcon = getResourceIcon(resource);
+          visualUpdates.push({
+            resourceId: resource.id,
+            label: resource.name,
+            icon: nextIcon,
+          });
+        }
+      }
+
+      if (visualUpdates.length) {
+        const visualByResourceId = new Map(
+          visualUpdates.map((entry) => [entry.resourceId, entry]),
+        );
+
+        setNodes((currentNodes) =>
+          currentNodes.map((node) => {
+            const nextVisual = visualByResourceId.get(node.data.resourceId);
+            if (!nextVisual) return node;
+            if (
+              node.data.label === nextVisual.label &&
+              node.data.icon === nextVisual.icon
+            ) {
+              return node;
+            }
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                label: nextVisual.label,
+                icon: nextVisual.icon,
+              },
+            };
+          }),
+        );
+      }
+    },
+    [setNodes, setProject, project.resources, nodes, NODE_SCHEMAS, getResourceIcon, setCodeLogs],
+  );
+
+  useEffect(() => {
+    setNodes((currentNodes) => {
+      const resourcesById = new Map(project.resources.map((resource) => [resource.id, resource]));
+      let changed = false;
+
+      const nextNodes = currentNodes.map((node) => {
+        const resource = resourcesById.get(node.data.resourceId);
+        if (!resource) return node;
+
+        const expectedIcon = getResourceIcon(resource);
+        if (node.data.icon === expectedIcon) return node;
+
+        changed = true;
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            icon: expectedIcon,
+          },
+        };
+      });
+
+      return changed ? nextNodes : currentNodes;
+    });
+  }, [getResourceIcon, project.resources, setNodes]);
+
+  const appendCodeValidationLogs = useCallback((entries: BottomPanelLogEntry[]) => {
+    if (!entries.length) return;
+    setCodeLogs((current) => [...entries, ...current].slice(0, 200));
+    setBottomPreferredTab("logs");
+    setBottomOpenSignal((s) => s + 1);
+  }, []);
+
+  const isTauriRuntime =
+    typeof window !== "undefined" &&
+    !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
+
+  const refreshCloudState = useCallback(async () => {
+    if (!projectDir || !isTauriRuntime) return;
+    setCloudStateLoading(true);
+    try {
+      const result = await invoke<{
+        hasState: boolean;
+        resources: Array<{
+          address: string;
+          type: string;
+          name: string;
+          mode: string;
+          values: Record<string, unknown> | null;
+        }>;
+        stateSignature: string | null;
+      }>("terraform_show", {
+        projectDir,
+        files: [],
+        awsCredentials: {
+          mode: awsCredentials.mode,
+          accessKeyId: awsCredentials.accessKeyId,
+          secretAccessKey: awsCredentials.secretAccessKey,
+          sessionToken: awsCredentials.sessionToken,
+          region: awsCredentials.region,
+          profile: awsCredentials.profile,
+          credentialsPath: awsCredentials.credentialsPath,
+          configPath: awsCredentials.configPath,
+          envFilePath: awsCredentials.envFilePath,
+        },
+        extraEnv: extraEnvForTerraform,
+      });
+      const next = new Map<string, Record<string, unknown>>();
+      result.resources.forEach((resource) => {
+        const key = `${resource.type}.${resource.name}`;
+        next.set(key, resource.values ?? {});
+      });
+      setCloudState(next);
+      setCloudStateAvailable(result.hasState);
+      setCloudStateSignature(result.stateSignature ?? null);
+      setCloudStateStale(false);
+      cloudStaleNoticeShownRef.current = false;
+    } catch (error) {
+      console.error("terraform_show error:", error);
+      setCloudState(new Map());
+      setCloudStateAvailable(false);
+      setCloudStateSignature(null);
+      setCloudStateStale(false);
+    } finally {
+      setCloudStateLoading(false);
+    }
+  }, [projectDir, isTauriRuntime, awsCredentials, extraEnvForTerraform]);
+
+  useEffect(() => {
+    if (activeSection !== "cloud" || !projectDir || !isTauriRuntime) return;
+    let cancelled = false;
+    const checkSignature = async () => {
+      try {
+        const sig = await invoke<string | null>("terraform_state_signature", { projectDir });
+        if (cancelled) return;
+        if (sig !== cloudStateSignature) {
+          setCloudStateStale(true);
+          if (!cloudStaleNoticeShownRef.current) {
+            cloudStaleNoticeShownRef.current = true;
+            sileo.warning({
+              title: t("toast.stateChanged"),
+              description: t("toast.stateChangedBody"),
+            });
+          }
+        }
+      } catch (error) {
+        console.error("terraform_state_signature error:", error);
+      }
+    };
+    void checkSignature();
+    const interval = window.setInterval(() => { void checkSignature(); }, 4000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [activeSection, projectDir, isTauriRuntime, cloudStateSignature]);
+
+  useEffect(() => {
+    if (activeSection !== "diff" && activeSection !== "cloud") return;
+    void refreshCloudState();
+  }, [activeSection, refreshCloudState]);
+
+  const runTerraformAction = useCallback(
+    async (
+      action: "terraform_plan" | "terraform_plan_destroy" | "terraform_apply" | "terraform_destroy",
+    ) => {
+      if (!projectDir || !isTauriRuntime) return;
+
+      const snapshotBefore = captureViewSnapshot();
+      setPlanChanges(new Map());
+      setIsDeploying(true);
+      if (action === "terraform_apply") {
+        setPendingDeployConfirmation("terraform_apply");
+      } else if (action === "terraform_destroy") {
+        setPendingDeployConfirmation("terraform_destroy");
+      }
+      setBottomPreferredTab("terminal");
+      setBottomOpenSignal((s) => s + 1);
+      let ok = false;
+      try {
+        ok = await invoke<boolean>(action, {
+          projectDir,
+          files: [],
+          awsCredentials: {
+            mode: awsCredentials.mode,
+            accessKeyId: awsCredentials.accessKeyId,
+            secretAccessKey: awsCredentials.secretAccessKey,
+            sessionToken: awsCredentials.sessionToken,
+            region: awsCredentials.region,
+            profile: awsCredentials.profile,
+            credentialsPath: awsCredentials.credentialsPath,
+            configPath: awsCredentials.configPath,
+            envFilePath: awsCredentials.envFilePath,
+          },
+          extraEnv: extraEnvForTerraform,
+        });
+        const wentWrong = t("toast.wentWrong");
+        const successMessages: Record<string, { title: string; description: string }> = {
+          terraform_plan: { title: t("toast.plan.successTitle"), description: t("toast.plan.successBody") },
+          terraform_plan_destroy: { title: t("toast.planDestroy.successTitle"), description: t("toast.plan.successBody") },
+          terraform_apply: { title: t("toast.apply.successTitle"), description: t("toast.apply.successBody") },
+          terraform_destroy: { title: t("toast.destroy.successTitle"), description: t("toast.destroy.successBody") },
+        };
+        const failureMessages: Record<string, { title: string; description: string }> = {
+          terraform_plan: { title: t("toast.plan.failTitle"), description: wentWrong },
+          terraform_plan_destroy: { title: t("toast.planDestroy.failTitle"), description: wentWrong },
+          terraform_apply: { title: t("toast.apply.failTitle"), description: wentWrong },
+          terraform_destroy: { title: t("toast.destroy.failTitle"), description: wentWrong },
+        };
+        if (ok) {
+          const msg = successMessages[action];
+          if (msg) sileo.success({ title: msg.title, description: msg.description });
+        } else {
+          const msg = failureMessages[action];
+          if (msg) sileo.error({ title: msg.title, description: msg.description });
+        }
+        if (action === "terraform_apply" || action === "terraform_destroy") {
+          await refreshCloudState();
+        }
+      } catch (error) {
+        console.error(`${action} error:`, error);
+        sileo.error({ title: t("toast.operationError"), description: t("toast.wentWrong") });
+      } finally {
+        setIsDeploying(false);
+        setPendingDeployConfirmation(null);
+
+        // Record history entry — wait a tick so planChangesRef has settled from the streaming effect
+        if (projectDir) {
+          setTimeout(() => {
+            const snapshotAfter = captureViewSnapshot();
+            const { summary, changes } = summarizePlanChanges(planChangesRef.current);
+            const isPlanAction = action === "terraform_plan" || action === "terraform_plan_destroy";
+            const entry: HistoryEntry = {
+              id: crypto.randomUUID(),
+              timestamp: new Date().toISOString(),
+              action,
+              success: ok,
+              viewId,
+              viewName,
+              summary,
+              changes: changes.length > 0 ? changes : undefined,
+              snapshotBefore,
+              snapshotAfter: isPlanAction ? snapshotBefore : snapshotAfter,
+            };
+            void appendHistoryEntry(projectDir, entry)
+              .then(() => {
+                setHistoryRefreshSignal((s) => s + 1);
+              })
+              .catch((err) => {
+                console.error(`Failed to append ${action} history entry:`, err);
+              });
+          }, 300);
+        }
+      }
+    },
+    [projectDir, isTauriRuntime, awsCredentials, extraEnvForTerraform, refreshCloudState, captureViewSnapshot, viewId, viewName],
+  );
+
+  const confirmTerraformAction = useCallback(
+    async (confirmed: boolean) => {
+      if (!isTauriRuntime) return;
+      try {
+        await invoke("terraform_confirm", { input: confirmed ? "yes" : "no" });
+      } catch (error) {
+        console.error("terraform_confirm error:", error);
+      }
+    },
+    [isTauriRuntime],
+  );
+
+  const triggerDeployAction = useCallback(
+    (action: "terraform_apply" | "terraform_destroy") => {
+      setActiveSection("diff");
+      void runTerraformAction(action);
+    },
+    [runTerraformAction],
+  );
+
+  return (
+    <div className="flex flex-col flex-1 overflow-hidden">
+      {showAwsConfig && (
+        <AwsCredentialsModal
+          provider={cloudProvider}
+          initial={providerCredentials}
+          onSave={saveProviderCredentials}
+          onClose={() => setShowAwsConfig(false)}
+        />
+      )}
+
+      {showClearConfirm && (
+        <div
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 p-6"
+          onClick={(e) => { if (e.target === e.currentTarget) setShowClearConfirm(false); }}
+        >
+          <div className="w-[26.25rem] max-w-full rounded-lg border border-slate-700 bg-slate-900 p-5 shadow-2xl">
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-500/15 ring-1 ring-red-500/30">
+                <Icon icon="mdi:trash-can-outline" className="text-lg text-red-400" />
+              </div>
+              <h3 className="text-[0.9375rem] font-semibold text-white">{t("clearCanvas.title")}</h3>
+            </div>
+            <p className="mt-3 text-[0.8125rem] leading-relaxed text-slate-300">
+              {t("clearCanvas.message")}
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowClearConfirm(false)}
+                className="rounded-lg border border-slate-700 px-4 py-2 text-[0.8125rem] font-medium text-slate-300 hover:bg-slate-800 transition-colors"
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmClearCanvas()}
+                className="rounded-lg bg-red-600 px-4 py-2 text-[0.8125rem] font-medium text-white hover:bg-red-500 transition-colors"
+              >
+                {t("clearCanvas.confirm")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Header
+        onClearCanvas={() => setShowClearConfirm(true)}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        cloudProvider={cloudProvider}
+        credentialsConfigured={providerConfigured && !credentialsLoading}
+        onOpenAwsConfig={() => setShowAwsConfig(true)}
+        onPlan={() => { setActiveSection("diff"); void runTerraformAction("terraform_plan"); }}
+        onApply={() => triggerDeployAction("terraform_apply")}
+        onDestroy={() => triggerDeployAction("terraform_destroy")}
+        isApplyConfirming={pendingDeployConfirmation === "terraform_apply"}
+        isDestroyConfirming={pendingDeployConfirmation === "terraform_destroy"}
+        onConfirmApply={() => void confirmTerraformAction(true)}
+        onCancelApply={() => void confirmTerraformAction(false)}
+        onConfirmDestroy={() => void confirmTerraformAction(true)}
+        onCancelDestroy={() => void confirmTerraformAction(false)}
+        isDeploying={isDeploying}
+      />
+
+      <div className="relative flex flex-1 min-h-0 overflow-hidden">
+        {activeSection !== "code" && (
+          <div className="relative flex flex-1 min-h-0 overflow-hidden">
+            <LeftPanel
+              addResource={addResource}
+              cloudProvider={cloudProvider}
+              onCloudProviderChange={setCloudProvider}
+              schemas={nodeSchemas}
+              onWidthChange={setLeftPanelWidth}
+            />
+
+            <main className="relative flex flex-1 min-h-0 overflow-hidden bg-white">
+              {activeSection === "cloud" && (
+                <div
+                  className="pointer-events-none absolute bottom-3 z-20 transition-[left] duration-200"
+                  style={{ left: `${leftPanelWidth + 12}px` }}
+                >
+                  <div className="pointer-events-auto flex items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 py-1.5 shadow-md backdrop-blur">
+                    <span
+                      className={`inline-block h-2 w-2 rounded-full ${
+                        cloudStateLoading
+                          ? "bg-slate-300 animate-pulse"
+                          : cloudStateStale
+                            ? "bg-amber-400 animate-pulse"
+                            : cloudStateAvailable
+                              ? "bg-emerald-400"
+                              : "bg-slate-300"
+                      }`}
+                    />
+                    <span className="text-[0.6875rem] font-medium text-slate-600">
+                      {cloudStateLoading
+                        ? t("cloud.loading")
+                        : cloudStateStale
+                          ? t("cloud.stale")
+                          : cloudStateAvailable
+                            ? t("cloud.synced")
+                            : t("cloud.noState")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => { void refreshCloudState(); }}
+                      disabled={cloudStateLoading}
+                      className={`ml-1 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold shadow-sm transition-colors disabled:opacity-50 ${
+                        cloudStateStale
+                          ? "bg-amber-500 text-white hover:bg-amber-600"
+                          : "border border-slate-200 bg-white text-slate-700 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700"
+                      }`}
+                      title={t("cloud.refreshTooltip")}
+                    >
+                      <Icon icon="lucide:refresh-cw" className={`h-3 w-3 ${cloudStateLoading ? "animate-spin" : ""}`} />
+                      {t("cloud.refresh")}
+                    </button>
+                  </div>
+                </div>
+              )}
+              <CenterPanel
+                autoFitKey={`${projectDir ?? "no-project"}:${viewId}`}
+                readOnly={activeSection === "diff" || activeSection === "cloud"}
+                leftOverlayOffset={leftPanelWidth}
+                nodes={nodes}
+                edges={edges}
+                resources={project.resources}
+                schemas={NODE_SCHEMAS}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onConnect={onConnect}
+                onDropNode={(node, position, options) => addResource(node, position, options)}
+                onNodeDragFinalize={onNodeDragFinalize}
+                onNodeDragStart={onNodeDragStart}
+                onNodeDragStop={onNodeDragStop}
+                onNodeSelected={selectNode}
+                onDeleteEdge={(edgeId) => {
+                  pushSnapshot(getCurrentSnapshot());
+                  setEdges((currentEdges) =>
+                    currentEdges.filter((edge) => edge.id !== edgeId),
+                  );
+                }}
+                onApplyEdgeMapping={applyEdgeMapping}
+                onViewportBoundsChange={activeSection === "canvas" ? setCanvasViewportBounds : undefined}
+                rightOverlayOffset={rightPanelOverlayOffset}
+                isRightOverlayResizing={isRightPanelOverlayResizing}
+              />
+            </main>
+
+            <RightPanel
+              nodes={nodes}
+              resources={project.resources}
+              selectedNodeId={selectedNodeId}
+              selectedNode={selectedNode}
+              selectedSchema={selectedSchema}
+              selectedResource={selectedResource}
+              onSelectNode={selectNode}
+              onUpdateSelectedResource={updateSelectedResource}
+              onOverlayWidthChange={setRightPanelOverlayOffset}
+              onOverlayResizingChange={setIsRightPanelOverlayResizing}
+              diffMode={activeSection === "diff"}
+              cloudMode={activeSection === "cloud"}
+              planChanges={planChanges}
+              cloudState={cloudState}
+              cloudStateAvailable={cloudStateAvailable}
+              cloudStateLoading={cloudStateLoading}
+              projectDir={projectDir}
+              currentViewId={viewId}
+              historyRefreshSignal={historyRefreshSignal}
+              onRestoreFromHistory={handleRestoreFromHistory}
+            />
+          </div>
+        )}
+
+        {activeSection === "code" && (
+          <div className="min-h-0 flex-1">
+          <main className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-white">
+            <div className="min-h-0 flex-1">
+              <CodePanel
+                resources={project.resources}
+                schemas={NODE_SCHEMAS}
+                cloudProvider={cloudProvider}
+                region={providerRegion}
+                projectDir={projectDir}
+                initialCustomFiles={codeFiles}
+                onCustomFilesChange={setCodeFiles}
+                onMainTfBlocksChange={syncResourcesFromMainTfBlocks}
+                onValidationLogs={appendCodeValidationLogs}
+                onOpenLogsPanel={() => { setBottomPreferredTab("logs"); setBottomOpenSignal((s) => s + 1); }}
+                mainTfDraft={codePanelMainTfDraft}
+                onMainTfDraftChange={setCodePanelMainTfDraft}
+                isFreeEditMode={codePanelFreeEditMode}
+                onFreeEditModeChange={setCodePanelFreeEditMode}
+              />
+            </div>
+          </main>
+          </div>
+        )}
+      </div>
+
+      {!terminalPoppedOut ? (
+        <BottomPanel
+          nodes={nodes}
+          edges={edges}
+          resources={project.resources}
+          schemas={NODE_SCHEMAS}
+          mode={activeSection === "code" ? "code" : "canvas"}
+          hideMapper={activeSection === "diff" || activeSection === "cloud"}
+          logs={codeLogs}
+          projectDir={projectDir}
+          viewId={viewId}
+          suppressTerminal={terminalPoppedOut || IS_E2E}
+          enabled={isVisible}
+          openSignal={bottomOpenSignal}
+          preferredTab={bottomPreferredTab}
+          leftOffset={activeSection === "canvas" || activeSection === "diff" || activeSection === "cloud" ? leftPanelWidth : 0}
+          terminalEnvVars={terminalEnvVars}
+          isTerraformRunning={isDeploying}
+        />
+      ) : null}
+    </div>
+  );
+}

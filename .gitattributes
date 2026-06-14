@@ -1,0 +1,35 @@
+# Normalize line endings: store text as LF in the repo, check out native on
+# each platform. Prevents CRLF/LF churn from Windows contributors.
+* text=auto eol=lf
+
+# Scripts that must stay LF even on Windows checkouts.
+*.sh   text eol=lf
+
+# Windows-specific files keep CRLF.
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Binary assets — never normalize or diff as text.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.icns  binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.pdf   binary
+
+# Lock files: treat as text but don't let them dominate diff stats / language stats.
+package-lock.json  -diff linguist-generated
+Cargo.lock         -diff linguist-generated
+
+# Help GitHub's language detection: don't count generated/vendored data or the
+# academic deliverable toward repo language stats.
+public/templates/index.json  linguist-generated
+e2e/**                       linguist-language=TypeScript
+
+# The HCL skeletons under the schema pipeline are generated reference output;
+# keep them out of language stats and collapse them in diffs.
+scripts/schema-pipeline/templates/**  linguist-generated -diff

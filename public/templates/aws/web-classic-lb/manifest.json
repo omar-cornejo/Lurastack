@@ -1,0 +1,13 @@
+{
+  "id": "aws/web-classic-lb",
+  "name": "AWS — Classic web (ALB + ASG)",
+  "description": "ALB + Auto Scaling Group de 3 instancias nginx en subnets públicas; cada instancia sirve una página distinta para ver el balanceo al refrescar.",
+  "provider": "aws",
+  "resourceCount": 14,
+  "tags": [
+    "web",
+    "load-balancer",
+    "autoscaling"
+  ],
+  "icon": "mdi:aws"
+}

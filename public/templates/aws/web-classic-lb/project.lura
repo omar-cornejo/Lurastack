@@ -1,0 +1,764 @@
+{
+  "version": "1",
+  "meta": {
+    "name": "AWS — Classic web (ALB + ASG)",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "settings": {
+    "autosave": false
+  },
+  "activeViewId": "view-7f3e990e-e24a-42ee-8308-e09fd7cdce95",
+  "views": [
+    {
+      "id": "view-7f3e990e-e24a-42ee-8308-e09fd7cdce95",
+      "name": "View 1",
+      "activeProvider": "aws",
+      "resources": [
+        {
+          "id": "bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "kind": "resource",
+          "type": "aws_vpc",
+          "name": "main",
+          "schemaId": "aws_vpc",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_vpc                                             │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_vpc\" \"this\" {\n\n  cidr_block           = \"\"     # string | optional+computed\n  enable_dns_hostnames = false  # bool | optional+computed\n  enable_dns_support   = false  # bool | optional\n  tags                 = {}     # map(string) | optional\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "cidr_block": "10.0.0.0/16",
+              "enable_dns_hostnames": true,
+              "enable_dns_support": true,
+              "tags": "{ Name = \"lurastack-web-vpc\" }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 0,
+            "icon": "/icons/Virtual-private-cloud-VPC_32.svg"
+          }
+        },
+        {
+          "id": "5e99f4ab-0586-44e0-839f-7877eaee1bfe",
+          "kind": "resource",
+          "type": "aws_internet_gateway",
+          "name": "main",
+          "schemaId": "aws_internet_gateway",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_internet_gateway                                │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_internet_gateway\" \"this\" {\n\n  vpc_id = \"\"     # string | optional+computed\n  tags   = {}     # map(string) | optional\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id",
+              "tags": "{ Name = \"lurastack-web-igw\" }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 0,
+            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg"
+          }
+        },
+        {
+          "id": "036fe1b5-d1a8-45cd-a418-3041217a98e0",
+          "kind": "resource",
+          "type": "aws_subnet",
+          "name": "public_a",
+          "schemaId": "aws_subnet",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_subnet                                          │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_subnet\" \"this\" {\n\n  vpc_id                  = \"\"     # string | required\n  availability_zone       = \"\"     # string | optional+computed\n  cidr_block              = \"\"     # string | optional\n  map_public_ip_on_launch = false  # bool | optional\n  tags                    = {}     # map(string) | optional\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id",
+              "cidr_block": "10.0.1.0/24",
+              "availability_zone": "us-east-1a",
+              "map_public_ip_on_launch": true,
+              "tags": "{ Name = \"lurastack-web-public-a\" }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 0,
+            "icon": "/icons/Private-subnet_32.svg"
+          }
+        },
+        {
+          "id": "cc43abab-4ff2-4531-a321-d0658b4bb90c",
+          "kind": "resource",
+          "type": "aws_subnet",
+          "name": "public_b",
+          "schemaId": "aws_subnet",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_subnet                                          │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_subnet\" \"this\" {\n\n  vpc_id                  = \"\"     # string | required\n  availability_zone       = \"\"     # string | optional+computed\n  cidr_block              = \"\"     # string | optional\n  map_public_ip_on_launch = false  # bool | optional\n  tags                    = {}     # map(string) | optional\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id",
+              "cidr_block": "10.0.2.0/24",
+              "availability_zone": "us-east-1b",
+              "map_public_ip_on_launch": true,
+              "tags": "{ Name = \"lurastack-web-public-b\" }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 840,
+            "y": 0,
+            "icon": "/icons/Private-subnet_32.svg"
+          }
+        },
+        {
+          "id": "e4a4c470-1e0f-456b-9f6b-6264acb49674",
+          "kind": "resource",
+          "type": "aws_route_table",
+          "name": "public",
+          "schemaId": "aws_route_table",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_route_table                                     │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_route_table\" \"this\" {\n\n  vpc_id = \"\"     # string | required\n  route  = []     # set(object) | optional+computed\n  tags   = {}     # map(string) | optional\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "vpc_id": "aws_vpc.main.id",
+              "route": [
+                {
+                  "cidr_block": "0.0.0.0/0",
+                  "gateway_id": "aws_internet_gateway.main.id"
+                }
+              ],
+              "tags": "{ Name = \"lurastack-web-public-rt\" }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 200,
+            "icon": "/icons/route-table.svg"
+          }
+        },
+        {
+          "id": "8851ac15-6091-4f7b-8733-27393d96d133",
+          "kind": "resource",
+          "type": "aws_route_table_association",
+          "name": "public_a",
+          "schemaId": "aws_route_table_association",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_route_table_association                         │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_route_table_association\" \"this\" {\n\n  route_table_id = \"\"     # string | required\n  subnet_id      = \"\"     # string | optional\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "subnet_id": "aws_subnet.public_a.id",
+              "route_table_id": "aws_route_table.public.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 200,
+            "icon": "/icons/route-table.svg"
+          }
+        },
+        {
+          "id": "9a2c1f30-5d6e-4a91-bf02-2c8e7b5a1d44",
+          "kind": "resource",
+          "type": "aws_route_table_association",
+          "name": "public_b",
+          "schemaId": "aws_route_table_association",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_route_table_association                         │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_route_table_association\" \"this\" {\n\n  route_table_id = \"\"     # string | required\n  subnet_id      = \"\"     # string | optional\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "subnet_id": "aws_subnet.public_b.id",
+              "route_table_id": "aws_route_table.public.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 840,
+            "y": 200,
+            "icon": "/icons/route-table.svg"
+          }
+        },
+        {
+          "id": "d112bc00-731f-42d9-8104-13d6c1271aeb",
+          "kind": "resource",
+          "type": "aws_security_group",
+          "name": "alb",
+          "schemaId": "aws_security_group",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_security_group                                  │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_security_group\" \"this\" {\n\n  description = \"\"     # string | optional\n  egress      = []     # set(object) | optional+computed\n  ingress     = []     # set(object) | optional+computed\n  name        = \"\"     # string | optional+computed\n  tags        = {}     # map(string) | optional\n  vpc_id      = \"\"     # string | optional+computed\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-alb-sg",
+              "description": "Allow HTTP (80) from the internet to the ALB",
+              "vpc_id": "aws_vpc.main.id",
+              "ingress": "[{ description = \"HTTP from internet\", from_port = 80, to_port = 80, protocol = \"tcp\", cidr_blocks = [\"0.0.0.0/0\"], ipv6_cidr_blocks = [], prefix_list_ids = [], security_groups = [], self = false }]",
+              "egress": "[{ description = \"All outbound\", from_port = 0, to_port = 0, protocol = \"-1\", cidr_blocks = [\"0.0.0.0/0\"], ipv6_cidr_blocks = [], prefix_list_ids = [], security_groups = [], self = false }]",
+              "tags": "{ Name = \"lurastack-web-alb-sg\" }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 400,
+            "icon": "/icons/aws_security_group.svg"
+          }
+        },
+        {
+          "id": "1e0e7a8b-b1e6-4bf5-9820-b711fac85d2e",
+          "kind": "resource",
+          "type": "aws_security_group",
+          "name": "app",
+          "schemaId": "aws_security_group",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_security_group                                  │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_security_group\" \"this\" {\n\n  description = \"\"     # string | optional\n  egress      = []     # set(object) | optional+computed\n  ingress     = []     # set(object) | optional+computed\n  name        = \"\"     # string | optional+computed\n  tags        = {}     # map(string) | optional\n  vpc_id      = \"\"     # string | optional+computed\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-app-sg",
+              "description": "Allow HTTP (80) from the ALB only",
+              "vpc_id": "aws_vpc.main.id",
+              "ingress": "[{ description = \"HTTP from ALB\", from_port = 80, to_port = 80, protocol = \"tcp\", cidr_blocks = [], ipv6_cidr_blocks = [], prefix_list_ids = [], security_groups = [aws_security_group.alb.id], self = false }]",
+              "egress": "[{ description = \"All outbound\", from_port = 0, to_port = 0, protocol = \"-1\", cidr_blocks = [\"0.0.0.0/0\"], ipv6_cidr_blocks = [], prefix_list_ids = [], security_groups = [], self = false }]",
+              "tags": "{ Name = \"lurastack-web-app-sg\" }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 400,
+            "icon": "/icons/aws_security_group.svg"
+          }
+        },
+        {
+          "id": "25de882c-57bd-4bd4-9c0a-d49b53a0822a",
+          "kind": "resource",
+          "type": "aws_alb",
+          "name": "main",
+          "schemaId": "aws_alb",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_alb                                             │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_alb\" \"this\" {\n\n  internal           = false  # bool | optional+computed\n  load_balancer_type = \"\"     # string | optional\n  name               = \"\"     # string | optional+computed\n  security_groups    = []     # set(string) | optional+computed\n  subnets            = []     # set(string) | optional+computed\n  tags               = {}     # map(string) | optional\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-alb",
+              "internal": false,
+              "load_balancer_type": "application",
+              "subnets": "[aws_subnet.public_a.id, aws_subnet.public_b.id]",
+              "security_groups": "[aws_security_group.alb.id]",
+              "tags": "{ Name = \"lurastack-web-alb\" }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 600,
+            "icon": "/icons/aws_alb.svg"
+          }
+        },
+        {
+          "id": "c0f836e9-3c3f-4d80-b28d-bad4594ccfc3",
+          "kind": "resource",
+          "type": "aws_alb_target_group",
+          "name": "app",
+          "schemaId": "aws_alb_target_group",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_alb_target_group                                │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_alb_target_group\" \"this\" {\n\n  name        = \"\"     # string | optional+computed\n  port        = 0      # number | optional\n  protocol    = \"\"     # string | optional\n  target_type = \"\"     # string | optional\n  vpc_id      = \"\"     # string | optional\n\n  health_check { # list [0..1]\n    enabled             = false  # bool | optional\n    healthy_threshold   = 0      # number | optional\n    interval            = 0      # number | optional\n    matcher             = \"\"     # string | optional+computed\n    path                = \"\"     # string | optional+computed\n    timeout             = 0      # number | optional+computed\n    unhealthy_threshold = 0      # number | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-tg",
+              "port": 80,
+              "protocol": "HTTP",
+              "vpc_id": "aws_vpc.main.id",
+              "target_type": "instance",
+              "health_check": [
+                {
+                  "enabled": true,
+                  "path": "/",
+                  "interval": 15,
+                  "timeout": 5,
+                  "healthy_threshold": 2,
+                  "unhealthy_threshold": 2
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 280,
+            "y": 600,
+            "icon": "/icons/aws_alb.svg"
+          }
+        },
+        {
+          "id": "5f751f14-4d43-4726-97db-3a657aaef196",
+          "kind": "resource",
+          "type": "aws_alb_listener",
+          "name": "http",
+          "schemaId": "aws_alb_listener",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_alb_listener                                    │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_alb_listener\" \"this\" {\n\n  load_balancer_arn = \"\"     # string | required\n  port              = 0      # number | optional\n  protocol          = \"\"     # string | optional+computed\n\n  default_action { # list [1..*]\n    type             = \"\"     # string | required\n    target_group_arn = \"\"     # string | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "load_balancer_arn": "aws_alb.main.arn",
+              "port": 80,
+              "protocol": "HTTP",
+              "default_action": [
+                {
+                  "type": "forward",
+                  "target_group_arn": "aws_alb_target_group.app.arn"
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 560,
+            "y": 600,
+            "icon": "/icons/aws_alb.svg"
+          }
+        },
+        {
+          "id": "b98bf48c-1be5-49eb-9972-c4d5f34405a6",
+          "kind": "resource",
+          "type": "aws_launch_template",
+          "name": "app",
+          "schemaId": "aws_launch_template",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_launch_template                                 │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_launch_template\" \"this\" {\n\n  image_id               = \"\"     # string | optional\n  instance_type          = \"\"     # string | optional\n  name_prefix            = \"\"     # string | optional+computed\n  user_data              = \"\"     # string | optional\n  vpc_security_group_ids = []     # set(string) | optional\n\n  tag_specifications { # list\n    resource_type = \"\"     # string | optional\n    tags          = {}     # map(string) | optional\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name_prefix": "lurastack-web-lt-",
+              "image_id": "ami-0c02fb55956c7d316",
+              "instance_type": "t3.micro",
+              "vpc_security_group_ids": "[aws_security_group.app.id]",
+              "user_data": "base64encode(file(\"${path.module}/user_data.sh\"))",
+              "tag_specifications": [
+                {
+                  "resource_type": "instance",
+                  "tags": "{ Name = \"lurastack-web-app\" }"
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 840,
+            "y": 600,
+            "icon": "/icons/EC2-instance-contents_32.svg"
+          }
+        },
+        {
+          "id": "12419aed-ae64-4155-ab54-a8d3e8ea4627",
+          "kind": "resource",
+          "type": "aws_autoscaling_group",
+          "name": "app",
+          "schemaId": "aws_autoscaling_group",
+          "origin": "imported-file",
+          "hclTemplate": "# ┌──────────────────────────────────────────────────────────────┐\n# │  resource: aws_autoscaling_group                               │\n# └──────────────────────────────────────────────────────────────┘\nresource \"aws_autoscaling_group\" \"this\" {\n\n  max_size                  = 0      # number | required\n  min_size                  = 0      # number | required\n  desired_capacity          = 0      # number | optional+computed\n  health_check_type         = \"\"     # string | optional+computed\n  health_check_grace_period = 0      # number | optional\n  name                      = \"\"     # string | optional+computed\n  target_group_arns         = []     # set(string) | optional+computed\n  vpc_zone_identifier       = []     # set(string) | optional+computed\n\n  launch_template { # list [0..1]\n    id      = \"\"     # string | optional+computed\n    version = \"\"     # string | optional+computed\n\n  }\n\n  tag { # set\n    key                 = \"\"     # string | required\n    propagate_at_launch = false  # bool | required\n    value               = \"\"     # string | required\n\n  }\n\n}\n\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-asg",
+              "min_size": 3,
+              "max_size": 4,
+              "desired_capacity": 3,
+              "health_check_type": "ELB",
+              "health_check_grace_period": 90,
+              "vpc_zone_identifier": "[aws_subnet.public_a.id, aws_subnet.public_b.id]",
+              "target_group_arns": "[aws_alb_target_group.app.arn]",
+              "launch_template": [
+                {
+                  "id": "aws_launch_template.app.id",
+                  "version": "$Latest"
+                }
+              ],
+              "tag": [
+                {
+                  "key": "Name",
+                  "value": "lurastack-web-app",
+                  "propagate_at_launch": true
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 1120,
+            "y": 600,
+            "icon": "/icons/aws_autoscaling_group.svg"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "id": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "type": "terraformResource",
+          "position": {
+            "x": -210.22605458206039,
+            "y": -150.07516881514482
+          },
+          "data": {
+            "resourceId": "bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+            "schemaId": "aws_vpc",
+            "label": "main",
+            "icon": "/icons/Virtual-private-cloud-VPC_32.svg",
+            "terraformType": "aws_vpc",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "width": 1211,
+          "height": 984,
+          "style": {
+            "width": 1211,
+            "height": 983.6033965133556
+          }
+        },
+        {
+          "id": "node-d112bc00-731f-42d9-8104-13d6c1271aeb",
+          "type": "terraformResource",
+          "position": {
+            "x": 164.8322765133148,
+            "y": -63.163867988403496
+          },
+          "data": {
+            "resourceId": "d112bc00-731f-42d9-8104-13d6c1271aeb",
+            "schemaId": "aws_security_group",
+            "label": "alb",
+            "icon": "/icons/aws_security_group.svg",
+            "terraformType": "aws_security_group",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "zone",
+            "zoneContainerIds": []
+          },
+          "width": 470,
+          "height": 271,
+          "style": {
+            "width": 470,
+            "height": 271
+          }
+        },
+        {
+          "id": "node-1e0e7a8b-b1e6-4bf5-9820-b711fac85d2e",
+          "type": "terraformResource",
+          "position": {
+            "x": 112.71597277303067,
+            "y": 503.1342469474316
+          },
+          "data": {
+            "resourceId": "1e0e7a8b-b1e6-4bf5-9820-b711fac85d2e",
+            "schemaId": "aws_security_group",
+            "label": "app",
+            "icon": "/icons/aws_security_group.svg",
+            "terraformType": "aws_security_group",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "zone",
+            "zoneContainerIds": []
+          },
+          "width": 447,
+          "height": 275,
+          "style": {
+            "width": 447,
+            "height": 275
+          }
+        },
+        {
+          "id": "node-5f751f14-4d43-4726-97db-3a657aaef196",
+          "type": "terraformResource",
+          "position": {
+            "x": 614.6135058247293,
+            "y": 234.20913030331104
+          },
+          "data": {
+            "resourceId": "5f751f14-4d43-4726-97db-3a657aaef196",
+            "schemaId": "aws_alb_listener",
+            "label": "http",
+            "icon": "/icons/aws_alb.svg",
+            "terraformType": "aws_alb_listener",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": [
+              "node-d112bc00-731f-42d9-8104-13d6c1271aeb"
+            ]
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 173,
+          "height": 68
+        },
+        {
+          "id": "node-b98bf48c-1be5-49eb-9972-c4d5f34405a6",
+          "type": "terraformResource",
+          "position": {
+            "x": 562.7802741202465,
+            "y": 819.9224106750876
+          },
+          "data": {
+            "resourceId": "b98bf48c-1be5-49eb-9972-c4d5f34405a6",
+            "schemaId": "aws_launch_template",
+            "label": "app",
+            "icon": "/icons/EC2-instance-contents_32.svg",
+            "terraformType": "aws_launch_template",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": [
+              "node-1e0e7a8b-b1e6-4bf5-9820-b711fac85d2e"
+            ]
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 188,
+          "height": 68
+        },
+        {
+          "id": "node-12419aed-ae64-4155-ab54-a8d3e8ea4627",
+          "type": "terraformResource",
+          "position": {
+            "x": 437.9151895618601,
+            "y": 731.5536972731758
+          },
+          "data": {
+            "resourceId": "12419aed-ae64-4155-ab54-a8d3e8ea4627",
+            "schemaId": "aws_autoscaling_group",
+            "label": "app",
+            "icon": "/icons/aws_autoscaling_group.svg",
+            "terraformType": "aws_autoscaling_group",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": [
+              "node-1e0e7a8b-b1e6-4bf5-9820-b711fac85d2e"
+            ]
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 199,
+          "height": 68
+        },
+        {
+          "id": "node-5e99f4ab-0586-44e0-839f-7877eaee1bfe",
+          "type": "terraformResource",
+          "position": {
+            "x": 139.8400744804173,
+            "y": 82.59958584669238
+          },
+          "data": {
+            "resourceId": "5e99f4ab-0586-44e0-839f-7877eaee1bfe",
+            "schemaId": "aws_internet_gateway",
+            "label": "main",
+            "icon": "/icons/Res_Amazon-VPC_Internet-Gateway_48.svg",
+            "terraformType": "aws_internet_gateway",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 194,
+          "height": 68
+        },
+        {
+          "id": "node-036fe1b5-d1a8-45cd-a418-3041217a98e0",
+          "type": "terraformResource",
+          "position": {
+            "x": 82.55864606449902,
+            "y": 385.56685714851125
+          },
+          "data": {
+            "resourceId": "036fe1b5-d1a8-45cd-a418-3041217a98e0",
+            "schemaId": "aws_subnet",
+            "label": "public_a",
+            "icon": "/icons/Private-subnet_32.svg",
+            "terraformType": "aws_subnet",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 411,
+          "height": 230,
+          "style": {
+            "width": 411,
+            "height": 230
+          }
+        },
+        {
+          "id": "node-cc43abab-4ff2-4531-a321-d0658b4bb90c",
+          "type": "terraformResource",
+          "position": {
+            "x": 543.2422978689165,
+            "y": 386.027382563983
+          },
+          "data": {
+            "resourceId": "cc43abab-4ff2-4531-a321-d0658b4bb90c",
+            "schemaId": "aws_subnet",
+            "label": "public_b",
+            "icon": "/icons/Private-subnet_32.svg",
+            "terraformType": "aws_subnet",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 391,
+          "height": 234,
+          "style": {
+            "width": 391,
+            "height": 234
+          }
+        },
+        {
+          "id": "node-e4a4c470-1e0f-456b-9f6b-6264acb49674",
+          "type": "terraformResource",
+          "position": {
+            "x": 144.1565919856173,
+            "y": 176.13553083676732
+          },
+          "data": {
+            "resourceId": "e4a4c470-1e0f-456b-9f6b-6264acb49674",
+            "schemaId": "aws_route_table",
+            "label": "public",
+            "icon": "/icons/route-table.svg",
+            "terraformType": "aws_route_table",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 168,
+          "height": 68
+        },
+        {
+          "id": "node-8851ac15-6091-4f7b-8733-27393d96d133",
+          "type": "terraformResource",
+          "position": {
+            "x": 66.02048221039881,
+            "y": 94.11013009266134
+          },
+          "data": {
+            "resourceId": "8851ac15-6091-4f7b-8733-27393d96d133",
+            "schemaId": "aws_route_table_association",
+            "label": "public_a",
+            "icon": "/icons/route-table.svg",
+            "terraformType": "aws_route_table_association",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-036fe1b5-d1a8-45cd-a418-3041217a98e0",
+          "width": 230,
+          "height": 68
+        },
+        {
+          "id": "node-9a2c1f30-5d6e-4a91-bf02-2c8e7b5a1d44",
+          "type": "terraformResource",
+          "position": {
+            "x": 87.7638954425351,
+            "y": 99.45786495649628
+          },
+          "data": {
+            "resourceId": "9a2c1f30-5d6e-4a91-bf02-2c8e7b5a1d44",
+            "schemaId": "aws_route_table_association",
+            "label": "public_b",
+            "icon": "/icons/route-table.svg",
+            "terraformType": "aws_route_table_association",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-cc43abab-4ff2-4531-a321-d0658b4bb90c",
+          "width": 230,
+          "height": 68
+        },
+        {
+          "id": "node-25de882c-57bd-4bd4-9c0a-d49b53a0822a",
+          "type": "terraformResource",
+          "position": {
+            "x": 424.06236478755426,
+            "y": 170.14240611587283
+          },
+          "data": {
+            "resourceId": "25de882c-57bd-4bd4-9c0a-d49b53a0822a",
+            "schemaId": "aws_alb",
+            "label": "main",
+            "icon": "/icons/aws_alb.svg",
+            "terraformType": "aws_alb",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": [
+              "node-d112bc00-731f-42d9-8104-13d6c1271aeb"
+            ]
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 160,
+          "height": 68
+        },
+        {
+          "id": "node-c0f836e9-3c3f-4d80-b28d-bad4594ccfc3",
+          "type": "terraformResource",
+          "position": {
+            "x": 407.16725483813286,
+            "y": 261.0357474032347
+          },
+          "data": {
+            "resourceId": "c0f836e9-3c3f-4d80-b28d-bad4594ccfc3",
+            "schemaId": "aws_alb_target_group",
+            "label": "app",
+            "icon": "/icons/aws_alb.svg",
+            "terraformType": "aws_alb_target_group",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": [
+              "node-d112bc00-731f-42d9-8104-13d6c1271aeb"
+            ]
+          },
+          "parentNode": "node-bba9e165-9d2b-4b10-81b2-d89ec15c3b3a",
+          "width": 194,
+          "height": 68
+        }
+      ],
+      "edges": [
+        {
+          "id": "reactflow__edge-node-12419aed-ae64-4155-ab54-a8d3e8ea4627top-node-036fe1b5-d1a8-45cd-a418-3041217a98e0bottom",
+          "source": "node-12419aed-ae64-4155-ab54-a8d3e8ea4627",
+          "target": "node-036fe1b5-d1a8-45cd-a418-3041217a98e0",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-12419aed-ae64-4155-ab54-a8d3e8ea4627top-node-cc43abab-4ff2-4531-a321-d0658b4bb90cbottom",
+          "source": "node-12419aed-ae64-4155-ab54-a8d3e8ea4627",
+          "target": "node-cc43abab-4ff2-4531-a321-d0658b4bb90c",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        },
+        {
+          "id": "reactflow__edge-node-12419aed-ae64-4155-ab54-a8d3e8ea4627top-node-c0f836e9-3c3f-4d80-b28d-bad4594ccfc3bottom",
+          "source": "node-12419aed-ae64-4155-ab54-a8d3e8ea4627",
+          "target": "node-c0f836e9-3c3f-4d80-b28d-bad4594ccfc3",
+          "sourceHandle": "top",
+          "targetHandle": "bottom",
+          "type": "mappingEdge",
+          "data": {
+            "mappings": []
+          }
+        }
+      ],
+      "codeFiles": [
+        {
+          "id": "a1b2c3d4-0001-4000-8000-000000000001",
+          "name": "user_data.sh",
+          "content": "#!/bin/bash\nset -uo pipefail\n\n# Install nginx (Amazon Linux 2023 uses dnf; Amazon Linux 2 uses amazon-linux-extras + yum)\nif command -v dnf >/dev/null 2>&1; then\n  dnf install -y nginx\nelse\n  amazon-linux-extras enable nginx1 || true\n  yum clean metadata || true\n  yum install -y nginx\nfi\n\n# Fetch this instance's identity via IMDSv2 so every instance renders a\n# distinct page — refreshing through the ALB visibly lands on a different one.\nTOKEN=$(curl -s -X PUT \"http://169.254.169.254/latest/api/token\" -H \"X-aws-ec2-metadata-token-ttl-seconds: 300\")\nIID=$(curl -s -H \"X-aws-ec2-metadata-token: $TOKEN\" http://169.254.169.254/latest/meta-data/instance-id)\nAZ=$(curl -s -H \"X-aws-ec2-metadata-token: $TOKEN\" http://169.254.169.254/latest/meta-data/placement/availability-zone)\n\n# Derive a stable accent colour from the instance id so each box looks different.\nHEX=$(echo -n \"$IID\" | md5sum | cut -c1-6)\n\ncat > /usr/share/nginx/html/index.html <<HTML\n<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>LuraStack — $IID</title>\n    <style>\n      body { font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }\n      .card { text-align: center; padding: 2rem 3rem; border: 4px solid #$HEX; border-radius: 12px; background: #1e293b; }\n      h1 { margin: 0 0 .5rem; color: #$HEX; }\n      code { color: #38bdf8; }\n    </style>\n  </head>\n  <body>\n    <div class=\"card\">\n      <h1>Instance $IID</h1>\n      <p>Availability zone: <code>$AZ</code></p>\n      <p>Refresh the page — the ALB may route you to a different instance.</p>\n      <p>Served by <strong>LuraStack</strong> ALB + Auto Scaling Group.</p>\n    </div>\n  </body>\n</html>\nHTML\n\nsystemctl enable nginx\nsystemctl restart nginx\n"
+        },
+        {
+          "id": "a1b2c3d4-0002-4000-8000-000000000002",
+          "name": "output.tf",
+          "content": "output \"alb_dns_name\" {\n  description = \"Public DNS name of the Application Load Balancer\"\n  value       = aws_alb.main.dns_name\n}\n\noutput \"url\" {\n  description = \"Open this URL and refresh repeatedly to hit different instances\"\n  value       = \"http://${aws_alb.main.dns_name}\"\n}\n"
+        }
+      ]
+    }
+  ]
+}

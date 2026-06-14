@@ -1,0 +1,56 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_compute_backend_bucket                       │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_compute_backend_bucket" "this" {
+
+  bucket_name             = ""     # string | required | Cloud Storage bucket name.
+  name                    = ""     # string | required | Name of the resource. Provided by the client when the resour…
+  compression_mode        = ""     # string | optional | Compress text responses using Brotli or gzip compression, ba…
+  custom_response_headers = []     # list(string) | optional | Headers that the HTTP/S load balancer should add to proxied …
+  description             = ""     # string | optional | An optional textual description of the resource; provided by…
+  edge_security_policy    = ""     # string | optional | The security policy associated with this backend bucket.
+  enable_cdn              = false  # bool | optional | If true, enable Cloud CDN for this BackendBucket.
+  id                      = ""     # string | optional+computed
+  project                 = ""     # string | optional+computed
+
+  # creation_timestamp      = ""     # string | computed | Creation timestamp in RFC3339 text format.
+  # self_link               = ""     # string | computed
+
+  cdn_policy { # list [0..1]
+    cache_mode                   = ""     # string | optional+computed | Specifies the cache setting for all responses from this back…
+    client_ttl                   = 0      # number | optional+computed | Specifies the maximum allowed TTL for cached content served …
+    default_ttl                  = 0      # number | optional+computed | Specifies the default TTL for cached content served by this …
+    max_ttl                      = 0      # number | optional+computed | Specifies the maximum allowed TTL for cached content served …
+    negative_caching             = false  # bool | optional+computed | Negative caching allows per-status code TTLs to be set, in o…
+    request_coalescing           = false  # bool | optional | If true then Cloud CDN will combine multiple concurrent cach…
+    serve_while_stale            = 0      # number | optional+computed | Serve existing content from the cache (if available) when re…
+    signed_url_cache_max_age_sec = 0      # number | optional | Maximum number of seconds the response to a signed URL reque…
+
+    bypass_cache_on_request_headers { # list [0..5]
+      header_name = ""     # string | optional | The header field name to match on when bypassing cache. Valu…
+
+    }
+
+    cache_key_policy { # list [0..1]
+      include_http_headers   = []     # list(string) | optional | Allows HTTP request headers (by name) to be used in the cach…
+      query_string_whitelist = []     # list(string) | optional | Names of query string parameters to include in cache keys. D…
+
+    }
+
+    negative_caching_policy { # list
+      code = 0      # number | optional | The HTTP status code to define a TTL against. Only HTTP stat…
+      ttl  = 0      # number | optional | The TTL (in seconds) for which to cache responses with the c…
+
+    }
+
+  }
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

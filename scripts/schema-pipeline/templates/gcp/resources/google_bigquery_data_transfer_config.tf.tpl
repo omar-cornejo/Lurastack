@@ -1,0 +1,46 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_bigquery_data_transfer_config                │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_bigquery_data_transfer_config" "this" {
+
+  data_source_id            = ""     # string | required | The data source id. Cannot be changed once the transfer conf…
+  display_name              = ""     # string | required | The user specified display name for the transfer config.
+  params                    = {}     # map(string) | required | Parameters specific to each data source. For more informatio…
+  data_refresh_window_days  = 0      # number | optional | The number of days to look back to automatically refresh the…
+  destination_dataset_id    = ""     # string | optional | The BigQuery target dataset id.
+  disabled                  = false  # bool | optional | When set to true, no runs are scheduled for a given transfer…
+  id                        = ""     # string | optional+computed
+  location                  = ""     # string | optional | The geographic location where the transfer config should res…
+  notification_pubsub_topic = ""     # string | optional | Pub/Sub topic where notifications will be sent after transfe…
+  project                   = ""     # string | optional+computed
+  schedule                  = ""     # string | optional | Data transfer schedule. If the data source does not support …
+  service_account_name      = ""     # string | optional | Service account email. If this field is set, transfer config…
+
+  # name                      = ""     # string | computed | The resource name of the transfer config. Transfer config na…
+
+  email_preferences { # list [0..1]
+    enable_failure_email = false  # bool | required | If true, email notifications will be sent on transfer run fa…
+
+  }
+
+  schedule_options { # list [0..1]
+    disable_auto_scheduling = false  # bool | optional | If true, automatic scheduling of data transfer runs for this…
+    end_time                = ""     # string | optional | Defines time to stop scheduling transfer runs. A transfer ru…
+    start_time              = ""     # string | optional | Specifies time to start scheduling transfer runs. The first …
+
+  }
+
+  sensitive_params { # list [0..1]
+    secret_access_key = ""     # string | required+sensitive | The Secret Access Key of the AWS account transferring data f…
+
+  }
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

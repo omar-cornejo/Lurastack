@@ -1,0 +1,534 @@
+{
+  "version": "1",
+  "meta": {
+    "name": "GCP — Classic web (LB + MIG)",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "settings": {
+    "autosave": false
+  },
+  "activeViewId": "view-gcp-web-0001",
+  "views": [
+    {
+      "id": "view-gcp-web-0001",
+      "name": "View 1",
+      "activeProvider": "gcp",
+      "resources": [
+        {
+          "id": "r-net",
+          "kind": "resource",
+          "type": "google_compute_network",
+          "name": "main",
+          "schemaId": "google_compute_network",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_network\nresource \"google_compute_network\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-vpc",
+              "auto_create_subnetworks": false
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 0,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        },
+        {
+          "id": "r-subnet",
+          "kind": "resource",
+          "type": "google_compute_subnetwork",
+          "name": "main",
+          "schemaId": "google_compute_subnetwork",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_subnetwork\nresource \"google_compute_subnetwork\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-subnet",
+              "ip_cidr_range": "10.0.1.0/24",
+              "region": "us-central1",
+              "network": "google_compute_network.main.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 300,
+            "y": 0,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        },
+        {
+          "id": "r-fw",
+          "kind": "resource",
+          "type": "google_compute_firewall",
+          "name": "allow_http",
+          "schemaId": "google_compute_firewall",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_firewall\nresource \"google_compute_firewall\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-allow-http",
+              "network": "google_compute_network.main.id",
+              "direction": "INGRESS",
+              "source_ranges": "[\"0.0.0.0/0\", \"130.211.0.0/22\", \"35.191.0.0/16\"]",
+              "target_tags": "[\"http-server\"]",
+              "allow": [
+                {
+                  "protocol": "tcp",
+                  "ports": "[\"80\"]"
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 600,
+            "y": 0,
+            "icon": "/icons/gcp_security_identity.svg"
+          }
+        },
+        {
+          "id": "r-hc",
+          "kind": "resource",
+          "type": "google_compute_health_check",
+          "name": "http",
+          "schemaId": "google_compute_health_check",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_health_check\nresource \"google_compute_health_check\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-hc",
+              "check_interval_sec": 5,
+              "timeout_sec": 5,
+              "http_health_check": [
+                {
+                  "port": 80,
+                  "request_path": "/"
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 900,
+            "y": 0,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        },
+        {
+          "id": "r-tpl",
+          "kind": "resource",
+          "type": "google_compute_instance_template",
+          "name": "app",
+          "schemaId": "google_compute_instance_template",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_instance_template\nresource \"google_compute_instance_template\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name_prefix": "lurastack-web-tpl-",
+              "machine_type": "e2-small",
+              "tags": "[\"http-server\"]",
+              "disk": [
+                {
+                  "source_image": "debian-cloud/debian-12",
+                  "auto_delete": true,
+                  "boot": true
+                }
+              ],
+              "network_interface": [
+                {
+                  "subnetwork": "google_compute_subnetwork.main.id",
+                  "access_config": [
+                    {}
+                  ]
+                }
+              ],
+              "metadata": "{ startup-script = file(\"${path.module}/startup.sh\") }"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 1200,
+            "y": 0,
+            "icon": "/icons/gcp_compute_engine.svg"
+          }
+        },
+        {
+          "id": "r-mig",
+          "kind": "resource",
+          "type": "google_compute_instance_group_manager",
+          "name": "app",
+          "schemaId": "google_compute_instance_group_manager",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_instance_group_manager\nresource \"google_compute_instance_group_manager\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-mig",
+              "base_instance_name": "lurastack-web",
+              "zone": "us-central1-a",
+              "target_size": 3,
+              "version": [
+                {
+                  "instance_template": "google_compute_instance_template.app.id"
+                }
+              ],
+              "named_port": [
+                {
+                  "name": "http",
+                  "port": 80
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 200,
+            "icon": "/icons/gcp_compute_engine.svg"
+          }
+        },
+        {
+          "id": "r-backend",
+          "kind": "resource",
+          "type": "google_compute_backend_service",
+          "name": "app",
+          "schemaId": "google_compute_backend_service",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_backend_service\nresource \"google_compute_backend_service\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-backend",
+              "protocol": "HTTP",
+              "port_name": "http",
+              "load_balancing_scheme": "EXTERNAL",
+              "timeout_sec": 10,
+              "health_checks": "[google_compute_health_check.http.id]",
+              "backend": [
+                {
+                  "group": "google_compute_instance_group_manager.app.instance_group"
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 300,
+            "y": 200,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        },
+        {
+          "id": "r-urlmap",
+          "kind": "resource",
+          "type": "google_compute_url_map",
+          "name": "app",
+          "schemaId": "google_compute_url_map",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_url_map\nresource \"google_compute_url_map\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-url-map",
+              "default_service": "google_compute_backend_service.app.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 600,
+            "y": 200,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        },
+        {
+          "id": "r-proxy",
+          "kind": "resource",
+          "type": "google_compute_target_http_proxy",
+          "name": "app",
+          "schemaId": "google_compute_target_http_proxy",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_target_http_proxy\nresource \"google_compute_target_http_proxy\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-proxy",
+              "url_map": "google_compute_url_map.app.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 900,
+            "y": 200,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        },
+        {
+          "id": "r-fr",
+          "kind": "resource",
+          "type": "google_compute_global_forwarding_rule",
+          "name": "app",
+          "schemaId": "google_compute_global_forwarding_rule",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_global_forwarding_rule\nresource \"google_compute_global_forwarding_rule\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-web-fr",
+              "target": "google_compute_target_http_proxy.app.id",
+              "port_range": "80",
+              "load_balancing_scheme": "EXTERNAL"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 1200,
+            "y": 200,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "id": "node-r-net",
+          "type": "terraformResource",
+          "position": {
+            "x": 0,
+            "y": 0
+          },
+          "data": {
+            "resourceId": "r-net",
+            "schemaId": "google_compute_network",
+            "label": "main",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_network",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "width": 708,
+          "height": 604,
+          "style": {
+            "width": 708.4709445602035,
+            "height": 604.0607920158805
+          }
+        },
+        {
+          "id": "node-r-subnet",
+          "type": "terraformResource",
+          "position": {
+            "x": 26.24139650872818,
+            "y": 90.06882793017456
+          },
+          "data": {
+            "resourceId": "r-subnet",
+            "schemaId": "google_compute_subnetwork",
+            "label": "main",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_subnetwork",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-net",
+          "width": 662,
+          "height": 494,
+          "style": {
+            "width": 662.2295480514754,
+            "height": 493.9919640857059
+          }
+        },
+        {
+          "id": "node-r-fw",
+          "type": "terraformResource",
+          "position": {
+            "x": 26.095254397467066,
+            "y": 214.5097229774512
+          },
+          "data": {
+            "resourceId": "r-fw",
+            "schemaId": "google_compute_firewall",
+            "label": "allow_http",
+            "icon": "/icons/gcp_security_identity.svg",
+            "terraformType": "google_compute_firewall",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 209,
+          "height": 68
+        },
+        {
+          "id": "node-r-mig",
+          "type": "terraformResource",
+          "position": {
+            "x": 23.75860349127182,
+            "y": 116.77605985037405
+          },
+          "data": {
+            "resourceId": "r-mig",
+            "schemaId": "google_compute_instance_group_manager",
+            "label": "app",
+            "icon": "/icons/gcp_compute_engine.svg",
+            "terraformType": "google_compute_instance_group_manager",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 282,
+          "height": 68
+        },
+        {
+          "id": "node-r-tpl",
+          "type": "terraformResource",
+          "position": {
+            "x": 23.735658139545954,
+            "y": 311.78603694396895
+          },
+          "data": {
+            "resourceId": "r-tpl",
+            "schemaId": "google_compute_instance_template",
+            "label": "app",
+            "icon": "/icons/gcp_compute_engine.svg",
+            "terraformType": "google_compute_instance_template",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 256,
+          "height": 68
+        },
+        {
+          "id": "node-r-hc",
+          "type": "terraformResource",
+          "position": {
+            "x": 371.06932668329193,
+            "y": 292.665837442722
+          },
+          "data": {
+            "resourceId": "r-hc",
+            "schemaId": "google_compute_health_check",
+            "label": "http",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_health_check",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 230,
+          "height": 68
+        },
+        {
+          "id": "node-r-backend",
+          "type": "terraformResource",
+          "position": {
+            "x": 371.40648108218943,
+            "y": 110.25685853244528
+          },
+          "data": {
+            "resourceId": "r-backend",
+            "schemaId": "google_compute_backend_service",
+            "label": "app",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_backend_service",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 245,
+          "height": 68
+        },
+        {
+          "id": "node-r-urlmap",
+          "type": "terraformResource",
+          "position": {
+            "x": 373.1890179522514,
+            "y": 203.3406497332196
+          },
+          "data": {
+            "resourceId": "r-urlmap",
+            "schemaId": "google_compute_url_map",
+            "label": "app",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_url_map",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 204,
+          "height": 68
+        },
+        {
+          "id": "node-r-proxy",
+          "type": "terraformResource",
+          "position": {
+            "x": 26.902360842829204,
+            "y": 405.9919640857059
+          },
+          "data": {
+            "resourceId": "r-proxy",
+            "schemaId": "google_compute_target_http_proxy",
+            "label": "app",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_target_http_proxy",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 256,
+          "height": 68
+        },
+        {
+          "id": "node-r-fr",
+          "type": "terraformResource",
+          "position": {
+            "x": 360.2295480514754,
+            "y": 403.45892802410833
+          },
+          "data": {
+            "resourceId": "r-fr",
+            "schemaId": "google_compute_global_forwarding_rule",
+            "label": "app",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_global_forwarding_rule",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 282,
+          "height": 68
+        }
+      ],
+      "edges": [],
+      "codeFiles": [
+        {
+          "id": "cf-startup",
+          "name": "startup.sh",
+          "content": "#!/bin/bash\nset -uo pipefail\n\napt-get update -y\napt-get install -y nginx\n\n# Each instance renders a distinct page (hostname + zone) so refreshing through\n# the load balancer visibly lands on a different backend.\nHOSTNAME=$(hostname)\nZONE=$(curl -s -H \"Metadata-Flavor: Google\" \"http://metadata.google.internal/computeMetadata/v1/instance/zone\" | awk -F/ '{print $NF}')\nHEX=$(echo -n \"$HOSTNAME\" | md5sum | cut -c1-6)\n\ncat > /var/www/html/index.html <<HTML\n<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>LuraStack — $HOSTNAME</title>\n    <style>\n      body { font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }\n      .card { text-align: center; padding: 2rem 3rem; border: 4px solid #$HEX; border-radius: 12px; background: #1e293b; }\n      h1 { margin: 0 0 .5rem; color: #$HEX; }\n      code { color: #34d399; }\n    </style>\n  </head>\n  <body>\n    <div class=\"card\">\n      <h1>Instance $HOSTNAME</h1>\n      <p>Zone: <code>$ZONE</code></p>\n      <p>Refresh the page — the load balancer may route you to a different instance.</p>\n      <p>Served by <strong>LuraStack</strong> HTTP LB + Managed Instance Group.</p>\n    </div>\n  </body>\n</html>\nHTML\n\nsystemctl enable nginx\nsystemctl restart nginx\n"
+        },
+        {
+          "id": "cf-var",
+          "name": "variable.tf",
+          "content": "variable \"project\" {\n  description = \"GCP project ID to deploy into\"\n  type        = string\n}\n"
+        },
+        {
+          "id": "cf-output",
+          "name": "output.tf",
+          "content": "output \"lb_ip\" {\n  description = \"Public IP of the HTTP load balancer\"\n  value       = google_compute_global_forwarding_rule.app.ip_address\n}\n\noutput \"url\" {\n  description = \"Open this and refresh repeatedly to hit different instances\"\n  value       = \"http://${google_compute_global_forwarding_rule.app.ip_address}\"\n}\n"
+        },
+        {
+          "id": "cf-tfvars",
+          "name": "terraform.tfvars",
+          "content": "# GCP project id.\n#\n# Leave this commented out to use the project from your saved GCP credentials\n# (LuraStack exports it as TF_VAR_project at deploy time).\n#\n# If you are not using LuraStack credentials, uncomment the next line and set it:\n# project = \"my-gcp-project-id\"\n"
+        }
+      ]
+    }
+  ]
+}

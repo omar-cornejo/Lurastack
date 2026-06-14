@@ -1,0 +1,253 @@
+{
+  "version": "1",
+  "meta": {
+    "name": "GCP — Basic VPC + VM (nginx)",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "updatedAt": "2026-01-01T00:00:00.000Z"
+  },
+  "settings": {
+    "autosave": false
+  },
+  "activeViewId": "view-gcp-basic-0001",
+  "views": [
+    {
+      "id": "view-gcp-basic-0001",
+      "name": "View 1",
+      "activeProvider": "gcp",
+      "resources": [
+        {
+          "id": "r-net",
+          "kind": "resource",
+          "type": "google_compute_network",
+          "name": "main",
+          "schemaId": "google_compute_network",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_network\nresource \"google_compute_network\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-basic-vpc",
+              "auto_create_subnetworks": false
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 0,
+            "y": 0,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        },
+        {
+          "id": "r-subnet",
+          "kind": "resource",
+          "type": "google_compute_subnetwork",
+          "name": "main",
+          "schemaId": "google_compute_subnetwork",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_subnetwork\nresource \"google_compute_subnetwork\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-basic-subnet",
+              "ip_cidr_range": "10.0.1.0/24",
+              "region": "us-central1",
+              "network": "google_compute_network.main.id"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 300,
+            "y": 0,
+            "icon": "/icons/gcp_networking.svg"
+          }
+        },
+        {
+          "id": "r-fw",
+          "kind": "resource",
+          "type": "google_compute_firewall",
+          "name": "allow",
+          "schemaId": "google_compute_firewall",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_firewall\nresource \"google_compute_firewall\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-basic-allow-web-ssh",
+              "network": "google_compute_network.main.id",
+              "direction": "INGRESS",
+              "source_ranges": "[\"0.0.0.0/0\"]",
+              "allow": [
+                {
+                  "protocol": "tcp",
+                  "ports": "[\"22\", \"80\"]"
+                }
+              ]
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 600,
+            "y": 0,
+            "icon": "/icons/gcp_security_identity.svg"
+          }
+        },
+        {
+          "id": "r-vm",
+          "kind": "resource",
+          "type": "google_compute_instance",
+          "name": "vm",
+          "schemaId": "google_compute_instance",
+          "origin": "imported-file",
+          "hclTemplate": "# resource: google_compute_instance\nresource \"google_compute_instance\" \"this\" {\n}\n",
+          "config": {
+            "attributes": {
+              "name": "lurastack-basic-vm",
+              "machine_type": "e2-micro",
+              "zone": "us-central1-a",
+              "tags": "[\"http-server\"]",
+              "boot_disk": [
+                {
+                  "initialize_params": [
+                    {
+                      "image": "debian-cloud/debian-12"
+                    }
+                  ]
+                }
+              ],
+              "network_interface": [
+                {
+                  "subnetwork": "google_compute_subnetwork.main.id",
+                  "access_config": [
+                    {}
+                  ]
+                }
+              ],
+              "metadata_startup_script": "file(\"${path.module}/startup.sh\")"
+            },
+            "blocks": {}
+          },
+          "ui": {
+            "x": 900,
+            "y": 0,
+            "icon": "/icons/gcp_compute_engine.svg"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "id": "node-r-net",
+          "type": "terraformResource",
+          "position": {
+            "x": -38,
+            "y": -146.7
+          },
+          "data": {
+            "resourceId": "r-net",
+            "schemaId": "google_compute_network",
+            "label": "main",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_network",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "width": 457,
+          "height": 388,
+          "style": {
+            "width": 457,
+            "height": 388
+          }
+        },
+        {
+          "id": "node-r-subnet",
+          "type": "terraformResource",
+          "position": {
+            "x": 20,
+            "y": 78.5
+          },
+          "data": {
+            "resourceId": "r-subnet",
+            "schemaId": "google_compute_subnetwork",
+            "label": "main",
+            "icon": "/icons/gcp_networking.svg",
+            "terraformType": "google_compute_subnetwork",
+            "terraformKind": "resource",
+            "isContainer": true,
+            "containerKind": "hierarchical",
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-net",
+          "width": 411,
+          "height": 290,
+          "style": {
+            "width": 411,
+            "height": 290
+          }
+        },
+        {
+          "id": "node-r-fw",
+          "type": "terraformResource",
+          "position": {
+            "x": 61.5,
+            "y": 97.4
+          },
+          "data": {
+            "resourceId": "r-fw",
+            "schemaId": "google_compute_firewall",
+            "label": "allow",
+            "icon": "/icons/gcp_security_identity.svg",
+            "terraformType": "google_compute_firewall",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 209,
+          "height": 68
+        },
+        {
+          "id": "node-r-vm",
+          "type": "terraformResource",
+          "position": {
+            "x": 159.7,
+            "y": 201.7
+          },
+          "data": {
+            "resourceId": "r-vm",
+            "schemaId": "google_compute_instance",
+            "label": "vm",
+            "icon": "/icons/gcp_compute_engine.svg",
+            "terraformType": "google_compute_instance",
+            "terraformKind": "resource",
+            "isContainer": false,
+            "zoneContainerIds": []
+          },
+          "parentNode": "node-r-subnet",
+          "width": 209,
+          "height": 68
+        }
+      ],
+      "edges": [],
+      "codeFiles": [
+        {
+          "id": "cf-startup",
+          "name": "startup.sh",
+          "content": "#!/bin/bash\nset -uo pipefail\n\n# Debian/Ubuntu images on GCE use apt.\napt-get update -y\napt-get install -y nginx\n\ncat > /var/www/html/index.html <<'HTML'\n<!doctype html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"utf-8\" />\n    <title>LuraStack — nginx on GCE</title>\n    <style>\n      body { font-family: system-ui, sans-serif; display: grid; place-items: center; height: 100vh; margin: 0; background: #0f172a; color: #e2e8f0; }\n      .card { text-align: center; padding: 2rem 3rem; border: 1px solid #334155; border-radius: 12px; background: #1e293b; }\n      h1 { margin: 0 0 .5rem; }\n      code { color: #34d399; }\n    </style>\n  </head>\n  <body>\n    <div class=\"card\">\n      <h1>It works 🎉</h1>\n      <p>nginx is running on this Compute Engine VM, served on <code>port 80</code>.</p>\n      <p>Provisioned with <strong>LuraStack</strong>.</p>\n    </div>\n  </body>\n</html>\nHTML\n\nsystemctl enable nginx\nsystemctl restart nginx\n"
+        },
+        {
+          "id": "cf-var",
+          "name": "variable.tf",
+          "content": "variable \"project\" {\n  description = \"GCP project ID to deploy into\"\n  type        = string\n}\n"
+        },
+        {
+          "id": "cf-output",
+          "name": "output.tf",
+          "content": "output \"instance_public_ip\" {\n  description = \"Public IP of the nginx VM\"\n  value       = google_compute_instance.vm.network_interface[0].access_config[0].nat_ip\n}\n\noutput \"url\" {\n  description = \"Open this URL to see the nginx welcome page\"\n  value       = \"http://${google_compute_instance.vm.network_interface[0].access_config[0].nat_ip}\"\n}\n"
+        },
+        {
+          "id": "cf-tfvars",
+          "name": "terraform.tfvars",
+          "content": "# GCP project id.\n#\n# Leave this commented out to use the project from your saved GCP credentials\n# (LuraStack exports it as TF_VAR_project at deploy time).\n#\n# If you are not using LuraStack credentials, uncomment the next line and set it:\n# project = \"my-gcp-project-id\"\n"
+        }
+      ]
+    }
+  ]
+}
