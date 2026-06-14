@@ -52,3 +52,14 @@ Thumbs.db
 
 # Non-app material (academic deliverable docs, separate build tree)
 ddf/
+
+# Release binaries are distributed as GitHub Release assets, not committed
+# (they bloat the repo and exceed GitHub's recommended file-size limit). The
+# notes/checksums under releases/ are kept; only the built artifacts are ignored.
+releases/**/*.AppImage
+releases/**/*.deb
+releases/**/*.rpm
+releases/**/*.dmg
+releases/**/*.msi
+releases/**/*.exe
+releases/**/*.app.tar.gz
