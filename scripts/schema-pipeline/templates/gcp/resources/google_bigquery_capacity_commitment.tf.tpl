@@ -1,0 +1,29 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_bigquery_capacity_commitment                 │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_bigquery_capacity_commitment" "this" {
+
+  plan                                 = ""     # string | required | Capacity commitment plan. Valid values are at https://cloud.…
+  slot_count                           = 0      # number | required | Number of slots in this commitment.
+  capacity_commitment_id               = ""     # string | optional | The optional capacity commitment ID. Capacity commitment nam…
+  edition                              = ""     # string | optional | The edition type. Valid values are STANDARD, ENTERPRISE, ENT…
+  enforce_single_admin_project_per_org = ""     # string | optional | If true, fail the request if another project in the organiza…
+  id                                   = ""     # string | optional+computed
+  location                             = ""     # string | optional | The geographic location where the transfer config should res…
+  project                              = ""     # string | optional+computed
+  renewal_plan                         = ""     # string | optional | The plan this capacity commitment is converted to after comm…
+
+  # commitment_end_time                  = ""     # string | computed | The start of the current commitment period. It is applicable…
+  # commitment_start_time                = ""     # string | computed | The start of the current commitment period. It is applicable…
+  # name                                 = ""     # string | computed | The resource name of the capacity commitment, e.g., projects…
+  # state                                = ""     # string | computed | State of the commitment
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

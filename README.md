@@ -125,7 +125,14 @@ lurastack/
 │   ├── icons/              # Open-licensed category / service / brand icons
 │   └── templates/          # Gallery templates (8 instantiable architectures)
 └── scripts/                # Build-time helpers (icon import, template index)
+    └── schema-pipeline/    # Go pipeline: provider schema → per-resource HCL skeletons
 ```
+
+The catalog the app loads from `src/schemas/` is not hand-written: it is curated
+from the output of the Go **schema-extraction pipeline** in
+[`scripts/schema-pipeline/`](scripts/schema-pipeline/), which turns a provider's
+machine-readable schema into one annotated `.tf.tpl` skeleton per resource. See
+that folder's README for how to reproduce it.
 
 ## Tech stack
 

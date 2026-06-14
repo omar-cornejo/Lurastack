@@ -1,0 +1,43 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  data: aws_iam_principal_policy_simulation                     │
+# └──────────────────────────────────────────────────────────────┘
+data "aws_iam_principal_policy_simulation" "this" {
+
+  action_names                       = []     # set(string) | required | One or more names of actions, like "iam:CreateUser", that sh…
+  policy_source_arn                  = ""     # string | required | ARN of the principal (e.g. user, role) whose existing config…
+  additional_policies_json           = []     # set(string) | optional | Additional principal-based policies to use in the simulation…
+  caller_arn                         = ""     # string | optional | ARN of a user to use as the caller of the simulated requests…
+  permissions_boundary_policies_json = []     # set(string) | optional | Additional permission boundary policies to use in the simula…
+  resource_arns                      = []     # set(string) | optional | ARNs of specific resources to use as the targets of the spec…
+  resource_handling_option           = ""     # string | optional | Specifies the type of simulation to run. Some API operations…
+  resource_owner_account_id          = ""     # string | optional | An AWS account ID to use as the simulated owner for any reso…
+  resource_policy_json               = ""     # string | optional | A resource policy to associate with all of the target resour…
+
+  # all_allowed                        = false  # bool | computed | A summary of the results attribute which is true if all of t…
+  # id                                 = ""     # string | computed | Do not use
+  # results = [  # set(object)
+  #   {
+  #     action_name = ""
+  #     allowed = false
+  #     decision = ""
+  #     decision_details = {}  # map(string)
+  #     matched_statements = [  # set(object)
+  #       {
+  #         source_policy_id = ""
+  #         source_policy_type = ""
+  #       }
+  #     ]
+  #     missing_context_keys = []  # set(string)
+  #     resource_arn = ""
+  #   }
+  # ]
+
+  context { # set
+    key    = ""     # string | required | The key name of the context entry, such as "aws:CurrentTime"…
+    type   = ""     # string | required | The type that the simulator should use to interpret the stri…
+    values = []     # set(string) | required | One or more values to assign to the context key, given as a …
+
+  }
+
+}
+

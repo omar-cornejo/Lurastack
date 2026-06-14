@@ -53,6 +53,7 @@ npm run tauri dev
 - `src/schemas/` — Terraform resource schemas (JSON) plus HCL templates (`*.tf.tpl`). Adding a resource means adding both files; Vite picks them up via `import.meta.glob` at build time, no code edit needed.
 - `public/templates/` — gallery templates. Each is `<provider>/<id>/{manifest.json, project.lura}`.
 - `scripts/` — build-time helpers (icon import, template index generation).
+- `scripts/schema-pipeline/` — standalone Go pipeline that turns a Terraform provider's schema into per-resource JSON + annotated `.tf.tpl` skeletons; the source of the `src/schemas/` catalog. Not built with the app.
 
 ## Coding conventions
 
@@ -160,6 +161,12 @@ PRs are squashed and merged. Write the PR title in the same Conventional Commits
 
 1. Drop `src/schemas/<provider>/resources/<resource_type>.json` (the schema in HashiCorp's `terraform providers schema -json` format).
 2. Drop the matching `src/schemas/<provider>/templates/resources/<resource_type>.tf.tpl` (HCL skeleton).
+
+   Both files don't have to be written by hand: the Go pipeline in
+   [`scripts/schema-pipeline/`](scripts/schema-pipeline/) generates a JSON schema
+   and an annotated `.tf.tpl` skeleton for *every* resource of a provider straight
+   from its machine-readable schema. Run it (see that folder's README) and copy
+   the resource you need into `src/schemas/`.
 3. If it has an obvious cloud-vendor icon, copy it to `public/icons/` and register it in `src/models/iconRegistry.ts`. Otherwise it falls back to the default icon.
 4. Categorize it (Compute / Networking / etc.) by adding an entry to `src/models/categoryRegistry.ts`.
 

@@ -1,0 +1,26 @@
+# ┌──────────────────────────────────────────────────────────────┐
+# │  resource: google_org_policy_custom_constraint                 │
+# └──────────────────────────────────────────────────────────────┘
+resource "google_org_policy_custom_constraint" "this" {
+
+  action_type    = ""     # string | required | The action to take if the condition is met. Possible values:…
+  condition      = ""     # string | required | A CEL condition that refers to a supported service resource,…
+  method_types   = []     # list(string) | required | A list of RESTful methods for which to enforce the constrain…
+  name           = ""     # string | required | Immutable. The name of the custom constraint. This is unique…
+  parent         = ""     # string | required | The parent of the resource, an organization. Format should b…
+  resource_types = []     # list(string) | required | Immutable. The fully qualified name of the Google Cloud REST…
+  description    = ""     # string | optional | A human-friendly description of the constraint to display as…
+  display_name   = ""     # string | optional | A human-friendly name for the constraint.
+  id             = ""     # string | optional+computed
+
+  # update_time    = ""     # string | computed | Output only. The timestamp representing when the constraint …
+
+  timeouts { # single
+    create = ""     # string | optional
+    delete = ""     # string | optional
+    update = ""     # string | optional
+
+  }
+
+}
+

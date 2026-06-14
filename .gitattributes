@@ -29,3 +29,7 @@ Cargo.lock         -diff linguist-generated
 # academic deliverable toward repo language stats.
 public/templates/index.json  linguist-generated
 e2e/**                       linguist-language=TypeScript
+
+# The HCL skeletons under the schema pipeline are generated reference output;
+# keep them out of language stats and collapse them in diffs.
+scripts/schema-pipeline/templates/**  linguist-generated -diff
