@@ -25,23 +25,23 @@ tauri-build = { version = "=2.6.2", features = [] }
 [dependencies]
 tauri = { version = "=2.11.2", features = [] }
 tauri-plugin-opener = "=2.5.4"
-serde = { version = "=1.0.228", features = ["derive"] }
-serde_json = "=1.0.150"
-tokio = { version = "=1.52.3", features = ["full"] }
-portable-pty = "=0.8.1"
-anyhow = "=1.0.102"
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.151"
+tokio = { version = "=1.53.1", features = ["full"] }
+portable-pty = "=0.9.0"
+anyhow = "=1.0.104"
 hcl-rs = "=0.19.7"
 tauri-plugin-fs = "=2.5.1"
 tauri-plugin-dialog = "=2.7.1"
 dirs = "=6.0.0"
 percent-encoding = "=2.3.2"
 keyring-core = "=1.0.0"
-cocoon = "=0.4.3"
-zeroize = { version = "=1.8.2", features = ["zeroize_derive"] }
+cocoon = "=0.5.0"
+zeroize = { version = "=1.9.0", features = ["zeroize_derive"] }
 tempfile = "=3.27.0"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-apple-native-keyring-store = { version = "=1.0.0", features = ["keychain"] }
+apple-native-keyring-store = { version = "=1.0.1", features = ["keychain"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 windows-native-keyring-store = "=1.1.0"
